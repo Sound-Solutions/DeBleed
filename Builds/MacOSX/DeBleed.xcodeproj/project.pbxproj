@@ -11,6 +11,8 @@
 			isa = PBXAggregateTarget;
 			buildConfigurationList = 5110775B2C30ABE3BCAFD0A8;
 			buildPhases = (
+				C2FF8E2B6FF51E02032F57B0,
+				FD9CB2F9AAA0A7B2C79379EF,
 			);
 			dependencies = (
 				F4374AA001CD3DF39369798E,
@@ -393,8 +395,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3B953670E3F3F39527B04B40;
 			buildPhases = (
+				6BFF9E96B4CDC2741ABD10FE,
 				F38FD079F705F8760AE426C7,
 				78426B8E26BCC12B49B2770B,
+				103C5BE6DD765F1292061B19,
 			);
 			buildRules = (
 			);
@@ -409,7 +413,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 867FA054D8723AB6A2D8FD86;
 			buildPhases = (
+				CDAC6B62C21CCDD5C36BF6C0,
 				EDB2806A558B3A074A6E3106,
+				814E93DC881F80B5ED908EA7,
 			);
 			buildRules = (
 			);
@@ -424,9 +430,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 95E157A420F0FF27AAD67D90;
 			buildPhases = (
+				5F644904FC510AD6E0F9004B,
 				98C1753F1ED9211A640ECB0F,
 				3C911662B83B8FB77304432A,
 				B7473EE7F0ED39920B30743D,
+				C257BC49D3BF27C22BD04627,
 			);
 			buildRules = (
 			);
@@ -442,10 +450,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6BB245A3F804ABBEBDF49486;
 			buildPhases = (
+				FE4648C2914B545F5A11F3D8,
 				D66F1EF7F007C541E8803D20,
 				3A5BEB5B787025A5A3021A8D,
 				C4BDAC8AE2CF1B7F9BEA30B3,
-				FE4648C2914B545F5A11F3D8,
+				76CB379CC49ECCBE52F8BE7C,
+				A0A25CDE47084091A156D84A,
 			);
 			buildRules = (
 			);
@@ -461,11 +471,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 407FE5F39E585A225A72AB96;
 			buildPhases = (
+				12ECBE15582C4DD9BB9D115D,
 				5473FC098C5061F1F8159E32,
 				63CD4B518CB2F32F46F827A4,
 				FE37F862A17C821AF66508CC,
-				12ECBE15582C4DD9BB9D115D,
 				8A872D5DC933781ADE7204E3,
+				F07F7BC1997C5BB3BBDA2442,
+				911AF82C8942091150306EE7,
 			);
 			buildRules = (
 			);
@@ -671,7 +683,73 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		12ECBE15582C4DD9BB9D115D /* Update manifest */ = {
+		103C5BE6DD765F1292061B19 /* Post-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Post-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
+		};
+		12ECBE15582C4DD9BB9D115D /* Pre-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Pre-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
+		};
+		5F644904FC510AD6E0F9004B /* Pre-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Pre-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
+		};
+		6BFF9E96B4CDC2741ABD10FE /* Pre-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Pre-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
+		};
+		76CB379CC49ECCBE52F8BE7C /* Post-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Post-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
+		};
+		814E93DC881F80B5ED908EA7 /* Post-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Post-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
+		};
+		8A872D5DC933781ADE7204E3 /* Update manifest */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -682,7 +760,7 @@
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\n\necho Running \\\"${CONFIGURATION_BUILD_DIR}/juce_vst3_helper\\\" \\> \\\"${CONFIGURATION_BUILD_DIR}/${WRAPPER_NAME}/Contents/Resources/moduleinfo.json\\\"\n\"${CONFIGURATION_BUILD_DIR}/juce_vst3_helper\" > \"${CONFIGURATION_BUILD_DIR}/${WRAPPER_NAME}/Contents/Resources/moduleinfo.json\"\n";
 		};
-		8A872D5DC933781ADE7204E3 /* Plugin Copy Step */ = {
+		911AF82C8942091150306EE7 /* Plugin Copy Step */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -693,7 +771,7 @@
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\n\nif [[ \"${CONFIGURATION}\" == \"Debug\" ]]; then\n  destinationPlugin=\"${HOME}/Library/Audio/Plug-Ins/VST3//$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\")\"\n  echo Running rm -rf \\\"${destinationPlugin}\\\"\n  rm -rf \"${destinationPlugin}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\\\" \\\"${destinationPlugin}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\" \"${destinationPlugin}\"\n\n  if [[ -n \"${EXPANDED_CODE_SIGN_IDENTITY-}\" ]]; then\n    if [[ -n \"${CODE_SIGN_ENTITLEMENTS-}\" ]]; then\n      entitlementsArg=(--entitlements \"${CODE_SIGN_ENTITLEMENTS}\")\n    fi\n\n    echo Signing Identity: \\\"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\\\"\n    echo Running codesign --verbose=4 --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY}\\\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \\\"${HOME}/Library/Audio/Plug-Ins/VST3//${WRAPPER_NAME}\\\"\n    codesign --verbose=4 --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \"${HOME}/Library/Audio/Plug-Ins/VST3//${WRAPPER_NAME}\"\n  fi\nfi\n\nif [[ \"${CONFIGURATION}\" == \"Release\" ]]; then\n  destinationPlugin=\"${HOME}/Library/Audio/Plug-Ins/VST3//$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\")\"\n  echo Running rm -rf \\\"${destinationPlugin}\\\"\n  rm -rf \"${destinationPlugin}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\\\" \\\"${destinationPlugin}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\" \"${destinationPlugin}\"\n\n  if [[ -n \"${EXPANDED_CODE_SIGN_IDENTITY-}\" ]]; then\n    if [[ -n \"${CODE_SIGN_ENTITLEMENTS-}\" ]]; then\n      entitlementsArg=(--entitlements \"${CODE_SIGN_ENTITLEMENTS}\")\n    fi\n\n    echo Signing Identity: \\\"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\\\"\n    echo Running codesign --verbose=4 --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY}\\\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \\\"${HOME}/Library/Audio/Plug-Ins/VST3//${WRAPPER_NAME}\\\"\n    codesign --verbose=4 --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \"${HOME}/Library/Audio/Plug-Ins/VST3//${WRAPPER_NAME}\"\n  fi\nfi\n";
 		};
-		FE4648C2914B545F5A11F3D8 /* Plugin Copy Step */ = {
+		A0A25CDE47084091A156D84A /* Plugin Copy Step */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -703,6 +781,72 @@
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\n\nif [[ \"${CONFIGURATION}\" == \"Debug\" ]]; then\n  destinationPlugin=\"${HOME}/Library/Audio/Plug-Ins/Components//$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\")\"\n  echo Running rm -rf \\\"${destinationPlugin}\\\"\n  rm -rf \"${destinationPlugin}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\\\" \\\"${destinationPlugin}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\" \"${destinationPlugin}\"\n\n  if [[ -n \"${EXPANDED_CODE_SIGN_IDENTITY-}\" ]]; then\n    if [[ -n \"${CODE_SIGN_ENTITLEMENTS-}\" ]]; then\n      entitlementsArg=(--entitlements \"${CODE_SIGN_ENTITLEMENTS}\")\n    fi\n\n    echo Signing Identity: \\\"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\\\"\n    echo Running codesign --verbose=4 --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY}\\\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \\\"${HOME}/Library/Audio/Plug-Ins/Components//${WRAPPER_NAME}\\\"\n    codesign --verbose=4 --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \"${HOME}/Library/Audio/Plug-Ins/Components//${WRAPPER_NAME}\"\n  fi\nfi\n\nif [[ \"${CONFIGURATION}\" == \"Release\" ]]; then\n  destinationPlugin=\"${HOME}/Library/Audio/Plug-Ins/Components//$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\")\"\n  echo Running rm -rf \\\"${destinationPlugin}\\\"\n  rm -rf \"${destinationPlugin}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\\\" \\\"${destinationPlugin}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\" \"${destinationPlugin}\"\n\n  if [[ -n \"${EXPANDED_CODE_SIGN_IDENTITY-}\" ]]; then\n    if [[ -n \"${CODE_SIGN_ENTITLEMENTS-}\" ]]; then\n      entitlementsArg=(--entitlements \"${CODE_SIGN_ENTITLEMENTS}\")\n    fi\n\n    echo Signing Identity: \\\"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\\\"\n    echo Running codesign --verbose=4 --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY}\\\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \\\"${HOME}/Library/Audio/Plug-Ins/Components//${WRAPPER_NAME}\\\"\n    codesign --verbose=4 --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \"${HOME}/Library/Audio/Plug-Ins/Components//${WRAPPER_NAME}\"\n  fi\nfi\n";
+		};
+		C257BC49D3BF27C22BD04627 /* Post-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Post-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
+		};
+		C2FF8E2B6FF51E02032F57B0 /* Pre-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Pre-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
+		};
+		CDAC6B62C21CCDD5C36BF6C0 /* Pre-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Pre-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
+		};
+		F07F7BC1997C5BB3BBDA2442 /* Post-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Post-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
+		};
+		FD9CB2F9AAA0A7B2C79379EF /* Post-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Post-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
+		};
+		FE4648C2914B545F5A11F3D8 /* Pre-build script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Pre-build script";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 

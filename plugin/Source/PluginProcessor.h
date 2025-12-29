@@ -58,6 +58,10 @@ public:
     bool isModelLoaded() const { return neuralEngine.isModelLoaded(); }
     juce::String getModelPath() const { return neuralEngine.getModelPath(); }
 
+    // Latency info
+    bool isLowLatencyMode() const { return lowLatency.load(); }
+    float getLatencyMs() const { return getLatencySamples() * 1000.0f / static_cast<float>(currentSampleRate); }
+
     // Training interface
     TrainerProcess& getTrainerProcess() { return trainerProcess; }
 
@@ -68,6 +72,7 @@ public:
     static const juce::String PARAM_STRENGTH;
     static const juce::String PARAM_MIX;
     static const juce::String PARAM_BYPASS;
+    static const juce::String PARAM_LOW_LATENCY;
 
 private:
     // Create parameter layout
@@ -80,6 +85,8 @@ private:
     std::atomic<float> strength{1.0f};
     std::atomic<float> mix{1.0f};
     std::atomic<bool> bypassed{false};
+    std::atomic<bool> lowLatency{false};
+    std::atomic<bool> needsReinit{false};
 
     // Audio processing components
     NeuralGateEngine neuralEngine;
@@ -89,12 +96,35 @@ private:
     TrainerProcess trainerProcess;
 
     // Processing state
+    static constexpr double TARGET_SAMPLE_RATE = 48000.0;
     double currentSampleRate = 48000.0;
     int currentBlockSize = 512;
+    double resampleRatio = 1.0;
+    bool needsResampling = false;
+
+    // Resampling
+    juce::LagrangeInterpolator inputResampler;
+    juce::LagrangeInterpolator outputResampler;
+    std::vector<float> resampledInput;
+    std::vector<float> resampledOutput;
+
+    // Resampler history for continuity across blocks
+    static constexpr int RESAMPLER_HISTORY_SIZE = 32;
+    std::vector<float> inputHistory;
+    std::vector<float> outputHistory;
 
     // Temporary buffers
     std::vector<float> processBuffer;
     std::vector<float> maskBuffer;
+
+    // Transpose buffers for neural network (STFT outputs [frames,bins], NN expects [bins,frames])
+    std::vector<float> transposedMagnitude;
+    std::vector<float> transposedMask;
+
+    // Mask smoothing (like Waves PSE / Shure 5045)
+    std::vector<float> smoothedMask;
+    static constexpr float MASK_SMOOTHING_ATTACK = 0.3f;   // Fast attack (30% per frame ~10ms)
+    static constexpr float MASK_SMOOTHING_RELEASE = 0.005f; // Very slow release (0.5% per frame ~500ms)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessor)
 };

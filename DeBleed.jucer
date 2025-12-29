@@ -62,7 +62,9 @@
                JUCE_WEB_BROWSER="0" JUCE_USE_CURL="0"/>
   <EXPORTFORMATS>
     <XCODE_MAC targetFolder="Builds/MacOSX" xcodeValidArchs="arm64,x86_64" extraLinkerFlags="-lonnxruntime"
-               externalLibraries="onnxruntime">
+               externalLibraries="onnxruntime"
+               prebuildCommand="&quot;${PROJECT_DIR}/../../scripts/update_timestamp.sh&quot; &quot;${PROJECT_DIR}/../..&quot;"
+               postbuildCommand="&quot;${PROJECT_DIR}/../../scripts/touch_bundles.sh&quot; &quot;${PRODUCT_NAME}&quot; &quot;${BUILT_PRODUCTS_DIR}&quot;">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="DeBleed" headerPath="$(HOME)/onnxruntime/include&#10;/usr/local/include"
                        libraryPath="$(HOME)/onnxruntime/lib&#10;/usr/local/lib" osxArchitecture="Native"

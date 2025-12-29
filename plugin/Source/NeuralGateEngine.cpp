@@ -95,13 +95,13 @@ bool NeuralGateEngine::loadModel(const juce::String& modelPath)
         // Verify shapes match expected
         if (inputShape.size() != 3)
         {
-            lastError = "Invalid input shape: expected 3 dimensions";
+            lastError = "Invalid input shape: expected 3 dimensions [batch, freq_bins, frames]";
             session.reset();
             return false;
         }
 
         // inputShape should be [batch, freq_bins, frames] or with dynamic dims
-        // The freq_bins dimension should match N_FREQ_BINS
+        // The freq_bins dimension (index 1) should match N_FREQ_BINS
         int64_t freqBins = inputShape[1];
         if (freqBins > 0 && freqBins != N_FREQ_BINS)
         {
@@ -169,7 +169,7 @@ const float* NeuralGateEngine::process(const float* magnitude, int numFrames)
         int numElements = numFrames * N_FREQ_BINS;
         std::memcpy(inputBuffer.data(), magnitude, numElements * sizeof(float));
 
-        // Create input tensor
+        // Create input tensor - model expects [batch, freq_bins, frames]
         std::vector<int64_t> inputDims = {1, N_FREQ_BINS, numFrames};
         Ort::Value inputTensor = Ort::Value::CreateTensor<float>(
             *memoryInfo,

@@ -1,5 +1,9 @@
 #include "PluginEditor.h"
 
+#if DEBUG || JUCE_DEBUG
+#include "BuildTimestamp.h"
+#endif
+
 DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& p)
     : AudioProcessorEditor(&p),
       audioProcessor(p),
@@ -46,6 +50,13 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     trainButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff3a6a4c));
     addAndMakeVisible(trainButton);
 
+    // Load Model button
+    loadModelButton.setButtonText("Load Model");
+    loadModelButton.onClick = [this]() { loadModel(); };
+    loadModelButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff5a7a9c));
+    loadModelButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff4a6a8c));
+    addAndMakeVisible(loadModelButton);
+
     // Status label
     statusLabel.setText("Select audio folders to begin", juce::dontSendNotification);
     statusLabel.setFont(juce::Font(12.0f));
@@ -79,6 +90,16 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     bypassButton.setColour(juce::ToggleButton::textColourId, juce::Colours::white);
     addAndMakeVisible(bypassButton);
 
+    // Low Latency button
+    lowLatencyButton.setButtonText("Low Latency");
+    lowLatencyButton.setColour(juce::ToggleButton::textColourId, juce::Colours::white);
+    addAndMakeVisible(lowLatencyButton);
+
+    // Latency label
+    latencyLabel.setFont(juce::Font(11.0f));
+    latencyLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.7f));
+    addAndMakeVisible(latencyLabel);
+
     // Model status
     modelStatusLabel.setFont(juce::Font(11.0f));
     modelStatusLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.7f));
@@ -92,6 +113,8 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_MIX, mixSlider);
     bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_BYPASS, bypassButton);
+    lowLatencyAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LOW_LATENCY, lowLatencyButton);
 
     // Log text box (hidden by default)
     logTextBox.setMultiLine(true);
@@ -120,8 +143,9 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
             });
         });
 
-    // Update model status
+    // Update model status and latency
     updateModelStatus();
+    updateLatencyLabel();
 
     // Start timer for UI updates
     startTimer(100);
@@ -155,6 +179,14 @@ void DeBleedAudioProcessorEditor::paint(juce::Graphics& g)
 
     // Above controls
     g.drawLine(10.0f, 280.0f, getWidth() - 10.0f, 280.0f, 1.0f);
+
+#if DEBUG || JUCE_DEBUG
+    g.setColour(juce::Colours::grey);
+    g.setFont(10.0f);
+    g.drawText("Build: " BUILD_TIMESTAMP,
+               getLocalBounds().removeFromBottom(16),
+               juce::Justification::centredRight);
+#endif
 }
 
 void DeBleedAudioProcessorEditor::resized()
@@ -182,7 +214,9 @@ void DeBleedAudioProcessorEditor::resized()
 
     auto trainRow = bounds.removeFromTop(30);
     trainButton.setBounds(trainRow.removeFromLeft(120));
-    trainRow.removeFromLeft(15);
+    trainRow.removeFromLeft(10);
+    loadModelButton.setBounds(trainRow.removeFromLeft(100));
+    trainRow.removeFromLeft(10);
     statusLabel.setBounds(trainRow);
 
     bounds.removeFromTop(20);
@@ -204,9 +238,13 @@ void DeBleedAudioProcessorEditor::resized()
 
     bounds.removeFromTop(10);
 
-    // Bottom row: bypass and model status
+    // Bottom row: bypass, low latency, latency display, and model status
     auto bottomRow = bounds.removeFromTop(25);
-    bypassButton.setBounds(bottomRow.removeFromLeft(100));
+    bypassButton.setBounds(bottomRow.removeFromLeft(90));
+    bottomRow.removeFromLeft(10);
+    lowLatencyButton.setBounds(bottomRow.removeFromLeft(100));
+    bottomRow.removeFromLeft(10);
+    latencyLabel.setBounds(bottomRow.removeFromLeft(80));
     modelStatusLabel.setBounds(bottomRow);
 
     // Log (if shown)
@@ -234,6 +272,7 @@ void DeBleedAudioProcessorEditor::timerCallback()
     }
 
     updateModelStatus();
+    updateLatencyLabel();
 }
 
 void DeBleedAudioProcessorEditor::startTraining()
@@ -241,11 +280,46 @@ void DeBleedAudioProcessorEditor::startTraining()
     if (cleanAudioPath.isEmpty() || noiseAudioPath.isEmpty())
         return;
 
+    // Ask for model name
+    auto* nameDialog = new juce::AlertWindow("Name Your Model",
+                                              "Enter a name for this trained model:",
+                                              juce::AlertWindow::QuestionIcon);
+    nameDialog->addTextEditor("modelName", "", "Model Name:");
+    nameDialog->addButton("Train", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    nameDialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+    nameDialog->enterModalState(true, juce::ModalCallbackFunction::create(
+        [this, nameDialog](int result)
+        {
+            if (result == 1)
+            {
+                juce::String modelName = nameDialog->getTextEditorContents("modelName").trim();
+                if (modelName.isEmpty())
+                    modelName = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
+
+                // Sanitize the name for filesystem
+                modelName = modelName.replaceCharacters(" /\\:*?\"<>|", "___________");
+
+                startTrainingWithName(modelName);
+            }
+            delete nameDialog;
+        }), true);
+}
+
+void DeBleedAudioProcessorEditor::startTrainingWithName(const juce::String& modelName)
+{
     // Create output directory in user's app data
     juce::File outputDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
                                .getChildFile("DeBleed")
                                .getChildFile("Models")
-                               .getChildFile(juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S"));
+                               .getChildFile(modelName);
+
+    // If name already exists, append timestamp
+    if (outputDir.exists())
+    {
+        outputDir = outputDir.getSiblingFile(modelName + "_" +
+                        juce::Time::getCurrentTime().formatted("%H%M%S"));
+    }
 
     outputDir.createDirectory();
 
@@ -276,6 +350,47 @@ void DeBleedAudioProcessorEditor::startTraining()
         trainButton.setEnabled(true);
         trainButton.setButtonText("Train Model");
     }
+}
+
+void DeBleedAudioProcessorEditor::loadModel()
+{
+    // Default to the DeBleed models directory
+    juce::File defaultDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                                .getChildFile("DeBleed")
+                                .getChildFile("Models");
+
+    if (!defaultDir.exists())
+        defaultDir = juce::File::getSpecialLocation(juce::File::userHomeDirectory);
+
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Select ONNX Model",
+        defaultDir,
+        "*.onnx"
+    );
+
+    chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+        [this, chooser](const juce::FileChooser& fc)
+        {
+            auto result = fc.getResult();
+            if (result.existsAsFile())
+            {
+                if (audioProcessor.loadModel(result.getFullPathName()))
+                {
+                    statusLabel.setText("Model loaded: " + result.getFileName(), juce::dontSendNotification);
+                    updateModelStatus();
+                }
+                else
+                {
+                    statusLabel.setText("Failed to load model", juce::dontSendNotification);
+                    juce::AlertWindow::showMessageBoxAsync(
+                        juce::AlertWindow::WarningIcon,
+                        "Load Failed",
+                        "Failed to load the selected model file.\n\nMake sure it's a valid DeBleed ONNX model.",
+                        "OK"
+                    );
+                }
+            }
+        });
 }
 
 void DeBleedAudioProcessorEditor::onTrainingProgress(int progress, const juce::String& status)
@@ -342,4 +457,11 @@ void DeBleedAudioProcessorEditor::updateModelStatus()
         modelStatusLabel.setText("Model: Not loaded", juce::dontSendNotification);
         modelStatusLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.5f));
     }
+}
+
+void DeBleedAudioProcessorEditor::updateLatencyLabel()
+{
+    float latencyMs = audioProcessor.getLatencyMs();
+    juce::String latencyText = juce::String(latencyMs, 1) + " ms";
+    latencyLabel.setText(latencyText, juce::dontSendNotification);
 }

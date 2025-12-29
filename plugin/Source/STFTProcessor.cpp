@@ -3,51 +3,85 @@
 
 STFTProcessor::STFTProcessor()
 {
-    // Calculate FFT order (log2 of N_FFT)
-    fftOrder = static_cast<int>(std::log2(N_FFT));
-    jassert((1 << fftOrder) == N_FFT);  // N_FFT must be power of 2
-
-    fft = std::make_unique<juce::dsp::FFT>(fftOrder);
-
-    createWindow();
+    // Will be properly initialized in prepare()
 }
 
 void STFTProcessor::createWindow()
 {
-    // Create Hann window for analysis
-    analysisWindow.resize(WIN_LENGTH);
-    for (int i = 0; i < WIN_LENGTH; ++i)
+    // Create Sine window for current FFT size
+    // With 50% overlap, Sine * Sine sums to exactly 1.0 (perfect COLA)
+    analysisWindow.resize(currentFFTSize);
+    synthesisWindow.resize(currentFFTSize);
+
+    for (int i = 0; i < currentFFTSize; ++i)
     {
-        analysisWindow[i] = 0.5f * (1.0f - std::cos(2.0f * juce::MathConstants<float>::pi * i / (WIN_LENGTH - 1)));
+        float w = std::sin(juce::MathConstants<float>::pi * i / currentFFTSize);
+        analysisWindow[i] = w;
+        synthesisWindow[i] = w;
     }
 
-    // Synthesis window is the same (will be normalized in overlap-add)
-    synthesisWindow = analysisWindow;
+    // COLA normalization factor for Sine window with 50% overlap = 1.0
+    colaSum = 1.0f;
 }
 
 void STFTProcessor::prepare(double sampleRate, int maxBlockSize)
 {
     currentSampleRate = sampleRate;
 
-    // Calculate maximum number of frames we might need
-    // For a 3-second buffer at 48kHz with hop of 128: ~1125 frames
-    maxFrames = static_cast<int>(std::ceil(3.0 * sampleRate / HOP_LENGTH)) + 16;
+    // Set FFT parameters based on mode
+    if (mode == Mode::LowLatency)
+    {
+        currentFFTSize = N_FFT_LOW_LATENCY;
+        currentHopLength = HOP_LOW_LATENCY;
+    }
+    else
+    {
+        currentFFTSize = N_FFT_QUALITY;
+        currentHopLength = HOP_QUALITY;
+    }
+
+    currentFreqBins = currentFFTSize / 2 + 1;
+
+    // Create FFT
+    fftOrder = static_cast<int>(std::log2(currentFFTSize));
+    fft = std::make_unique<juce::dsp::FFT>(fftOrder);
+
+    // Create windows
+    createWindow();
+
+    // Calculate maximum number of frames per block
+    maxFrames = (maxBlockSize / currentHopLength) + 4;
 
     // Allocate buffers
-    inputBuffer.resize(N_FFT * 2, 0.0f);  // Double buffer for overlap
+    inputBuffer.resize(currentFFTSize, 0.0f);
     inputWritePos = 0;
 
+    // Magnitude/phase buffers - always N_FREQ_BINS (129) for neural net compatibility
     magnitudeBuffer.resize(N_FREQ_BINS * maxFrames, 0.0f);
     phaseBuffer.resize(N_FREQ_BINS * maxFrames, 0.0f);
     numFramesReady = 0;
 
-    // Overlap-add buffer (enough for several frames)
-    overlapAddBuffer.resize(N_FFT + maxBlockSize * 4, 0.0f);
-    overlapAddReadPos = 0;
+    // Output buffer - larger to handle circular wrap-around safely
+    outputBuffer.resize(currentFFTSize * 8 + maxBlockSize, 0.0f);
+    std::fill(outputBuffer.begin(), outputBuffer.end(), 0.0f);
+    outputReadPos = 0;
+    // Start write position ahead by FFTSize - this provides the latency needed
+    // for overlap-add to complete before samples are read
+    outputWritePos = currentFFTSize;
 
-    // FFT work buffers
-    fftBuffer.resize(N_FFT);
-    fftWorkBuffer.resize(N_FFT * 2);  // Real FFT needs 2x size
+    // FFT work buffer
+    fftWorkBuffer.resize(currentFFTSize * 2, 0.0f);
+
+    // Interpolation buffers for low-latency mode
+    if (mode == Mode::LowLatency)
+    {
+        interpMagBuffer.resize(N_FREQ_BINS, 0.0f);
+        interpPhaseBuffer.resize(N_FREQ_BINS, 0.0f);
+        decimatedMaskBuffer.resize(currentFreqBins, 0.0f);
+    }
+
+    // DEBUG: Buffer to store windowed frames for testing overlap-add
+    windowedFrameBuffer.resize(currentFFTSize * maxFrames, 0.0f);
 }
 
 void STFTProcessor::reset()
@@ -59,8 +93,9 @@ void STFTProcessor::reset()
     std::fill(phaseBuffer.begin(), phaseBuffer.end(), 0.0f);
     numFramesReady = 0;
 
-    std::fill(overlapAddBuffer.begin(), overlapAddBuffer.end(), 0.0f);
-    overlapAddReadPos = 0;
+    std::fill(outputBuffer.begin(), outputBuffer.end(), 0.0f);
+    outputReadPos = 0;
+    outputWritePos = currentFFTSize;  // Match prepare() - start ahead for overlap-add latency
 }
 
 int STFTProcessor::processBlock(const float* input, int numSamples)
@@ -69,75 +104,121 @@ int STFTProcessor::processBlock(const float* input, int numSamples)
 
     for (int i = 0; i < numSamples; ++i)
     {
-        // Add sample to input buffer
         inputBuffer[inputWritePos] = input[i];
         inputWritePos++;
 
-        // Check if we have enough samples for a new frame
-        if (inputWritePos >= N_FFT)
+        if (inputWritePos >= currentFFTSize)
         {
-            // Compute STFT for this frame
             computeSTFTFrame(inputBuffer.data());
 
-            // Shift input buffer by hop length
             std::memmove(inputBuffer.data(),
-                        inputBuffer.data() + HOP_LENGTH,
-                        (N_FFT - HOP_LENGTH) * sizeof(float));
-            inputWritePos = N_FFT - HOP_LENGTH;
+                        inputBuffer.data() + currentHopLength,
+                        (currentFFTSize - currentHopLength) * sizeof(float));
+            inputWritePos = currentFFTSize - currentHopLength;
         }
     }
 
     return numFramesReady;
 }
 
+void STFTProcessor::interpolateBins(const float* input, int inputBins, float* output, int outputBins)
+{
+    // Linear interpolation from inputBins to outputBins
+    for (int i = 0; i < outputBins; ++i)
+    {
+        float srcPos = static_cast<float>(i) * (inputBins - 1) / (outputBins - 1);
+        int srcIdx = static_cast<int>(srcPos);
+        float frac = srcPos - srcIdx;
+
+        if (srcIdx >= inputBins - 1)
+        {
+            output[i] = input[inputBins - 1];
+        }
+        else
+        {
+            output[i] = input[srcIdx] * (1.0f - frac) + input[srcIdx + 1] * frac;
+        }
+    }
+}
+
+void STFTProcessor::decimateBins(const float* input, int inputBins, float* output, int outputBins)
+{
+    // Linear interpolation from inputBins to outputBins (downsampling)
+    for (int i = 0; i < outputBins; ++i)
+    {
+        float srcPos = static_cast<float>(i) * (inputBins - 1) / (outputBins - 1);
+        int srcIdx = static_cast<int>(srcPos);
+        float frac = srcPos - srcIdx;
+
+        if (srcIdx >= inputBins - 1)
+        {
+            output[i] = input[inputBins - 1];
+        }
+        else
+        {
+            output[i] = input[srcIdx] * (1.0f - frac) + input[srcIdx + 1] * frac;
+        }
+    }
+}
+
 void STFTProcessor::computeSTFTFrame(const float* frameData)
 {
     if (numFramesReady >= maxFrames)
-        return;  // Buffer full
+        return;
 
-    // Apply analysis window and prepare for FFT
-    for (int i = 0; i < N_FFT; ++i)
+    // Apply analysis window
+    for (int i = 0; i < currentFFTSize; ++i)
     {
         fftWorkBuffer[i] = frameData[i] * analysisWindow[i];
     }
 
-    // Zero pad the second half (for real FFT)
-    std::fill(fftWorkBuffer.begin() + N_FFT, fftWorkBuffer.end(), 0.0f);
+    // DEBUG: Store windowed frame for testing overlap-add without FFT
+    float* windowedPtr = windowedFrameBuffer.data() + numFramesReady * currentFFTSize;
+    std::memcpy(windowedPtr, fftWorkBuffer.data(), currentFFTSize * sizeof(float));
 
-    // Perform forward FFT
-    fft->performRealOnlyForwardTransform(fftWorkBuffer.data(), true);
+    for (int i = currentFFTSize; i < currentFFTSize * 2; ++i)
+    {
+        fftWorkBuffer[i] = 0.0f;
+    }
 
-    // Extract magnitude and phase
-    // JUCE FFT output: [real0, imag0, real1, imag1, ...]
-    // For real FFT: DC and Nyquist are real-only
+    // Forward FFT
+    fft->performRealOnlyForwardTransform(fftWorkBuffer.data());
+
+    // Extract magnitude and phase to temporary buffers
+    std::vector<float> tempMag(currentFreqBins);
+    std::vector<float> tempPhase(currentFreqBins);
+
+    // DC component
+    tempMag[0] = std::abs(fftWorkBuffer[0]);
+    tempPhase[0] = (fftWorkBuffer[0] >= 0) ? 0.0f : juce::MathConstants<float>::pi;
+
+    // Nyquist
+    tempMag[currentFreqBins - 1] = std::abs(fftWorkBuffer[1]);
+    tempPhase[currentFreqBins - 1] = (fftWorkBuffer[1] >= 0) ? 0.0f : juce::MathConstants<float>::pi;
+
+    // Other bins
+    for (int bin = 1; bin < currentFreqBins - 1; ++bin)
+    {
+        float real = fftWorkBuffer[bin * 2];
+        float imag = fftWorkBuffer[bin * 2 + 1];
+        tempMag[bin] = std::sqrt(real * real + imag * imag);
+        tempPhase[bin] = std::atan2(imag, real);
+    }
+
+    // Output pointers (always N_FREQ_BINS = 129)
     float* magPtr = magnitudeBuffer.data() + numFramesReady * N_FREQ_BINS;
     float* phasePtr = phaseBuffer.data() + numFramesReady * N_FREQ_BINS;
 
-    for (int bin = 0; bin < N_FREQ_BINS; ++bin)
+    // Interpolate if needed (low-latency mode: 65 bins -> 129 bins)
+    if (currentFreqBins != N_FREQ_BINS)
     {
-        float real, imag;
-
-        if (bin == 0)
-        {
-            // DC component
-            real = fftWorkBuffer[0];
-            imag = 0.0f;
-        }
-        else if (bin == N_FFT / 2)
-        {
-            // Nyquist component
-            real = fftWorkBuffer[1];
-            imag = 0.0f;
-        }
-        else
-        {
-            // Regular bins
-            real = fftWorkBuffer[bin * 2];
-            imag = fftWorkBuffer[bin * 2 + 1];
-        }
-
-        magPtr[bin] = std::sqrt(real * real + imag * imag);
-        phasePtr[bin] = std::atan2(imag, real);
+        interpolateBins(tempMag.data(), currentFreqBins, magPtr, N_FREQ_BINS);
+        interpolateBins(tempPhase.data(), currentFreqBins, phasePtr, N_FREQ_BINS);
+    }
+    else
+    {
+        std::memcpy(magPtr, tempMag.data(), N_FREQ_BINS * sizeof(float));
+        std::memcpy(phasePtr, tempPhase.data(), N_FREQ_BINS * sizeof(float));
     }
 
     numFramesReady++;
@@ -145,145 +226,124 @@ void STFTProcessor::computeSTFTFrame(const float* frameData)
 
 void STFTProcessor::applyMaskAndReconstruct(const float* mask, float* output, int numSamples)
 {
-    // Clear output
-    std::fill(output, output + numSamples, 0.0f);
+    // Temporary buffer for ISTFT output
+    std::vector<float> istftOutput(currentFFTSize);
 
-    if (numFramesReady == 0)
-        return;
-
-    // Process each frame
+    // Process each STFT frame: apply mask, IFFT, overlap-add
     for (int frame = 0; frame < numFramesReady; ++frame)
     {
         const float* magPtr = magnitudeBuffer.data() + frame * N_FREQ_BINS;
         const float* phasePtr = phaseBuffer.data() + frame * N_FREQ_BINS;
-        const float* maskPtr = mask + frame * N_FREQ_BINS;
 
-        // Apply mask to magnitude
-        std::vector<float> maskedMag(N_FREQ_BINS);
-        for (int bin = 0; bin < N_FREQ_BINS; ++bin)
+        // Get mask for this frame (or assume 1.0 if null)
+        const float* maskPtr = (mask != nullptr) ? mask + frame * N_FREQ_BINS : nullptr;
+
+        // Prepare magnitude and phase at correct resolution
+        std::vector<float> reconMag(currentFreqBins);
+        std::vector<float> reconPhase(currentFreqBins);
+
+        if (currentFreqBins != N_FREQ_BINS)
         {
-            maskedMag[bin] = magPtr[bin] * maskPtr[bin];
+            // Low-latency mode: decimate from 129 bins to 65 bins
+            decimateBins(magPtr, N_FREQ_BINS, reconMag.data(), currentFreqBins);
+            decimateBins(phasePtr, N_FREQ_BINS, reconPhase.data(), currentFreqBins);
+        }
+        else
+        {
+            std::memcpy(reconMag.data(), magPtr, currentFreqBins * sizeof(float));
+            std::memcpy(reconPhase.data(), phasePtr, currentFreqBins * sizeof(float));
         }
 
-        // Reconstruct complex spectrum
-        for (int bin = 0; bin < N_FREQ_BINS; ++bin)
+        // Apply mask to magnitude
+        if (maskPtr != nullptr)
         {
-            float mag = maskedMag[bin];
-            float phase = phasePtr[bin];
-            float real = mag * std::cos(phase);
-            float imag = mag * std::sin(phase);
-
-            if (bin == 0)
+            if (currentFreqBins != N_FREQ_BINS)
             {
-                fftWorkBuffer[0] = real;
-            }
-            else if (bin == N_FFT / 2)
-            {
-                fftWorkBuffer[1] = real;
+                // Decimate mask too
+                decimateBins(maskPtr, N_FREQ_BINS, decimatedMaskBuffer.data(), currentFreqBins);
+                for (int bin = 0; bin < currentFreqBins; ++bin)
+                    reconMag[bin] *= decimatedMaskBuffer[bin];
             }
             else
             {
-                fftWorkBuffer[bin * 2] = real;
-                fftWorkBuffer[bin * 2 + 1] = imag;
+                for (int bin = 0; bin < currentFreqBins; ++bin)
+                    reconMag[bin] *= maskPtr[bin];
             }
         }
+        // If mask is null, magnitude is unchanged (pass-through)
 
-        // Perform inverse FFT
-        fft->performRealOnlyInverseTransform(fftWorkBuffer.data());
+        // Compute ISTFT frame (synthesis window applied inside)
+        computeISTFTFrame(reconMag.data(), reconPhase.data(), istftOutput.data());
 
-        // Apply synthesis window and overlap-add
-        int frameStart = frame * HOP_LENGTH;
-        for (int i = 0; i < N_FFT; ++i)
+        // Overlap-add to circular buffer
+        for (int i = 0; i < currentFFTSize; ++i)
         {
-            int outIdx = frameStart + i;
-            if (outIdx < static_cast<int>(overlapAddBuffer.size()))
-            {
-                overlapAddBuffer[outIdx] += fftWorkBuffer[i] * synthesisWindow[i];
-            }
+            int outIdx = (outputWritePos + i) % outputBuffer.size();
+            outputBuffer[outIdx] += istftOutput[i];
         }
+        outputWritePos = (outputWritePos + currentHopLength) % outputBuffer.size();
     }
 
-    // Normalize and copy to output
-    // Compute window normalization factor
-    static std::vector<float> windowNorm;
-    if (windowNorm.empty() || static_cast<int>(windowNorm.size()) < numSamples + N_FFT)
-    {
-        windowNorm.resize(numSamples + N_FFT * 2, 0.0f);
-        std::fill(windowNorm.begin(), windowNorm.end(), 0.0f);
-
-        int totalFrames = (numSamples + N_FFT) / HOP_LENGTH + 1;
-        for (int frame = 0; frame < totalFrames; ++frame)
-        {
-            int frameStart = frame * HOP_LENGTH;
-            for (int i = 0; i < N_FFT; ++i)
-            {
-                int idx = frameStart + i;
-                if (idx < static_cast<int>(windowNorm.size()))
-                {
-                    float w = synthesisWindow[i];
-                    windowNorm[idx] += w * w;
-                }
-            }
-        }
-
-        // Avoid division by zero
-        for (auto& v : windowNorm)
-        {
-            if (v < 1e-8f) v = 1e-8f;
-        }
-    }
-
-    // Copy normalized output
+    // Read from circular buffer
     for (int i = 0; i < numSamples; ++i)
     {
-        int idx = overlapAddReadPos + i;
-        if (idx < static_cast<int>(overlapAddBuffer.size()) && i < static_cast<int>(windowNorm.size()))
-        {
-            output[i] = overlapAddBuffer[idx] / windowNorm[i];
-        }
+        int readIdx = (outputReadPos + i) % outputBuffer.size();
+        float sample = outputBuffer[readIdx];
+
+        if (std::isnan(sample) || std::isinf(sample))
+            sample = 0.0f;
+        else
+            sample = std::clamp(sample, -10.0f, 10.0f);
+
+        output[i] = sample;
+        outputBuffer[readIdx] = 0.0f;  // Clear after reading
     }
 
-    // Shift overlap-add buffer
-    int shift = numSamples;
-    if (shift > 0 && shift < static_cast<int>(overlapAddBuffer.size()))
+    outputReadPos = (outputReadPos + numSamples) % outputBuffer.size();
+}
+
+void STFTProcessor::readOutput(float* output, int numSamples)
+{
+    // Read from circular output buffer (for when no frames were processed)
+    for (int i = 0; i < numSamples; ++i)
     {
-        std::memmove(overlapAddBuffer.data(),
-                    overlapAddBuffer.data() + shift,
-                    (overlapAddBuffer.size() - shift) * sizeof(float));
-        std::fill(overlapAddBuffer.end() - shift, overlapAddBuffer.end(), 0.0f);
+        int readIdx = (outputReadPos + i) % outputBuffer.size();
+        float sample = outputBuffer[readIdx];
+
+        if (std::isnan(sample) || std::isinf(sample))
+            sample = 0.0f;
+        else
+            sample = std::clamp(sample, -10.0f, 10.0f);
+
+        output[i] = sample;
+        outputBuffer[readIdx] = 0.0f;  // Clear after reading
     }
+
+    outputReadPos = (outputReadPos + numSamples) % outputBuffer.size();
 }
 
 void STFTProcessor::computeISTFTFrame(const float* magnitude, const float* phase, float* output)
 {
-    // Reconstruct complex spectrum
-    for (int bin = 0; bin < N_FREQ_BINS; ++bin)
-    {
-        float mag = magnitude[bin];
-        float ph = phase[bin];
-        float real = mag * std::cos(ph);
-        float imag = mag * std::sin(ph);
+    // Clear work buffer
+    std::fill(fftWorkBuffer.begin(), fftWorkBuffer.end(), 0.0f);
 
-        if (bin == 0)
-        {
-            fftWorkBuffer[0] = real;
-        }
-        else if (bin == N_FFT / 2)
-        {
-            fftWorkBuffer[1] = real;
-        }
-        else
-        {
-            fftWorkBuffer[bin * 2] = real;
-            fftWorkBuffer[bin * 2 + 1] = imag;
-        }
+    // DC
+    fftWorkBuffer[0] = magnitude[0] * std::cos(phase[0]);
+
+    // Nyquist
+    fftWorkBuffer[1] = magnitude[currentFreqBins - 1] * std::cos(phase[currentFreqBins - 1]);
+
+    // Other bins
+    for (int bin = 1; bin < currentFreqBins - 1; ++bin)
+    {
+        fftWorkBuffer[bin * 2] = magnitude[bin] * std::cos(phase[bin]);
+        fftWorkBuffer[bin * 2 + 1] = magnitude[bin] * std::sin(phase[bin]);
     }
 
-    // Perform inverse FFT
     fft->performRealOnlyInverseTransform(fftWorkBuffer.data());
 
-    // Apply synthesis window
-    for (int i = 0; i < N_FFT; ++i)
+    // Apply synthesis window (JUCE FFT handles normalization internally)
+    for (int i = 0; i < currentFFTSize; ++i)
     {
         output[i] = fftWorkBuffer[i] * synthesisWindow[i];
     }

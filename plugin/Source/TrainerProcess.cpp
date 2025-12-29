@@ -96,13 +96,35 @@ juce::String TrainerProcess::findTrainerExecutable()
     juce::File pluginDir = juce::File::getSpecialLocation(
         juce::File::currentExecutableFile).getParentDirectory();
 
+    // For macOS app bundles: /path/to/DeBleed.app/Contents/MacOS/
+    // Go up to find the project root
+    juce::File appBundle = pluginDir.getParentDirectory().getParentDirectory();  // .app bundle
+    juce::File buildDir = appBundle.getParentDirectory();  // Debug or Release
+    juce::File projectRoot = buildDir.getParentDirectory()  // build
+                                     .getParentDirectory()   // MacOSX
+                                     .getParentDirectory()   // Builds
+                                     .getParentDirectory();  // DeBleed project root
+
     // Check various locations
     juce::StringArray searchPaths = {
+        // Development paths (relative to project root)
+        projectRoot.getChildFile("python/trainer.py").getFullPathName(),
+
+        // App bundle Resources folder
+        appBundle.getChildFile("Contents/Resources/trainer.py").getFullPathName(),
+        appBundle.getChildFile("Contents/Resources/python/trainer.py").getFullPathName(),
+
+        // User Application Support (for installed trainer)
+        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+            .getChildFile("DeBleed/trainer.py").getFullPathName(),
+        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+            .getChildFile("DeBleed/python/trainer.py").getFullPathName(),
+
+        // Legacy paths
         pluginDir.getChildFile("trainer").getFullPathName(),
-        pluginDir.getChildFile("trainer.exe").getFullPathName(),
-        pluginDir.getChildFile("Resources/trainer").getFullPathName(),
-        pluginDir.getParentDirectory().getChildFile("Resources/trainer").getFullPathName(),
-        pluginDir.getChildFile("../python/trainer.py").getFullPathName(),
+        pluginDir.getChildFile("trainer.py").getFullPathName(),
+        pluginDir.getChildFile("Resources/trainer.py").getFullPathName(),
+        pluginDir.getParentDirectory().getChildFile("Resources/trainer.py").getFullPathName(),
     };
 
     for (const auto& path : searchPaths)
@@ -110,17 +132,6 @@ juce::String TrainerProcess::findTrainerExecutable()
         juce::File f(path);
         if (f.existsAsFile())
             return path;
-    }
-
-    // Fall back to system Python with trainer.py
-    // Try to find the trainer.py script
-    juce::File scriptFile = pluginDir.getParentDirectory()
-                                      .getChildFile("python")
-                                      .getChildFile("trainer.py");
-
-    if (scriptFile.existsAsFile())
-    {
-        return scriptFile.getFullPathName();
     }
 
     return {};
@@ -140,11 +151,31 @@ juce::StringArray TrainerProcess::buildCommandLine()
     // Check if it's a Python script or compiled executable
     if (executable.endsWith(".py"))
     {
-        // Use Python interpreter
+        // Use Python interpreter with unbuffered output
 #ifdef _WIN32
         args.add("python");
+        args.add("-u");  // Unbuffered stdout/stderr
 #else
-        args.add("python3");
+        // Try to find python3 - check common locations
+        juce::StringArray pythonPaths = {
+            "/usr/bin/python3",
+            "/usr/local/bin/python3",
+            "/opt/homebrew/bin/python3",
+            "python3"  // Fallback to PATH
+        };
+
+        juce::String pythonExe = "python3";
+        for (const auto& path : pythonPaths)
+        {
+            if (juce::File(path).existsAsFile())
+            {
+                pythonExe = path;
+                break;
+            }
+        }
+
+        args.add(pythonExe);
+        args.add("-u");  // Unbuffered stdout/stderr
 #endif
         args.add(executable);
     }

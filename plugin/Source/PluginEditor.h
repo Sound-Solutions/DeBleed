@@ -36,9 +36,12 @@ public:
 
 private:
     void startTraining();
+    void startTrainingWithName(const juce::String& modelName);
+    void loadModel();
     void onTrainingProgress(int progress, const juce::String& status);
     void onTrainingComplete(bool success, const juce::String& modelPath, const juce::String& error);
     void updateModelStatus();
+    void updateLatencyLabel();
 
     DeBleedAudioProcessor& audioProcessor;
 
@@ -52,6 +55,7 @@ private:
     // Training controls
     juce::ProgressBar progressBar;
     juce::TextButton trainButton;
+    juce::TextButton loadModelButton;
     juce::Label statusLabel;
     double progressValue = 0.0;
 
@@ -61,6 +65,8 @@ private:
     juce::Slider mixSlider;
     juce::Label mixLabel;
     juce::ToggleButton bypassButton;
+    juce::ToggleButton lowLatencyButton;
+    juce::Label latencyLabel;
 
     // Model status
     juce::Label modelStatusLabel;
@@ -69,6 +75,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> strengthAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lowLatencyAttachment;
 
     // Training log
     juce::TextEditor logTextBox;

@@ -18,13 +18,26 @@
 class STFTProcessor
 {
 public:
-    static constexpr int N_FFT = 256;
-    static constexpr int HOP_LENGTH = 128;
-    static constexpr int WIN_LENGTH = 256;
-    static constexpr int N_FREQ_BINS = N_FFT / 2 + 1;  // 129
+    // Fixed output bins for neural network compatibility
+    static constexpr int N_FREQ_BINS = 129;  // Always 129 for neural net
+
+    // Configurable FFT sizes
+    enum class Mode { Quality, LowLatency };
+
+    // Quality mode: FFT=256, ~5.3ms latency
+    static constexpr int N_FFT_QUALITY = 256;
+    static constexpr int HOP_QUALITY = 128;
+
+    // Low latency mode: FFT=128, ~2.7ms latency
+    static constexpr int N_FFT_LOW_LATENCY = 128;
+    static constexpr int HOP_LOW_LATENCY = 64;
 
     STFTProcessor();
     ~STFTProcessor() = default;
+
+    /** Set the processing mode (must call before prepare) */
+    void setMode(Mode newMode) { mode = newMode; }
+    Mode getMode() const { return mode; }
 
     /** Prepare the processor for a given sample rate and block size. */
     void prepare(double sampleRate, int maxBlockSize);
@@ -61,10 +74,29 @@ public:
      */
     void applyMaskAndReconstruct(const float* mask, float* output, int numSamples);
 
+    /**
+     * Read pending output samples without processing new frames.
+     * Call this when numFrames is 0 to get the tail of the overlap-add.
+     */
+    void readOutput(float* output, int numSamples);
+
     /** Get the latency in samples introduced by STFT processing. */
-    int getLatencySamples() const { return N_FFT; }
+    // One FFT window offset for overlap-add to complete before reading
+    int getLatencySamples() const { return currentFFTSize; }
+
+    /** Get current FFT size */
+    int getFFTSize() const { return currentFFTSize; }
+
+    /** Get current hop length */
+    int getHopLength() const { return currentHopLength; }
 
 private:
+    // Mode
+    Mode mode = Mode::Quality;
+    int currentFFTSize = N_FFT_QUALITY;
+    int currentHopLength = HOP_QUALITY;
+    int currentFreqBins = N_FFT_QUALITY / 2 + 1;  // Actual bins from FFT
+
     // FFT
     std::unique_ptr<juce::dsp::FFT> fft;
     int fftOrder;
@@ -83,9 +115,11 @@ private:
     int numFramesReady = 0;
     int maxFrames = 0;
 
-    // Overlap-add buffers for reconstruction
-    std::vector<float> overlapAddBuffer;
-    int overlapAddReadPos = 0;
+    // Overlap-add output buffer (circular, persistent between blocks)
+    std::vector<float> outputBuffer;
+    int outputReadPos = 0;
+    int outputWritePos = 0;
+    float colaSum = 1.5f;  // COLA normalization factor
 
     // Temporary FFT buffers
     std::vector<std::complex<float>> fftBuffer;
@@ -98,6 +132,16 @@ private:
     void computeSTFTFrame(const float* frameData);
     void computeISTFTFrame(const float* magnitude, const float* phase, float* output);
     void createWindow();
+    void interpolateBins(const float* input, int inputBins, float* output, int outputBins);
+    void decimateBins(const float* input, int inputBins, float* output, int outputBins);
+
+    // Interpolation buffer for low-latency mode
+    std::vector<float> interpMagBuffer;
+    std::vector<float> interpPhaseBuffer;
+    std::vector<float> decimatedMaskBuffer;
+
+    // DEBUG: Store windowed frames for testing overlap-add without FFT
+    std::vector<float> windowedFrameBuffer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(STFTProcessor)
 };
