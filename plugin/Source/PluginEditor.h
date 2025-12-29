@@ -3,6 +3,8 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "AudioDropZone.h"
+#include "SpectrogramVisualization.h"
+#include "GainReductionMeter.h"
 
 /**
  * DeBleedAudioProcessorEditor - GUI for the DeBleed Neural Gate plugin.
@@ -59,7 +61,11 @@ private:
     juce::Label statusLabel;
     double progressValue = 0.0;
 
-    // Parameter controls
+    // Visualization components
+    std::unique_ptr<SpectrogramVisualization> spectrogramView;
+    std::unique_ptr<GainReductionMeter> gainReductionMeter;
+
+    // Parameter controls - existing
     juce::Slider strengthSlider;
     juce::Label strengthLabel;
     juce::Slider mixSlider;
@@ -68,14 +74,36 @@ private:
     juce::ToggleButton lowLatencyButton;
     juce::Label latencyLabel;
 
+    // Parameter controls - new
+    juce::Slider attackSlider;
+    juce::Label attackLabel;
+    juce::Slider releaseSlider;
+    juce::Label releaseLabel;
+    juce::Slider freqLowSlider;
+    juce::Label freqLowLabel;
+    juce::Slider freqHighSlider;
+    juce::Label freqHighLabel;
+    juce::Slider thresholdSlider;
+    juce::Label thresholdLabel;
+    juce::Slider floorSlider;
+    juce::Label floorLabel;
+
     // Model status
     juce::Label modelStatusLabel;
 
-    // Parameter attachments
+    // Parameter attachments - existing
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> strengthAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lowLatencyAttachment;
+
+    // Parameter attachments - new
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqLowAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqHighAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> floorAttachment;
 
     // Training log
     juce::TextEditor logTextBox;

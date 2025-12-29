@@ -73,6 +73,56 @@ public:
     static const juce::String PARAM_MIX;
     static const juce::String PARAM_BYPASS;
     static const juce::String PARAM_LOW_LATENCY;
+    static const juce::String PARAM_ATTACK;
+    static const juce::String PARAM_RELEASE;
+    static const juce::String PARAM_FREQ_LOW;
+    static const juce::String PARAM_FREQ_HIGH;
+    static const juce::String PARAM_THRESHOLD;
+    static const juce::String PARAM_FLOOR;
+
+    // Visualization data for thread-safe audio->GUI transfer
+    struct VisualizationData
+    {
+        static constexpr int N_FREQ_BINS = 129;
+        static constexpr int FIFO_SIZE = 64;
+
+        struct FrameData
+        {
+            std::array<float, N_FREQ_BINS> magnitude{};
+            std::array<float, N_FREQ_BINS> mask{};
+        };
+
+        juce::AbstractFifo fifo{FIFO_SIZE};
+        std::array<FrameData, FIFO_SIZE> frameBuffer;
+        std::atomic<float> averageGainReductionDb{0.0f};
+
+        void pushFrame(const float* mag, const float* msk)
+        {
+            int start1, size1, start2, size2;
+            fifo.prepareToWrite(1, start1, size1, start2, size2);
+            if (size1 > 0)
+            {
+                std::memcpy(frameBuffer[start1].magnitude.data(), mag, N_FREQ_BINS * sizeof(float));
+                std::memcpy(frameBuffer[start1].mask.data(), msk, N_FREQ_BINS * sizeof(float));
+                fifo.finishedWrite(1);
+            }
+        }
+
+        bool popFrame(FrameData& out)
+        {
+            int start1, size1, start2, size2;
+            fifo.prepareToRead(1, start1, size1, start2, size2);
+            if (size1 > 0)
+            {
+                out = frameBuffer[start1];
+                fifo.finishedRead(1);
+                return true;
+            }
+            return false;
+        }
+    };
+
+    VisualizationData& getVisualizationData() { return visualizationData; }
 
 private:
     // Create parameter layout
@@ -87,6 +137,20 @@ private:
     std::atomic<bool> bypassed{false};
     std::atomic<bool> lowLatency{false};
     std::atomic<bool> needsReinit{false};
+
+    // New parameters
+    std::atomic<float> attackMs{10.0f};
+    std::atomic<float> releaseMs{500.0f};
+    std::atomic<float> freqLowHz{20.0f};
+    std::atomic<float> freqHighHz{20000.0f};
+    std::atomic<float> threshold{0.0f};
+    std::atomic<float> floorDb{-60.0f};
+
+    // Visualization data
+    VisualizationData visualizationData;
+
+    // Helper to convert frequency to bin index
+    int freqToBin(float freqHz) const;
 
     // Audio processing components
     NeuralGateEngine neuralEngine;
@@ -123,8 +187,6 @@ private:
 
     // Mask smoothing (like Waves PSE / Shure 5045)
     std::vector<float> smoothedMask;
-    static constexpr float MASK_SMOOTHING_ATTACK = 0.3f;   // Fast attack (30% per frame ~10ms)
-    static constexpr float MASK_SMOOTHING_RELEASE = 0.005f; // Very slow release (0.5% per frame ~500ms)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessor)
 };

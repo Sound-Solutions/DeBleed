@@ -38,6 +38,14 @@
             file="plugin/Source/AudioDropZone.cpp"/>
       <FILE id="AudioDropZone_h" name="AudioDropZone.h" compile="0" resource="0"
             file="plugin/Source/AudioDropZone.h"/>
+      <FILE id="SpectrogramVisualization_cpp" name="SpectrogramVisualization.cpp" compile="1" resource="0"
+            file="plugin/Source/SpectrogramVisualization.cpp"/>
+      <FILE id="SpectrogramVisualization_h" name="SpectrogramVisualization.h" compile="0" resource="0"
+            file="plugin/Source/SpectrogramVisualization.h"/>
+      <FILE id="GainReductionMeter_cpp" name="GainReductionMeter.cpp" compile="1" resource="0"
+            file="plugin/Source/GainReductionMeter.cpp"/>
+      <FILE id="GainReductionMeter_h" name="GainReductionMeter.h" compile="0" resource="0"
+            file="plugin/Source/GainReductionMeter.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

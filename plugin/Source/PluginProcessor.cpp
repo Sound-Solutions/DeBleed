@@ -8,6 +8,12 @@ const juce::String DeBleedAudioProcessor::PARAM_STRENGTH = "strength";
 const juce::String DeBleedAudioProcessor::PARAM_MIX = "mix";
 const juce::String DeBleedAudioProcessor::PARAM_BYPASS = "bypass";
 const juce::String DeBleedAudioProcessor::PARAM_LOW_LATENCY = "lowLatency";
+const juce::String DeBleedAudioProcessor::PARAM_ATTACK = "attack";
+const juce::String DeBleedAudioProcessor::PARAM_RELEASE = "release";
+const juce::String DeBleedAudioProcessor::PARAM_FREQ_LOW = "freqLow";
+const juce::String DeBleedAudioProcessor::PARAM_FREQ_HIGH = "freqHigh";
+const juce::String DeBleedAudioProcessor::PARAM_THRESHOLD = "threshold";
+const juce::String DeBleedAudioProcessor::PARAM_FLOOR = "floor";
 
 DeBleedAudioProcessor::DeBleedAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -20,12 +26,24 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     parameters.addParameterListener(PARAM_MIX, this);
     parameters.addParameterListener(PARAM_BYPASS, this);
     parameters.addParameterListener(PARAM_LOW_LATENCY, this);
+    parameters.addParameterListener(PARAM_ATTACK, this);
+    parameters.addParameterListener(PARAM_RELEASE, this);
+    parameters.addParameterListener(PARAM_FREQ_LOW, this);
+    parameters.addParameterListener(PARAM_FREQ_HIGH, this);
+    parameters.addParameterListener(PARAM_THRESHOLD, this);
+    parameters.addParameterListener(PARAM_FLOOR, this);
 
     // Initialize atomic values
     strength.store(*parameters.getRawParameterValue(PARAM_STRENGTH));
     mix.store(*parameters.getRawParameterValue(PARAM_MIX));
     bypassed.store(*parameters.getRawParameterValue(PARAM_BYPASS) > 0.5f);
     lowLatency.store(*parameters.getRawParameterValue(PARAM_LOW_LATENCY) > 0.5f);
+    attackMs.store(*parameters.getRawParameterValue(PARAM_ATTACK));
+    releaseMs.store(*parameters.getRawParameterValue(PARAM_RELEASE));
+    freqLowHz.store(*parameters.getRawParameterValue(PARAM_FREQ_LOW));
+    freqHighHz.store(*parameters.getRawParameterValue(PARAM_FREQ_HIGH));
+    threshold.store(*parameters.getRawParameterValue(PARAM_THRESHOLD));
+    floorDb.store(*parameters.getRawParameterValue(PARAM_FLOOR));
 }
 
 DeBleedAudioProcessor::~DeBleedAudioProcessor()
@@ -34,6 +52,12 @@ DeBleedAudioProcessor::~DeBleedAudioProcessor()
     parameters.removeParameterListener(PARAM_MIX, this);
     parameters.removeParameterListener(PARAM_BYPASS, this);
     parameters.removeParameterListener(PARAM_LOW_LATENCY, this);
+    parameters.removeParameterListener(PARAM_ATTACK, this);
+    parameters.removeParameterListener(PARAM_RELEASE, this);
+    parameters.removeParameterListener(PARAM_FREQ_LOW, this);
+    parameters.removeParameterListener(PARAM_FREQ_HIGH, this);
+    parameters.removeParameterListener(PARAM_THRESHOLD, this);
+    parameters.removeParameterListener(PARAM_FLOOR, this);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::createParameterLayout()
@@ -78,6 +102,86 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         false
     ));
 
+    // Attack time (ms) - how fast gate opens
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_ATTACK, 1},
+        "Attack",
+        juce::NormalisableRange<float>(0.1f, 100.0f, 0.1f, 0.5f),  // Skewed for finer control at low end
+        10.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + " ms"; },
+        nullptr
+    ));
+
+    // Release time (ms) - how fast gate closes
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_RELEASE, 1},
+        "Release",
+        juce::NormalisableRange<float>(10.0f, 2000.0f, 1.0f, 0.4f),  // Skewed for finer control at low end
+        500.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 0) + " ms"; },
+        nullptr
+    ));
+
+    // Frequency Low (Hz) - HPF sidechain, below this = pass-through
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_FREQ_LOW, 1},
+        "Freq Low",
+        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f),  // Log skew
+        20.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) {
+            return value >= 1000.0f
+                ? juce::String(value / 1000.0f, 1) + " kHz"
+                : juce::String(value, 0) + " Hz";
+        },
+        nullptr
+    ));
+
+    // Frequency High (Hz) - LPF sidechain, above this = pass-through
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_FREQ_HIGH, 1},
+        "Freq High",
+        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f),  // Log skew
+        20000.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) {
+            return value >= 1000.0f
+                ? juce::String(value / 1000.0f, 1) + " kHz"
+                : juce::String(value, 0) + " Hz";
+        },
+        nullptr
+    ));
+
+    // Threshold - input magnitude (dB) below this keeps gate closed
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_THRESHOLD, 1},
+        "Threshold",
+        juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f),
+        -80.0f,  // Default: effectively disabled (very low)
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + " dB"; },
+        nullptr
+    ));
+
+    // Range - depth of attenuation when gated (mask=0 gives this level)
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_FLOOR, 1},
+        "Range",
+        juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f),
+        -80.0f,  // Default: full attenuation when gated
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + " dB"; },
+        nullptr
+    ));
+
     return {params.begin(), params.end()};
 }
 
@@ -99,6 +203,25 @@ void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, fl
             needsReinit.store(true);
         }
     }
+    else if (parameterID == PARAM_ATTACK)
+        attackMs.store(newValue);
+    else if (parameterID == PARAM_RELEASE)
+        releaseMs.store(newValue);
+    else if (parameterID == PARAM_FREQ_LOW)
+        freqLowHz.store(newValue);
+    else if (parameterID == PARAM_FREQ_HIGH)
+        freqHighHz.store(newValue);
+    else if (parameterID == PARAM_THRESHOLD)
+        threshold.store(newValue);
+    else if (parameterID == PARAM_FLOOR)
+        floorDb.store(newValue);
+}
+
+int DeBleedAudioProcessor::freqToBin(float freqHz) const
+{
+    // Convert frequency to FFT bin index
+    float binFloat = freqHz * stftProcessor.getFFTSize() / static_cast<float>(TARGET_SAMPLE_RATE);
+    return std::clamp(static_cast<int>(binFloat), 0, STFTProcessor::N_FREQ_BINS - 1);
 }
 
 void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
@@ -273,8 +396,30 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         // Run neural network inference
         const float* nnMask = neuralEngine.process(magnitude, numFrames);
 
-        // Clamp mask to [0, 1] range, check for NaN/Inf, and apply temporal smoothing
-        // Smoothing prevents clicks by making mask changes gradual (like Waves PSE / Shure 5045)
+        // Get new parameter values
+        float currentAttackMs = attackMs.load();
+        float currentReleaseMs = releaseMs.load();
+        float currentFreqLow = freqLowHz.load();
+        float currentFreqHigh = freqHighHz.load();
+        float currentThresholdDb = threshold.load();  // Now in dB
+        float currentRangeLinear = juce::Decibels::decibelsToGain(floorDb.load());  // Range/floor
+
+        // Convert attack/release times to smoothing coefficients
+        // Based on hop time (~2.67ms at 128 hop, 48kHz)
+        float hopTimeMs = (stftProcessor.getHopLength() / static_cast<float>(TARGET_SAMPLE_RATE)) * 1000.0f;
+        float attackCoeff = 1.0f - std::exp(-hopTimeMs / currentAttackMs);
+        float releaseCoeff = 1.0f - std::exp(-hopTimeMs / currentReleaseMs);
+
+        // Calculate frequency bin range for sidechain focus
+        int lowBin = freqToBin(currentFreqLow);
+        int highBin = freqToBin(currentFreqHigh);
+        if (lowBin > highBin) std::swap(lowBin, highBin);  // Handle inverted range
+
+        // Accumulators for gain reduction meter
+        float totalReduction = 0.0f;
+        int reductionCount = 0;
+
+        // Clamp mask to [0, 1] range, check for NaN/Inf, apply new params and temporal smoothing
         for (int frame = 0; frame < numFrames; ++frame)
         {
             for (int bin = 0; bin < STFTProcessor::N_FREQ_BINS; ++bin)
@@ -288,14 +433,48 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 else
                     maskVal = std::clamp(maskVal, 0.0f, 1.0f);
 
+                // Apply frequency focus (sidechain HPF/LPF)
+                // Frequencies outside the range: gate stays closed (suppressed)
+                if (bin < lowBin || bin > highBin)
+                    maskVal = 0.0f;
+
+                // Apply threshold - if input magnitude below threshold dB, force gate closed
+                // This allows the gate to only respond when signal is loud enough
+                float magDb = 20.0f * std::log10f(std::max(magnitude[idx], 1e-10f));
+                if (magDb < currentThresholdDb)
+                    maskVal = 0.0f;
+
+                // Apply range - scale mask from [0,1] to [rangeLinear, 1.0]
+                // mask=0 gives rangeLinear (the "floor" of attenuation)
+                // mask=1 gives 1.0 (full signal)
+                maskVal = currentRangeLinear + maskVal * (1.0f - currentRangeLinear);
+
                 // Apply asymmetric smoothing (fast attack, slow release)
                 float smoothingCoeff = (maskVal > smoothedMask[bin])
-                    ? MASK_SMOOTHING_ATTACK   // Opening up (attack)
-                    : MASK_SMOOTHING_RELEASE; // Closing down (release)
+                    ? attackCoeff    // Opening up (attack)
+                    : releaseCoeff;  // Closing down (release)
 
                 smoothedMask[bin] += smoothingCoeff * (maskVal - smoothedMask[bin]);
                 transposedMask[idx] = smoothedMask[bin];
+
+                // Accumulate for gain reduction meter
+                totalReduction += smoothedMask[bin];
+                reductionCount++;
             }
+
+            // Push frame to visualization FIFO
+            visualizationData.pushFrame(
+                magnitude + frame * STFTProcessor::N_FREQ_BINS,
+                transposedMask.data() + frame * STFTProcessor::N_FREQ_BINS
+            );
+        }
+
+        // Update gain reduction meter (average mask -> dB)
+        if (reductionCount > 0)
+        {
+            float avgMask = totalReduction / static_cast<float>(reductionCount);
+            float reductionDb = juce::Decibels::gainToDecibels(avgMask);
+            visualizationData.averageGainReductionDb.store(reductionDb);
         }
 
         const float* mask = transposedMask.data();

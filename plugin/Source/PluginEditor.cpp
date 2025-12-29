@@ -106,7 +106,68 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     modelStatusLabel.setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(modelStatusLabel);
 
-    // Parameter attachments
+    // New parameter sliders - Attack
+    attackSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    attackSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 55, 20);
+    addAndMakeVisible(attackSlider);
+    attackLabel.setText("Attack", juce::dontSendNotification);
+    attackLabel.setFont(juce::Font(11.0f));
+    attackLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(attackLabel);
+
+    // Release
+    releaseSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    releaseSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 55, 20);
+    addAndMakeVisible(releaseSlider);
+    releaseLabel.setText("Release", juce::dontSendNotification);
+    releaseLabel.setFont(juce::Font(11.0f));
+    releaseLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(releaseLabel);
+
+    // Freq Low
+    freqLowSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    freqLowSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 55, 20);
+    addAndMakeVisible(freqLowSlider);
+    freqLowLabel.setText("Freq Lo", juce::dontSendNotification);
+    freqLowLabel.setFont(juce::Font(11.0f));
+    freqLowLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(freqLowLabel);
+
+    // Freq High
+    freqHighSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    freqHighSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 55, 20);
+    addAndMakeVisible(freqHighSlider);
+    freqHighLabel.setText("Freq Hi", juce::dontSendNotification);
+    freqHighLabel.setFont(juce::Font(11.0f));
+    freqHighLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(freqHighLabel);
+
+    // Threshold
+    thresholdSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    thresholdSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 55, 20);
+    addAndMakeVisible(thresholdSlider);
+    thresholdLabel.setText("Threshold", juce::dontSendNotification);
+    thresholdLabel.setFont(juce::Font(11.0f));
+    thresholdLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(thresholdLabel);
+
+    // Range (depth of attenuation when gated)
+    floorSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    floorSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 55, 20);
+    addAndMakeVisible(floorSlider);
+    floorLabel.setText("Range", juce::dontSendNotification);
+    floorLabel.setFont(juce::Font(11.0f));
+    floorLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(floorLabel);
+
+    // Visualization components
+    spectrogramView = std::make_unique<SpectrogramVisualization>(audioProcessor);
+    addAndMakeVisible(spectrogramView.get());
+
+    gainReductionMeter = std::make_unique<GainReductionMeter>();
+    addAndMakeVisible(gainReductionMeter.get());
+
+    // Parameter attachments - existing
     strengthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_STRENGTH, strengthSlider);
     mixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -115,6 +176,20 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_BYPASS, bypassButton);
     lowLatencyAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LOW_LATENCY, lowLatencyButton);
+
+    // Parameter attachments - new
+    attackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_ATTACK, attackSlider);
+    releaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_RELEASE, releaseSlider);
+    freqLowAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_FREQ_LOW, freqLowSlider);
+    freqHighAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_FREQ_HIGH, freqHighSlider);
+    thresholdAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_THRESHOLD, thresholdSlider);
+    floorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_FLOOR, floorSlider);
 
     // Log text box (hidden by default)
     logTextBox.setMultiLine(true);
@@ -150,8 +225,8 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     // Start timer for UI updates
     startTimer(100);
 
-    // Set size
-    setSize(500, 400);
+    // Set size (expanded for visualization and new params)
+    setSize(600, 580);
 }
 
 DeBleedAudioProcessorEditor::~DeBleedAudioProcessorEditor()
@@ -194,58 +269,94 @@ void DeBleedAudioProcessorEditor::resized()
     auto bounds = getLocalBounds().reduced(15);
 
     // Title
-    titleLabel.setBounds(bounds.removeFromTop(40));
+    titleLabel.setBounds(bounds.removeFromTop(35));
 
-    bounds.removeFromTop(15);
+    bounds.removeFromTop(10);
 
     // Drop zones (side by side)
-    auto dropZoneArea = bounds.removeFromTop(120);
+    auto dropZoneArea = bounds.removeFromTop(100);
     int dropZoneWidth = (dropZoneArea.getWidth() - 15) / 2;
 
     cleanDropZone.setBounds(dropZoneArea.removeFromLeft(dropZoneWidth));
-    dropZoneArea.removeFromLeft(15);  // Gap
+    dropZoneArea.removeFromLeft(15);
     noiseDropZone.setBounds(dropZoneArea);
+
+    bounds.removeFromTop(10);
+
+    // Progress and training
+    progressBar.setBounds(bounds.removeFromTop(18));
+    bounds.removeFromTop(8);
+
+    auto trainRow = bounds.removeFromTop(28);
+    trainButton.setBounds(trainRow.removeFromLeft(110));
+    trainRow.removeFromLeft(8);
+    loadModelButton.setBounds(trainRow.removeFromLeft(95));
+    trainRow.removeFromLeft(8);
+    statusLabel.setBounds(trainRow);
+
+    bounds.removeFromTop(12);
+
+    // Visualization area
+    auto vizArea = bounds.removeFromTop(130);
+    int meterWidth = 50;
+    spectrogramView->setBounds(vizArea.removeFromLeft(vizArea.getWidth() - meterWidth - 10));
+    vizArea.removeFromLeft(10);
+    gainReductionMeter->setBounds(vizArea);
 
     bounds.removeFromTop(15);
 
-    // Progress and training
-    progressBar.setBounds(bounds.removeFromTop(20));
-    bounds.removeFromTop(10);
+    // Parameter controls - 3 rows, 3 columns
+    int labelWidth = 55;
+    int sliderWidth = 120;
+    int columnWidth = labelWidth + sliderWidth + 10;
+    int rowHeight = 24;
+    int rowGap = 6;
 
-    auto trainRow = bounds.removeFromTop(30);
-    trainButton.setBounds(trainRow.removeFromLeft(120));
-    trainRow.removeFromLeft(10);
-    loadModelButton.setBounds(trainRow.removeFromLeft(100));
-    trainRow.removeFromLeft(10);
-    statusLabel.setBounds(trainRow);
+    // Row 1: Strength, Attack, Release
+    auto row1 = bounds.removeFromTop(rowHeight);
+    strengthLabel.setBounds(row1.removeFromLeft(labelWidth));
+    strengthSlider.setBounds(row1.removeFromLeft(sliderWidth));
+    row1.removeFromLeft(15);
+    attackLabel.setBounds(row1.removeFromLeft(labelWidth));
+    attackSlider.setBounds(row1.removeFromLeft(sliderWidth));
+    row1.removeFromLeft(15);
+    releaseLabel.setBounds(row1.removeFromLeft(labelWidth));
+    releaseSlider.setBounds(row1.removeFromLeft(sliderWidth));
 
-    bounds.removeFromTop(20);
+    bounds.removeFromTop(rowGap);
 
-    // Parameter controls
-    auto controlArea = bounds.removeFromTop(80);
+    // Row 2: Threshold, Freq Lo, Freq Hi
+    auto row2 = bounds.removeFromTop(rowHeight);
+    thresholdLabel.setBounds(row2.removeFromLeft(labelWidth));
+    thresholdSlider.setBounds(row2.removeFromLeft(sliderWidth));
+    row2.removeFromLeft(15);
+    freqLowLabel.setBounds(row2.removeFromLeft(labelWidth));
+    freqLowSlider.setBounds(row2.removeFromLeft(sliderWidth));
+    row2.removeFromLeft(15);
+    freqHighLabel.setBounds(row2.removeFromLeft(labelWidth));
+    freqHighSlider.setBounds(row2.removeFromLeft(sliderWidth));
 
-    // Strength slider
-    auto strengthRow = controlArea.removeFromTop(30);
-    strengthRow.removeFromLeft(70);  // Label space
-    strengthSlider.setBounds(strengthRow.removeFromLeft(200));
+    bounds.removeFromTop(rowGap);
 
-    controlArea.removeFromTop(10);
+    // Row 3: Range only
+    auto row3 = bounds.removeFromTop(rowHeight);
+    floorLabel.setBounds(row3.removeFromLeft(labelWidth));
+    floorSlider.setBounds(row3.removeFromLeft(sliderWidth));
 
-    // Mix slider
-    auto mixRow = controlArea.removeFromTop(30);
-    mixRow.removeFromLeft(70);  // Label space
-    mixSlider.setBounds(mixRow.removeFromLeft(200));
-
-    bounds.removeFromTop(10);
+    bounds.removeFromTop(12);
 
     // Bottom row: bypass, low latency, latency display, and model status
     auto bottomRow = bounds.removeFromTop(25);
-    bypassButton.setBounds(bottomRow.removeFromLeft(90));
-    bottomRow.removeFromLeft(10);
-    lowLatencyButton.setBounds(bottomRow.removeFromLeft(100));
-    bottomRow.removeFromLeft(10);
-    latencyLabel.setBounds(bottomRow.removeFromLeft(80));
+    bypassButton.setBounds(bottomRow.removeFromLeft(80));
+    bottomRow.removeFromLeft(8);
+    lowLatencyButton.setBounds(bottomRow.removeFromLeft(95));
+    bottomRow.removeFromLeft(8);
+    latencyLabel.setBounds(bottomRow.removeFromLeft(70));
     modelStatusLabel.setBounds(bottomRow);
+
+    // Mix slider is removed from main UI (user said they don't need it)
+    mixSlider.setVisible(false);
+    mixLabel.setVisible(false);
 
     // Log (if shown)
     if (showLog && bounds.getHeight() > 50)
@@ -269,6 +380,17 @@ void DeBleedAudioProcessorEditor::timerCallback()
     {
         progressValue = trainer.getProgress() / 100.0;
         progressBar.repaint();
+    }
+
+    // Update visualization
+    if (spectrogramView)
+        spectrogramView->updateFromQueue();
+
+    if (gainReductionMeter)
+    {
+        float reductionDb = audioProcessor.getVisualizationData().averageGainReductionDb.load();
+        gainReductionMeter->setReductionLevel(reductionDb);
+        gainReductionMeter->repaint();
     }
 
     updateModelStatus();
