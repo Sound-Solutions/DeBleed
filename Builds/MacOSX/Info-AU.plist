@@ -8,7 +8,7 @@
     <key>CFBundleIconFile</key>
     <string></string>
     <key>CFBundleIdentifier</key>
-    <string>com.debleedaudio.debleed</string>
+    <string>com.soundsolutionsllc.debleed</string>
     <key>CFBundleName</key>
     <string>DeBleed</string>
     <key>CFBundleDisplayName</key>
@@ -29,15 +29,15 @@
     <array>
       <dict>
         <key>name</key>
-        <string>DeBleed Audio: DeBleed</string>
+        <string>Sound Solutions LLC: DeBleed</string>
         <key>description</key>
         <string>Neural Gate - Timbre-Aware Source Enhancer</string>
         <key>factoryFunction</key>
         <string>DeBleedAUFactory</string>
         <key>manufacturer</key>
-        <string>Dbld</string>
+        <string>SoSo</string>
         <key>type</key>
-        <string>aumf</string>
+        <string>aufx</string>
         <key>subtype</key>
         <string>Dbld</string>
         <key>version</key>

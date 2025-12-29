@@ -8,7 +8,7 @@
     <key>CFBundleIconFile</key>
     <string></string>
     <key>CFBundleIdentifier</key>
-    <string>com.debleedaudio.debleed</string>
+    <string>com.soundsolutionsllc.debleed</string>
     <key>CFBundleName</key>
     <string>DeBleed</string>
     <key>CFBundleDisplayName</key>
