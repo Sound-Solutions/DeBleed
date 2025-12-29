@@ -1,0 +1,49 @@
+# Build outputs
+Builds/MacOSX/build/
+*.a
+*.o
+*.dylib
+
+# Xcode
+*.xcuserstate
+*.xcworkspace
+xcuserdata/
+DerivedData/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.venv/
+venv/
+ENV/
+
+# Model outputs (generated during training)
+python/models/
+*.onnx
+*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Test outputs
+python/test_*/
+
+# Local ONNX Runtime (user downloads separately)
+# onnxruntime is in ~/onnxruntime, not in repo

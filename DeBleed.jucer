@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="DeBleed1" name="DeBleed" projectType="audioplug" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="1.0.0"
+              companyName="DeBleed Audio" companyWebsite="" companyEmail=""
+              pluginFormats="buildAU,buildStandalone,buildVST3" pluginCharacteristicsValue="pluginWantsMidiIn"
+              pluginName="DeBleed" pluginDesc="Neural Gate - Timbre-Aware Source Enhancer"
+              pluginManufacturer="DeBleed Audio" pluginManufacturerCode="Dbld"
+              pluginCode="Dbld" pluginChannelConfigs="{1,1},{2,2}" pluginIsSynth="0"
+              pluginWantsMidiIn="0" pluginProducesMidiOut="0" pluginIsMidiEffectPlugin="0"
+              pluginEditorRequiresKeys="0" pluginAUExportPrefix="DeBleedAU"
+              aaxIdentifier="com.debleedaudio.debleed" pluginAAXCategory="0"
+              cppLanguageStandard="17" displaySplashScreen="0" reportAppUsage="0"
+              splashScreenColour="Dark" bundleIdentifier="com.debleedaudio.debleed">
+  <MAINGROUP id="MainGroup" name="DeBleed">
+    <GROUP id="SourceGroup" name="Source">
+      <FILE id="PluginProcessor_cpp" name="PluginProcessor.cpp" compile="1"
+            resource="0" file="plugin/Source/PluginProcessor.cpp"/>
+      <FILE id="PluginProcessor_h" name="PluginProcessor.h" compile="0" resource="0"
+            file="plugin/Source/PluginProcessor.h"/>
+      <FILE id="PluginEditor_cpp" name="PluginEditor.cpp" compile="1" resource="0"
+            file="plugin/Source/PluginEditor.cpp"/>
+      <FILE id="PluginEditor_h" name="PluginEditor.h" compile="0" resource="0"
+            file="plugin/Source/PluginEditor.h"/>
+      <FILE id="NeuralGateEngine_cpp" name="NeuralGateEngine.cpp" compile="1"
+            resource="0" file="plugin/Source/NeuralGateEngine.cpp"/>
+      <FILE id="NeuralGateEngine_h" name="NeuralGateEngine.h" compile="0"
+            resource="0" file="plugin/Source/NeuralGateEngine.h"/>
+      <FILE id="STFTProcessor_cpp" name="STFTProcessor.cpp" compile="1" resource="0"
+            file="plugin/Source/STFTProcessor.cpp"/>
+      <FILE id="STFTProcessor_h" name="STFTProcessor.h" compile="0" resource="0"
+            file="plugin/Source/STFTProcessor.h"/>
+      <FILE id="TrainerProcess_cpp" name="TrainerProcess.cpp" compile="1"
+            resource="0" file="plugin/Source/TrainerProcess.cpp"/>
+      <FILE id="TrainerProcess_h" name="TrainerProcess.h" compile="0" resource="0"
+            file="plugin/Source/TrainerProcess.h"/>
+      <FILE id="AudioDropZone_cpp" name="AudioDropZone.cpp" compile="1" resource="0"
+            file="plugin/Source/AudioDropZone.cpp"/>
+      <FILE id="AudioDropZone_h" name="AudioDropZone.h" compile="0" resource="0"
+            file="plugin/Source/AudioDropZone.h"/>
+    </GROUP>
+  </MAINGROUP>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
+            useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors_headless" showAllCode="1" useLocalCopy="0"
+            useGlobalPath="1"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+  </MODULES>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"
+               JUCE_WEB_BROWSER="0" JUCE_USE_CURL="0"/>
+  <EXPORTFORMATS>
+    <XCODE_MAC targetFolder="Builds/MacOSX" xcodeValidArchs="arm64,x86_64"
+               extraLinkerFlags="-lonnxruntime" externalLibraries="onnxruntime">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="DeBleed" headerPath="$(HOME)/onnxruntime/include&#10;/usr/local/include"
+                       libraryPath="$(HOME)/onnxruntime/lib&#10;/usr/local/lib" osxArchitecture="Native"
+                       extraLinkerFlags="-lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="DeBleed" headerPath="$(HOME)/onnxruntime/include&#10;/usr/local/include"
+                       libraryPath="$(HOME)/onnxruntime/lib&#10;/usr/local/lib" osxArchitecture="Native"
+                       extraLinkerFlags="-lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors_headless" path="../../../../Applications/JUCE/modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
+  </EXPORTFORMATS>
+</JUCERPROJECT>
