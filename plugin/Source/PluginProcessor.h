@@ -4,6 +4,8 @@
 #include "NeuralGateEngine.h"
 #include "STFTProcessor.h"
 #include "TrainerProcess.h"
+#include "IIRFilterBank.h"
+#include "SidechainAnalyzer.h"
 
 /**
  * DeBleedAudioProcessor - Main audio processor for the DeBleed Neural Gate plugin.
@@ -75,8 +77,6 @@ public:
     static const juce::String PARAM_LOW_LATENCY;
     static const juce::String PARAM_ATTACK;
     static const juce::String PARAM_RELEASE;
-    static const juce::String PARAM_FREQ_LOW;
-    static const juce::String PARAM_FREQ_HIGH;
     static const juce::String PARAM_THRESHOLD;
     static const juce::String PARAM_FLOOR;
     static const juce::String PARAM_LIVE_MODE;
@@ -125,6 +125,11 @@ public:
 
     VisualizationData& getVisualizationData() { return visualizationData; }
 
+    // IIR band data for visualization
+    static constexpr int NUM_IIR_BANDS = 64;
+    const std::array<float, NUM_IIR_BANDS>& getIIRBandGains() const;
+    const std::array<float, NUM_IIR_BANDS>& getIIRCenterFrequencies() const;
+
 private:
     // Create parameter layout
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
@@ -142,8 +147,6 @@ private:
     // New parameters
     std::atomic<float> attackMs{10.0f};
     std::atomic<float> releaseMs{500.0f};
-    std::atomic<float> freqLowHz{20.0f};
-    std::atomic<float> freqHighHz{20000.0f};
     std::atomic<float> threshold{0.0f};
     std::atomic<float> floorDb{-60.0f};
 
@@ -153,9 +156,13 @@ private:
     // Helper to convert frequency to bin index
     int freqToBin(float freqHz) const;
 
-    // Audio processing components
+    // Audio processing components (legacy FFT-based - kept for compatibility)
     NeuralGateEngine neuralEngine;
     STFTProcessor stftProcessor;
+
+    // NEW: Zero-latency IIR-based processing
+    IIRFilterBank iirFilterBank;
+    SidechainAnalyzer sidechainAnalyzer;
 
     // Training process
     TrainerProcess trainerProcess;
@@ -188,6 +195,9 @@ private:
 
     // Mask smoothing (like Waves PSE / Shure 5045)
     std::vector<float> smoothedMask;
+
+    // Sidechain analysis buffer (copy of input for IIR mode)
+    std::vector<float> sidechainBuffer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessor)
 };

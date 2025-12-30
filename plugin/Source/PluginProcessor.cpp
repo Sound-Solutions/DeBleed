@@ -10,8 +10,6 @@ const juce::String DeBleedAudioProcessor::PARAM_BYPASS = "bypass";
 const juce::String DeBleedAudioProcessor::PARAM_LOW_LATENCY = "lowLatency";
 const juce::String DeBleedAudioProcessor::PARAM_ATTACK = "attack";
 const juce::String DeBleedAudioProcessor::PARAM_RELEASE = "release";
-const juce::String DeBleedAudioProcessor::PARAM_FREQ_LOW = "freqLow";
-const juce::String DeBleedAudioProcessor::PARAM_FREQ_HIGH = "freqHigh";
 const juce::String DeBleedAudioProcessor::PARAM_THRESHOLD = "threshold";
 const juce::String DeBleedAudioProcessor::PARAM_FLOOR = "floor";
 const juce::String DeBleedAudioProcessor::PARAM_LIVE_MODE = "liveMode";
@@ -29,8 +27,6 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     parameters.addParameterListener(PARAM_LOW_LATENCY, this);
     parameters.addParameterListener(PARAM_ATTACK, this);
     parameters.addParameterListener(PARAM_RELEASE, this);
-    parameters.addParameterListener(PARAM_FREQ_LOW, this);
-    parameters.addParameterListener(PARAM_FREQ_HIGH, this);
     parameters.addParameterListener(PARAM_THRESHOLD, this);
     parameters.addParameterListener(PARAM_FLOOR, this);
 
@@ -41,8 +37,6 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     lowLatency.store(*parameters.getRawParameterValue(PARAM_LOW_LATENCY) > 0.5f);
     attackMs.store(*parameters.getRawParameterValue(PARAM_ATTACK));
     releaseMs.store(*parameters.getRawParameterValue(PARAM_RELEASE));
-    freqLowHz.store(*parameters.getRawParameterValue(PARAM_FREQ_LOW));
-    freqHighHz.store(*parameters.getRawParameterValue(PARAM_FREQ_HIGH));
     threshold.store(*parameters.getRawParameterValue(PARAM_THRESHOLD));
     floorDb.store(*parameters.getRawParameterValue(PARAM_FLOOR));
 }
@@ -55,8 +49,6 @@ DeBleedAudioProcessor::~DeBleedAudioProcessor()
     parameters.removeParameterListener(PARAM_LOW_LATENCY, this);
     parameters.removeParameterListener(PARAM_ATTACK, this);
     parameters.removeParameterListener(PARAM_RELEASE, this);
-    parameters.removeParameterListener(PARAM_FREQ_LOW, this);
-    parameters.removeParameterListener(PARAM_FREQ_HIGH, this);
     parameters.removeParameterListener(PARAM_THRESHOLD, this);
     parameters.removeParameterListener(PARAM_FLOOR, this);
 }
@@ -127,38 +119,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         nullptr
     ));
 
-    // Frequency Low (Hz) - HPF sidechain, below this = pass-through
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_FREQ_LOW, 1},
-        "Freq Low",
-        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f),  // Log skew
-        20.0f,
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) {
-            return value >= 1000.0f
-                ? juce::String(value / 1000.0f, 1) + " kHz"
-                : juce::String(value, 0) + " Hz";
-        },
-        nullptr
-    ));
-
-    // Frequency High (Hz) - LPF sidechain, above this = pass-through
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_FREQ_HIGH, 1},
-        "Freq High",
-        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f),  // Log skew
-        20000.0f,
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) {
-            return value >= 1000.0f
-                ? juce::String(value / 1000.0f, 1) + " kHz"
-                : juce::String(value, 0) + " Hz";
-        },
-        nullptr
-    ));
-
     // Threshold - input magnitude (dB) below this keeps gate closed
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_THRESHOLD, 1},
@@ -215,10 +175,6 @@ void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, fl
         attackMs.store(newValue);
     else if (parameterID == PARAM_RELEASE)
         releaseMs.store(newValue);
-    else if (parameterID == PARAM_FREQ_LOW)
-        freqLowHz.store(newValue);
-    else if (parameterID == PARAM_FREQ_HIGH)
-        freqHighHz.store(newValue);
     else if (parameterID == PARAM_THRESHOLD)
         threshold.store(newValue);
     else if (parameterID == PARAM_FLOOR)
@@ -237,47 +193,49 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     currentSampleRate = sampleRate;
     currentBlockSize = samplesPerBlock;
 
-    // Check if we need to resample
+    // Check if we need to resample (for sidechain analysis)
     needsResampling = (std::abs(sampleRate - TARGET_SAMPLE_RATE) > 1.0);
     resampleRatio = TARGET_SAMPLE_RATE / sampleRate;
 
-    // Calculate resampled block size
+    // Calculate resampled block size for sidechain
     int resampledBlockSize = needsResampling
         ? static_cast<int>(std::ceil(samplesPerBlock * resampleRatio)) + 16
         : samplesPerBlock;
 
-    // Set STFT mode based on low latency parameter
-    stftProcessor.setMode(lowLatency.load() ? STFTProcessor::Mode::LowLatency : STFTProcessor::Mode::Quality);
+    // === NEW: IIR Filter Bank (Zero-Latency Audio Path) ===
+    iirFilterBank.prepare(sampleRate, samplesPerBlock);
 
-    // Prepare STFT processor at target sample rate
+    // === NEW: Sidechain Analyzer (Control Path) ===
+    sidechainAnalyzer.prepare(TARGET_SAMPLE_RATE, resampledBlockSize, iirFilterBank.getCenterFrequencies());
+
+    // Allocate sidechain buffer
+    sidechainBuffer.resize(resampledBlockSize, 0.0f);
+
+    // === LEGACY: Keep STFT/Neural for visualization and fallback ===
+    stftProcessor.setMode(lowLatency.load() ? STFTProcessor::Mode::LowLatency : STFTProcessor::Mode::Quality);
     stftProcessor.prepare(TARGET_SAMPLE_RATE, resampledBlockSize);
 
-    // Prepare neural engine with max frames we might need
     int hopLength = stftProcessor.getHopLength();
     int maxFrames = (resampledBlockSize / hopLength) + 8;
     neuralEngine.prepare(maxFrames);
 
-    // Allocate buffers
+    // Allocate buffers (kept for visualization)
     processBuffer.resize(resampledBlockSize * 2, 0.0f);
     maskBuffer.resize(STFTProcessor::N_FREQ_BINS * maxFrames, 1.0f);
-
-    // Allocate transpose buffers for neural network data layout conversion
     transposedMagnitude.resize(STFTProcessor::N_FREQ_BINS * maxFrames, 0.0f);
     transposedMask.resize(STFTProcessor::N_FREQ_BINS * maxFrames, 1.0f);
 
-    // Allocate smoothed mask buffer (one value per frequency bin, persists between blocks)
     if (smoothedMask.size() != STFTProcessor::N_FREQ_BINS)
     {
-        smoothedMask.resize(STFTProcessor::N_FREQ_BINS, 1.0f);  // Initialize to pass-through
+        smoothedMask.resize(STFTProcessor::N_FREQ_BINS, 1.0f);
     }
 
-    // Allocate resampling buffers and history
+    // Allocate resampling buffers for sidechain
     if (needsResampling)
     {
         resampledInput.resize(resampledBlockSize + 64, 0.0f);
         resampledOutput.resize(samplesPerBlock + 64, 0.0f);
 
-        // Initialize history buffers for resampler continuity
         inputHistory.resize(RESAMPLER_HISTORY_SIZE, 0.0f);
         outputHistory.resize(RESAMPLER_HISTORY_SIZE, 0.0f);
 
@@ -285,17 +243,16 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
         outputResampler.reset();
     }
 
-    // Set latency (account for resampling)
-    int latencySamples = stftProcessor.getLatencySamples();
-    if (needsResampling)
-    {
-        latencySamples = static_cast<int>(latencySamples / resampleRatio);
-    }
-    setLatencySamples(latencySamples);
+    // === ZERO LATENCY ===
+    // IIR filters are causal - no lookahead needed
+    // Only report minimal latency for filter group delay (~1-2 samples)
+    setLatencySamples(0);
 }
 
 void DeBleedAudioProcessor::releaseResources()
 {
+    iirFilterBank.reset();
+    sidechainAnalyzer.reset();
     stftProcessor.reset();
 }
 
@@ -318,23 +275,6 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 {
     juce::ScopedNoDenormals noDenormals;
 
-    // Check if we need to reinitialize due to mode change
-    if (needsReinit.exchange(false))
-    {
-        // Reinitialize with new mode
-        stftProcessor.setMode(lowLatency.load() ? STFTProcessor::Mode::LowLatency : STFTProcessor::Mode::Quality);
-        stftProcessor.prepare(TARGET_SAMPLE_RATE, currentBlockSize);
-        stftProcessor.reset();
-
-        // Update latency
-        int latencySamples = stftProcessor.getLatencySamples();
-        if (needsResampling)
-        {
-            latencySamples = static_cast<int>(latencySamples / resampleRatio);
-        }
-        setLatencySamples(latencySamples);
-    }
-
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     int numSamples = buffer.getNumSamples();
@@ -347,262 +287,133 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     if (bypassed.load())
         return;
 
-    // Check if model is loaded
-    if (!neuralEngine.isModelLoaded())
-        return;  // Pass through
+    // Check if model is loaded in sidechain analyzer
+    if (!sidechainAnalyzer.isModelLoaded())
+        return;  // Pass through (no processing)
 
     // Get parameter values
     float currentStrength = strength.load();
     float currentMix = mix.load();
 
-    // Early bypass if mix is 0% - skip all STFT processing
+    // Early bypass if mix is 0%
     if (currentMix < 0.001f)
         return;
 
     const float* inputData = buffer.getReadPointer(0);
 
-    // Keep a copy of the dry signal
+    // Keep a copy of the dry signal for mix
     std::vector<float> drySignal(inputData, inputData + numSamples);
 
-    // Prepare data for processing (resample if needed)
-    const float* processInput = inputData;
-    int processNumSamples = numSamples;
+    // === SIDECHAIN ANALYSIS (Control Path) ===
+    // Prepare data for sidechain (resample to 48kHz if needed)
+    const float* analysisInput = inputData;
+    int analysisNumSamples = numSamples;
 
     if (needsResampling)
     {
-        // Downsample input to 48kHz with history for continuity
-        processNumSamples = static_cast<int>(numSamples * resampleRatio);
-        resampledInput.resize(processNumSamples + 16);
+        analysisNumSamples = static_cast<int>(numSamples * resampleRatio);
+        sidechainBuffer.resize(analysisNumSamples + 16);
 
-        // Create temporary buffer with history prepended for resampler look-back
         std::vector<float> inputWithHistory(RESAMPLER_HISTORY_SIZE + numSamples);
         std::memcpy(inputWithHistory.data(), inputHistory.data(), RESAMPLER_HISTORY_SIZE * sizeof(float));
         std::memcpy(inputWithHistory.data() + RESAMPLER_HISTORY_SIZE, inputData, numSamples * sizeof(float));
 
-        // Process starting after history (resampler can look back into history)
         inputResampler.process(1.0 / resampleRatio,
                                inputWithHistory.data() + RESAMPLER_HISTORY_SIZE,
-                               resampledInput.data(),
-                               processNumSamples);
+                               sidechainBuffer.data(),
+                               analysisNumSamples);
 
-        // Update history with last samples from current input
         int historyStart = numSamples - RESAMPLER_HISTORY_SIZE;
         if (historyStart >= 0)
             std::memcpy(inputHistory.data(), inputData + historyStart, RESAMPLER_HISTORY_SIZE * sizeof(float));
 
-        processInput = resampledInput.data();
+        analysisInput = sidechainBuffer.data();
     }
 
-    // Process through STFT
-    int numFrames = stftProcessor.processBlock(processInput, processNumSamples);
+    // Update sidechain analyzer parameters
+    sidechainAnalyzer.setStrength(currentStrength);
+    sidechainAnalyzer.setAttack(attackMs.load());
+    sidechainAnalyzer.setRelease(releaseMs.load());
+    sidechainAnalyzer.setThreshold(threshold.load());
+    sidechainAnalyzer.setFloor(floorDb.load());
 
+    // Run sidechain analysis (STFT → Neural Net → Band Mapping → Envelopes)
+    sidechainAnalyzer.analyze(analysisInput, analysisNumSamples);
+
+    // Get smoothed band gains from analysis
+    const auto& bandGains = sidechainAnalyzer.getBandGains();
+
+    // === AUDIO PATH: Apply gains to IIR filter bank ===
+    iirFilterBank.setAllBandGains(bandGains);
+
+    // Process audio through IIR filter bank (ZERO LATENCY)
+    iirFilterBank.process(buffer);
+
+    // === VISUALIZATION ===
+    // Also run through legacy STFT for visualization data
+    int numFrames = stftProcessor.processBlock(analysisInput, analysisNumSamples);
     if (numFrames > 0)
     {
-        // Get magnitude data from STFT
         const float* magnitude = stftProcessor.getMagnitudeData();
+        const float* rawMask = sidechainAnalyzer.getRawMask();
 
-        // Run neural network inference
-        const float* nnMask = neuralEngine.process(magnitude, numFrames);
-
-        // Get new parameter values
-        float currentAttackMs = attackMs.load();
-        float currentReleaseMs = releaseMs.load();
-        float currentFreqLow = freqLowHz.load();
-        float currentFreqHigh = freqHighHz.load();
-        float currentThresholdDb = threshold.load();  // Now in dB
-        float currentRangeLinear = juce::Decibels::decibelsToGain(floorDb.load());  // Range/floor
-
-        // Convert attack/release times to smoothing coefficients
-        // Based on hop time (~2.67ms at 128 hop, 48kHz)
-        float hopTimeMs = (stftProcessor.getHopLength() / static_cast<float>(TARGET_SAMPLE_RATE)) * 1000.0f;
-        float attackCoeff = 1.0f - std::exp(-hopTimeMs / currentAttackMs);
-        float releaseCoeff = 1.0f - std::exp(-hopTimeMs / currentReleaseMs);
-
-        // Calculate frequency bin range for sidechain focus
-        int lowBin = freqToBin(currentFreqLow);
-        int highBin = freqToBin(currentFreqHigh);
-        if (lowBin > highBin) std::swap(lowBin, highBin);  // Handle inverted range
-
-        // Accumulators for gain reduction meter
-        float totalReduction = 0.0f;
-        int reductionCount = 0;
-
-        // Clamp mask to [0, 1] range, check for NaN/Inf, apply new params and temporal smoothing
-        for (int frame = 0; frame < numFrames; ++frame)
+        if (rawMask != nullptr)
         {
-            for (int bin = 0; bin < STFTProcessor::N_FREQ_BINS; ++bin)
+            for (int frame = 0; frame < numFrames; ++frame)
             {
-                int idx = frame * STFTProcessor::N_FREQ_BINS + bin;
-                float maskVal = nnMask[idx];
-
-                // Safety: handle NaN/Inf and clamp to valid range
-                if (std::isnan(maskVal) || std::isinf(maskVal))
-                    maskVal = 1.0f;
-                else
-                    maskVal = std::clamp(maskVal, 0.0f, 1.0f);
-
-                // Apply frequency focus (sidechain HPF/LPF)
-                // Frequencies outside the range: gate stays closed (suppressed)
-                if (bin < lowBin || bin > highBin)
-                    maskVal = 0.0f;
-
-                // Apply threshold - if input magnitude below threshold dB, force gate closed
-                // This allows the gate to only respond when signal is loud enough
-                float magDb = 20.0f * std::log10f(std::max(magnitude[idx], 1e-10f));
-                if (magDb < currentThresholdDb)
-                    maskVal = 0.0f;
-
-                // Apply range - scale mask from [0,1] to [rangeLinear, 1.0]
-                // mask=0 gives rangeLinear (the "floor" of attenuation)
-                // mask=1 gives 1.0 (full signal)
-                maskVal = currentRangeLinear + maskVal * (1.0f - currentRangeLinear);
-
-                // Apply asymmetric smoothing (fast attack, slow release)
-                float smoothingCoeff = (maskVal > smoothedMask[bin])
-                    ? attackCoeff    // Opening up (attack)
-                    : releaseCoeff;  // Closing down (release)
-
-                smoothedMask[bin] += smoothingCoeff * (maskVal - smoothedMask[bin]);
-                transposedMask[idx] = smoothedMask[bin];
-
-                // Accumulate for gain reduction meter
-                totalReduction += smoothedMask[bin];
-                reductionCount++;
+                visualizationData.pushFrame(
+                    magnitude + frame * STFTProcessor::N_FREQ_BINS,
+                    rawMask  // Use sidechain analyzer's mask for visualization
+                );
             }
-
-            // Push frame to visualization FIFO
-            visualizationData.pushFrame(
-                magnitude + frame * STFTProcessor::N_FREQ_BINS,
-                transposedMask.data() + frame * STFTProcessor::N_FREQ_BINS
-            );
-        }
-
-        // Update gain reduction meter (average mask -> dB)
-        if (reductionCount > 0)
-        {
-            float avgMask = totalReduction / static_cast<float>(reductionCount);
-            float reductionDb = juce::Decibels::gainToDecibels(avgMask);
-            visualizationData.averageGainReductionDb.store(reductionDb);
-        }
-
-        const float* mask = transposedMask.data();
-
-        // Apply strength parameter to mask
-        if (currentStrength < 1.0f)
-        {
-            int numElements = numFrames * STFTProcessor::N_FREQ_BINS;
-            maskBuffer.resize(numElements);
-
-            for (int i = 0; i < numElements; ++i)
-            {
-                // Blend mask towards 1.0 (pass-through) based on strength
-                maskBuffer[i] = mask[i] * currentStrength + (1.0f - currentStrength);
-            }
-            mask = maskBuffer.data();
-        }
-
-        // Reconstruct audio with mask applied
-        float* outputData = buffer.getWritePointer(0);
-
-        if (needsResampling)
-        {
-            // Reconstruct at 48kHz
-            std::vector<float> processedAt48k(processNumSamples);
-            stftProcessor.applyMaskAndReconstruct(mask, processedAt48k.data(), processNumSamples);
-
-            // Upsample back to DAW rate with history for continuity
-            std::vector<float> outputWithHistory(RESAMPLER_HISTORY_SIZE + processNumSamples);
-            std::memcpy(outputWithHistory.data(), outputHistory.data(), RESAMPLER_HISTORY_SIZE * sizeof(float));
-            std::memcpy(outputWithHistory.data() + RESAMPLER_HISTORY_SIZE, processedAt48k.data(), processNumSamples * sizeof(float));
-
-            outputResampler.process(resampleRatio,
-                                    outputWithHistory.data() + RESAMPLER_HISTORY_SIZE,
-                                    outputData,
-                                    numSamples);
-
-            // Update output history
-            int historyStart = processNumSamples - RESAMPLER_HISTORY_SIZE;
-            if (historyStart >= 0)
-                std::memcpy(outputHistory.data(), processedAt48k.data() + historyStart, RESAMPLER_HISTORY_SIZE * sizeof(float));
-        }
-        else
-        {
-            stftProcessor.applyMaskAndReconstruct(mask, outputData, numSamples);
-        }
-
-        // Apply dry/wet mix
-        if (currentMix < 1.0f)
-        {
-            float wet = currentMix;
-            float dry = 1.0f - currentMix;
-
-            for (int i = 0; i < numSamples; ++i)
-            {
-                outputData[i] = outputData[i] * wet + drySignal[i] * dry;
-            }
-        }
-
-        // SAFETY: Final hard limit to prevent any extreme output
-        for (int i = 0; i < numSamples; ++i)
-        {
-            if (std::isnan(outputData[i]) || std::isinf(outputData[i]))
-                outputData[i] = 0.0f;
-            else
-                outputData[i] = std::clamp(outputData[i], -1.0f, 1.0f);
-        }
-
-        // Copy to other channels if stereo
-        for (int channel = 1; channel < totalNumOutputChannels; ++channel)
-        {
-            buffer.copyFrom(channel, 0, outputData, numSamples);
         }
     }
-    else
+
+    // Update gain reduction meter
+    float avgReductionDb = sidechainAnalyzer.getAverageGainReduction();
+    visualizationData.averageGainReductionDb.store(avgReductionDb);
+
+    // === MIX: Dry/Wet blend ===
+    float* outputData = buffer.getWritePointer(0);
+    if (currentMix < 1.0f)
     {
-        // No complete frames yet, but still read any pending overlap-add output
-        float* outputData = buffer.getWritePointer(0);
+        float wet = currentMix;
+        float dry = 1.0f - currentMix;
 
-        if (needsResampling)
+        for (int i = 0; i < numSamples; ++i)
         {
-            std::vector<float> processedAt48k(processNumSamples);
-            stftProcessor.readOutput(processedAt48k.data(), processNumSamples);
-
-            // Upsample with history for continuity
-            std::vector<float> outputWithHistory(RESAMPLER_HISTORY_SIZE + processNumSamples);
-            std::memcpy(outputWithHistory.data(), outputHistory.data(), RESAMPLER_HISTORY_SIZE * sizeof(float));
-            std::memcpy(outputWithHistory.data() + RESAMPLER_HISTORY_SIZE, processedAt48k.data(), processNumSamples * sizeof(float));
-
-            outputResampler.process(resampleRatio,
-                                    outputWithHistory.data() + RESAMPLER_HISTORY_SIZE,
-                                    outputData,
-                                    numSamples);
-
-            // Update output history
-            int historyStart = processNumSamples - RESAMPLER_HISTORY_SIZE;
-            if (historyStart >= 0)
-                std::memcpy(outputHistory.data(), processedAt48k.data() + historyStart, RESAMPLER_HISTORY_SIZE * sizeof(float));
+            outputData[i] = outputData[i] * wet + drySignal[i] * dry;
         }
+    }
+
+    // === SAFETY: Final hard limit ===
+    for (int i = 0; i < numSamples; ++i)
+    {
+        if (std::isnan(outputData[i]) || std::isinf(outputData[i]))
+            outputData[i] = 0.0f;
         else
-        {
-            stftProcessor.readOutput(outputData, numSamples);
-        }
+            outputData[i] = std::clamp(outputData[i], -1.0f, 1.0f);
+    }
 
-        // Copy to other channels if stereo
-        for (int channel = 1; channel < totalNumOutputChannels; ++channel)
-        {
-            buffer.copyFrom(channel, 0, outputData, numSamples);
-        }
+    // Copy to other channels if stereo
+    for (int channel = 1; channel < totalNumOutputChannels; ++channel)
+    {
+        buffer.copyFrom(channel, 0, outputData, numSamples);
     }
 }
 
 bool DeBleedAudioProcessor::loadModel(const juce::String& modelPath)
 {
-    return neuralEngine.loadModel(modelPath);
+    // Load model in both the legacy engine (for visualization) and sidechain analyzer
+    bool legacyLoaded = neuralEngine.loadModel(modelPath);
+    bool sidechainLoaded = sidechainAnalyzer.loadModel(modelPath);
+    return legacyLoaded && sidechainLoaded;
 }
 
 void DeBleedAudioProcessor::unloadModel()
 {
     neuralEngine.unloadModel();
+    sidechainAnalyzer.unloadModel();
 }
 
 juce::AudioProcessorEditor* DeBleedAudioProcessor::createEditor()
@@ -639,6 +450,16 @@ void DeBleedAudioProcessor::setStateInformation(const void* data, int sizeInByte
             }
         }
     }
+}
+
+const std::array<float, DeBleedAudioProcessor::NUM_IIR_BANDS>& DeBleedAudioProcessor::getIIRBandGains() const
+{
+    return sidechainAnalyzer.getBandGains();
+}
+
+const std::array<float, DeBleedAudioProcessor::NUM_IIR_BANDS>& DeBleedAudioProcessor::getIIRCenterFrequencies() const
+{
+    return iirFilterBank.getCenterFrequencies();
 }
 
 // Plugin instantiation

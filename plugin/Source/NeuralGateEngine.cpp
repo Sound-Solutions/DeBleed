@@ -32,9 +32,11 @@ void NeuralGateEngine::prepare(int maxFrames)
 {
     maxFramesAllocated = maxFrames;
 
-    // Pre-allocate input and output buffers
-    inputBuffer.resize(N_FREQ_BINS * maxFrames, 0.0f);
-    outputBuffer.resize(N_FREQ_BINS * maxFrames, 0.0f);
+    // Pre-allocate input buffer for maximum input size (dual-stream: 257 features)
+    inputBuffer.resize(N_MAX_INPUT_FEATURES * maxFrames, 0.0f);
+
+    // Output buffer is always 129 bins (mask for Stream A)
+    outputBuffer.resize(N_OUTPUT_BINS * maxFrames, 0.0f);
 
     // Initialize output to pass-through (mask = 1.0)
     std::fill(outputBuffer.begin(), outputBuffer.end(), 1.0f);
@@ -95,19 +97,49 @@ bool NeuralGateEngine::loadModel(const juce::String& modelPath)
         // Verify shapes match expected
         if (inputShape.size() != 3)
         {
-            lastError = "Invalid input shape: expected 3 dimensions [batch, freq_bins, frames]";
+            lastError = "Invalid input shape: expected 3 dimensions [batch, input_features, frames]";
             session.reset();
             return false;
         }
 
-        // inputShape should be [batch, freq_bins, frames] or with dynamic dims
-        // The freq_bins dimension (index 1) should match N_FREQ_BINS
-        int64_t freqBins = inputShape[1];
-        if (freqBins > 0 && freqBins != N_FREQ_BINS)
+        // inputShape should be [batch, input_features, frames] or with dynamic dims
+        // input_features is either 129 (single-stream) or 257 (dual-stream)
+        int64_t inputFeatures = inputShape[1];
+        if (inputFeatures > 0)
+        {
+            if (inputFeatures == N_OUTPUT_BINS)
+            {
+                modelInputFeatures = N_OUTPUT_BINS;  // Single-stream (legacy)
+                DBG("Loaded single-stream model (129 input features)");
+            }
+            else if (inputFeatures == N_MAX_INPUT_FEATURES)
+            {
+                modelInputFeatures = N_MAX_INPUT_FEATURES;  // Dual-stream
+                DBG("Loaded dual-stream model (257 input features)");
+            }
+            else
+            {
+                lastError = juce::String::formatted(
+                    "Unexpected input features: model has %lld, expected 129 or 257",
+                    inputFeatures);
+                session.reset();
+                return false;
+            }
+        }
+        else
+        {
+            // Dynamic dimension - assume dual-stream
+            modelInputFeatures = N_MAX_INPUT_FEATURES;
+            DBG("Model has dynamic input dimension, assuming dual-stream (257)");
+        }
+
+        // Verify output shape - should always be 129 bins
+        int64_t outputBins = outputShape.size() >= 2 ? outputShape[1] : -1;
+        if (outputBins > 0 && outputBins != N_OUTPUT_BINS)
         {
             lastError = juce::String::formatted(
-                "Frequency bins mismatch: model has %lld, expected %d",
-                freqBins, N_FREQ_BINS);
+                "Output bins mismatch: model has %lld, expected %d",
+                outputBins, N_OUTPUT_BINS);
             session.reset();
             return false;
         }
@@ -117,7 +149,7 @@ bool NeuralGateEngine::loadModel(const juce::String& modelPath)
         lastError.clear();
 
         DBG("Model loaded successfully: " << modelPath);
-        DBG("Input name: " << inputNameStr);
+        DBG("Input name: " << inputNameStr << " (" << modelInputFeatures << " features)");
         DBG("Output name: " << outputNameStr);
 
         return true;
@@ -143,16 +175,16 @@ void NeuralGateEngine::unloadModel()
     std::fill(outputBuffer.begin(), outputBuffer.end(), 1.0f);
 }
 
-const float* NeuralGateEngine::process(const float* magnitude, int numFrames)
+const float* NeuralGateEngine::process(const float* inputFeatures, int numFrames)
 {
-    // Calculate number of elements for pass-through
-    int numElements = std::min(numFrames * N_FREQ_BINS,
-                               static_cast<int>(outputBuffer.size()));
+    // Calculate number of output elements for pass-through
+    int outputElements = std::min(numFrames * N_OUTPUT_BINS,
+                                  static_cast<int>(outputBuffer.size()));
 
     // If no model loaded, return pass-through mask (all 1.0s)
     if (!modelLoaded.load())
     {
-        std::fill(outputBuffer.begin(), outputBuffer.begin() + numElements, 1.0f);
+        std::fill(outputBuffer.begin(), outputBuffer.begin() + outputElements, 1.0f);
         return outputBuffer.data();
     }
 
@@ -169,29 +201,30 @@ const float* NeuralGateEngine::process(const float* magnitude, int numFrames)
     if (!lock.owns_lock())
     {
         // Model is being loaded/unloaded, return pass-through
-        std::fill(outputBuffer.begin(), outputBuffer.begin() + numElements, 1.0f);
+        std::fill(outputBuffer.begin(), outputBuffer.begin() + outputElements, 1.0f);
         return outputBuffer.data();
     }
 
     // Double-check model is still loaded after acquiring lock
     if (!session || !modelLoaded.load())
     {
-        std::fill(outputBuffer.begin(), outputBuffer.begin() + numElements, 1.0f);
+        std::fill(outputBuffer.begin(), outputBuffer.begin() + outputElements, 1.0f);
         return outputBuffer.data();
     }
 
     try
     {
         // Copy input data to our buffer
-        numElements = numFrames * N_FREQ_BINS;
-        std::memcpy(inputBuffer.data(), magnitude, numElements * sizeof(float));
+        // Use the model's expected input size (129 for single-stream, 257 for dual-stream)
+        int inputElements = numFrames * modelInputFeatures;
+        std::memcpy(inputBuffer.data(), inputFeatures, inputElements * sizeof(float));
 
-        // Create input tensor - model expects [batch, freq_bins, frames]
-        std::vector<int64_t> inputDims = {1, N_FREQ_BINS, numFrames};
+        // Create input tensor - model expects [batch, input_features, frames]
+        std::vector<int64_t> inputDims = {1, static_cast<int64_t>(modelInputFeatures), static_cast<int64_t>(numFrames)};
         Ort::Value inputTensor = Ort::Value::CreateTensor<float>(
             *memoryInfo,
             inputBuffer.data(),
-            numElements,
+            inputElements,
             inputDims.data(),
             inputDims.size()
         );
@@ -209,11 +242,11 @@ const float* NeuralGateEngine::process(const float* magnitude, int numFrames)
             outputNames.size()
         );
 
-        // Copy output
+        // Copy output (always N_OUTPUT_BINS = 129 bins)
         if (!outputTensors.empty() && outputTensors[0].IsTensor())
         {
             const float* outputData = outputTensors[0].GetTensorData<float>();
-            std::memcpy(outputBuffer.data(), outputData, numElements * sizeof(float));
+            std::memcpy(outputBuffer.data(), outputData, outputElements * sizeof(float));
         }
     }
     catch (const Ort::Exception& e)

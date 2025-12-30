@@ -268,6 +268,48 @@ void RTAVisualization::drawDividerLine(juce::Graphics& g)
     g.drawText("GR", 2, static_cast<int>(dividerY) + 2, 20, 12, juce::Justification::left, false);
 }
 
+float RTAVisualization::getBandpassMagnitude(float freq, float centerFreq, float Q) const
+{
+    // Approximate 2nd-order bandpass magnitude response
+    // |H(f)| = 1 / sqrt(1 + Q² * ((f/fc) - (fc/f))²)
+    // This gives 1.0 at f=fc, falling off on either side
+
+    if (freq <= 0.0f || centerFreq <= 0.0f)
+        return 0.0f;
+
+    float ratio = freq / centerFreq;
+    float term = ratio - (1.0f / ratio);  // (f/fc) - (fc/f)
+    float denominator = 1.0f + Q * Q * term * term;
+
+    return 1.0f / std::sqrt(denominator);
+}
+
+float RTAVisualization::getCombinedGainAtFreq(float freq) const
+{
+    // Get the IIR band data from processor
+    const auto& bandGains = audioProcessor.getIIRBandGains();
+    const auto& centerFreqs = audioProcessor.getIIRCenterFrequencies();
+
+    // Combined gain = 1.0 + Sum(BandpassMagnitude * GainCoeff)
+    // Where GainCoeff = (mask - 1.0), so negative for cuts
+    float totalGain = 1.0f;
+
+    for (int i = 0; i < NUM_IIR_BANDS; ++i)
+    {
+        float mask = bandGains[i];
+        float gainCoeff = mask - 1.0f;  // Negative for cuts
+
+        // Only contribute if there's actual cut happening
+        if (std::abs(gainCoeff) > 0.001f)
+        {
+            float bpMag = getBandpassMagnitude(freq, centerFreqs[i], BANDPASS_Q);
+            totalGain += bpMag * gainCoeff;
+        }
+    }
+
+    return std::max(totalGain, 0.0001f);  // Prevent log(0)
+}
+
 void RTAVisualization::drawReductionCurve(juce::Graphics& g)
 {
     const float width = static_cast<float>(getWidth());
@@ -282,16 +324,16 @@ void RTAVisualization::drawReductionCurve(juce::Graphics& g)
     for (float x = 0; x < width; x += pixelStep)
     {
         float freq = pixelToFreq(x, width);
-        float binIndex = freq * 256.0f / 48000.0f;
 
-        float maskVal = getInterpolatedMask(binIndex);
+        // Get combined frequency response from all 64 IIR bands
+        float gainLinear = getCombinedGainAtFreq(freq);
 
-        // Convert mask to dB reduction (mask=1 -> 0dB, mask=0.1 -> -20dB)
-        float reductionDb = 20.0f * std::log10f(std::max(maskVal, 1e-10f));
-        reductionDb = std::clamp(reductionDb, MIN_REDUCTION_DB, 0.0f);
+        // Convert to dB
+        float gainDb = 20.0f * std::log10f(gainLinear);
+        gainDb = std::clamp(gainDb, MIN_REDUCTION_DB, 0.0f);
 
         // Map reduction dB (0 to -40) to Y pixel (dividerY to bottom)
-        float normY = juce::jmap(reductionDb, 0.0f, MIN_REDUCTION_DB, 0.0f, 1.0f);
+        float normY = juce::jmap(gainDb, 0.0f, MIN_REDUCTION_DB, 0.0f, 1.0f);
         float y = dividerY + reductionHeight * normY;
 
         if (!pathStarted)

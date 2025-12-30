@@ -7,26 +7,44 @@
 /**
  * STFTProcessor - Short-Time Fourier Transform processor for real-time audio.
  *
- * Handles overlap-add STFT/iSTFT with low latency for the neural gate.
- * Uses JUCE's FFT for efficient computation.
+ * Supports dual-stream STFT analysis for enhanced frequency resolution:
+ * - Stream A (Fast): 256-point FFT, ~187Hz resolution, good for transients
+ * - Stream B (Slow): 2048-point FFT, ~23Hz resolution, good for bass precision
  *
- * Parameters match the Python trainer:
- * - N_FFT: 256 (5.33ms at 48kHz)
- * - Hop: 128 (2.67ms)
- * - Window: Hann
+ * Both streams use the same hop size for frame alignment.
+ * The neural network receives concatenated features: [Stream A (129 bins) | Stream B bass (128 bins)]
  */
 class STFTProcessor
 {
 public:
-    // Fixed output bins for neural network compatibility
-    static constexpr int N_FREQ_BINS = 129;  // Always 129 for neural net
+    // ==========================================================================
+    // Dual-Stream Configuration (matches Python trainer)
+    // ==========================================================================
 
-    // Configurable FFT sizes
+    // Stream A: Fast/Temporal (transients, high-frequency detail)
+    static constexpr int N_FFT_A = 256;           // ~5.33ms @ 48kHz
+    static constexpr int N_FREQ_BINS_A = 129;     // N_FFT_A / 2 + 1
+
+    // Stream B: Slow/Spectral (bass precision)
+    static constexpr int N_FFT_B = 2048;          // ~42.67ms @ 48kHz
+    static constexpr int N_FREQ_BINS_B = 1025;    // N_FFT_B / 2 + 1
+    static constexpr int STREAM_B_BINS_USED = 128; // Lower bins only (0 to ~1.5kHz)
+
+    // Common hop size for frame alignment
+    static constexpr int HOP_LENGTH = 128;        // ~2.67ms @ 48kHz
+
+    // Total input features for neural network
+    static constexpr int N_TOTAL_FEATURES = N_FREQ_BINS_A + STREAM_B_BINS_USED;  // 257
+
+    // Legacy aliases
+    static constexpr int N_FREQ_BINS = N_FREQ_BINS_A;  // Output mask is still 129 bins
+
+    // Configurable FFT sizes (for legacy single-stream mode)
     enum class Mode { Quality, LowLatency };
 
     // Quality mode: FFT=256, ~5.3ms latency
-    static constexpr int N_FFT_QUALITY = 256;
-    static constexpr int HOP_QUALITY = 128;
+    static constexpr int N_FFT_QUALITY = N_FFT_A;
+    static constexpr int HOP_QUALITY = HOP_LENGTH;
 
     // Low latency mode: FFT=128, ~2.7ms latency
     static constexpr int N_FFT_LOW_LATENCY = 128;
@@ -52,8 +70,8 @@ public:
     int processBlock(const float* input, int numSamples);
 
     /**
-     * Get the current magnitude spectrogram for neural network input.
-     * Returns pointer to magnitude data [N_FREQ_BINS x numFrames].
+     * Get Stream A magnitude spectrogram (legacy method).
+     * Returns pointer to magnitude data [N_FREQ_BINS_A x numFrames].
      */
     const float* getMagnitudeData() const { return magnitudeBuffer.data(); }
 
@@ -65,6 +83,40 @@ public:
 
     /** Get the number of complete frames in the current buffer. */
     int getNumFrames() const { return numFramesReady; }
+
+    // ==========================================================================
+    // Dual-Stream Analysis Methods
+    // ==========================================================================
+
+    /**
+     * Enable dual-stream analysis mode.
+     * When enabled, both Stream A (256 FFT) and Stream B (2048 FFT) are computed.
+     */
+    void setDualStreamEnabled(bool enabled) { dualStreamEnabled = enabled; }
+    bool isDualStreamEnabled() const { return dualStreamEnabled; }
+
+    /**
+     * Get Stream A magnitude (129 bins, ~187Hz resolution).
+     */
+    const float* getStreamAMagnitude() const { return magnitudeBuffer.data(); }
+
+    /**
+     * Get Stream B low-frequency magnitude (128 bins, ~23Hz resolution).
+     * Only valid if dual-stream mode is enabled.
+     */
+    const float* getStreamBLowMagnitude() const { return streamBLowMagBuffer.data(); }
+
+    /**
+     * Get concatenated dual-stream features for neural network input.
+     * Returns pointer to data [N_TOTAL_FEATURES x numFrames] = [257 x numFrames]
+     * Layout: [Stream A (129) | Stream B bass (128)]
+     */
+    const float* getDualStreamFeatures() const { return dualStreamFeaturesBuffer.data(); }
+
+    /**
+     * Get the total number of input features for dual-stream mode.
+     */
+    static constexpr int getTotalFeatures() { return N_TOTAL_FEATURES; }
 
     /**
      * Apply a mask to the magnitude and reconstruct audio.
@@ -97,23 +149,48 @@ private:
     int currentHopLength = HOP_QUALITY;
     int currentFreqBins = N_FFT_QUALITY / 2 + 1;  // Actual bins from FFT
 
-    // FFT
-    std::unique_ptr<juce::dsp::FFT> fft;
+    // ==========================================================================
+    // Stream A (Fast STFT - 256 point)
+    // ==========================================================================
+    std::unique_ptr<juce::dsp::FFT> fft;  // Stream A FFT
     int fftOrder;
 
-    // Windows
+    // Windows for Stream A
     std::vector<float> analysisWindow;
     std::vector<float> synthesisWindow;
 
-    // Input buffering
+    // Input buffering for Stream A
     std::vector<float> inputBuffer;
     int inputWritePos = 0;
 
-    // STFT output buffers
+    // STFT output buffers for Stream A
     std::vector<float> magnitudeBuffer;
     std::vector<float> phaseBuffer;
     int numFramesReady = 0;
     int maxFrames = 0;
+
+    // ==========================================================================
+    // Stream B (Slow STFT - 2048 point) for bass precision
+    // ==========================================================================
+    bool dualStreamEnabled = true;  // Enable by default for new models
+    std::unique_ptr<juce::dsp::FFT> fftB;  // Stream B FFT (larger)
+    int fftOrderB;
+
+    // Window for Stream B
+    std::vector<float> analysisWindowB;
+
+    // Input buffering for Stream B (needs larger buffer)
+    std::vector<float> inputBufferB;
+    int inputWritePosB = 0;
+
+    // Stream B output buffers (only low-frequency bins)
+    std::vector<float> streamBLowMagBuffer;  // [STREAM_B_BINS_USED x maxFrames]
+
+    // Concatenated dual-stream features [N_TOTAL_FEATURES x maxFrames]
+    std::vector<float> dualStreamFeaturesBuffer;
+
+    // FFT work buffer for Stream B
+    std::vector<float> fftWorkBufferB;
 
     // Overlap-add output buffer (circular, persistent between blocks)
     std::vector<float> outputBuffer;
@@ -128,12 +205,17 @@ private:
     // Sample rate
     double currentSampleRate = 48000.0;
 
-    // Helper methods
+    // Helper methods for Stream A
     void computeSTFTFrame(const float* frameData);
     void computeISTFTFrame(const float* magnitude, const float* phase, float* output);
     void createWindow();
     void interpolateBins(const float* input, int inputBins, float* output, int outputBins);
     void decimateBins(const float* input, int inputBins, float* output, int outputBins);
+
+    // Helper methods for Stream B (dual-stream)
+    void createWindowB();
+    void computeStreamBFrame(const float* frameData);
+    void concatenateDualStreamFeatures();
 
     // Interpolation buffer for low-latency mode
     std::vector<float> interpMagBuffer;

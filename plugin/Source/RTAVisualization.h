@@ -20,11 +20,13 @@ class RTAVisualization : public juce::Component
 {
 public:
     static constexpr int N_FREQ_BINS = 129;
+    static constexpr int NUM_IIR_BANDS = 64;
     static constexpr float MIN_FREQ = 20.0f;
     static constexpr float MAX_FREQ = 20000.0f;
     static constexpr float MIN_DB = -60.0f;
     static constexpr float MAX_DB = 12.0f;
     static constexpr float MIN_REDUCTION_DB = -40.0f;
+    static constexpr float BANDPASS_Q = 2.0f;  // Must match IIRFilterBank
 
     explicit RTAVisualization(DeBleedAudioProcessor& processor);
     ~RTAVisualization() override = default;
@@ -61,6 +63,10 @@ private:
     void drawSpectrumCurve(juce::Graphics& g);
     void drawReductionCurve(juce::Graphics& g);
     void drawDividerLine(juce::Graphics& g);
+
+    // IIR frequency response calculation
+    float getBandpassMagnitude(float freq, float centerFreq, float Q) const;
+    float getCombinedGainAtFreq(float freq) const;
 
     // Layout helpers
     float getSpectrumHeight() const { return getHeight() * 0.6f; }

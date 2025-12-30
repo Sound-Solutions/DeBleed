@@ -130,11 +130,6 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     setupKnob(attackSlider, attackLabel, "Attack", DeBleedLookAndFeel::orangeAccent);
     setupKnob(releaseSlider, releaseLabel, "Release", DeBleedLookAndFeel::orangeAccent);
 
-    // Yellow knobs
-    setupKnob(freqLowSlider, freqLowLabel, "Freq Lo", DeBleedLookAndFeel::yellowAccent);
-    setupKnob(freqHighSlider, freqHighLabel, "Freq Hi", DeBleedLookAndFeel::yellowAccent);
-    freqHighSlider.getProperties().set("invertArc", true);  // Fill from right to left
-
     // Purple knob
     setupKnob(floorSlider, floorLabel, "Range", DeBleedLookAndFeel::purpleAccent);
 
@@ -173,10 +168,6 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_ATTACK, attackSlider);
     releaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_RELEASE, releaseSlider);
-    freqLowAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_FREQ_LOW, freqLowSlider);
-    freqHighAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_FREQ_HIGH, freqHighSlider);
     thresholdAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_THRESHOLD, thresholdSlider);
     floorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -261,10 +252,6 @@ void DeBleedAudioProcessorEditor::setActiveTab(Tab tab)
     releaseLabel.setVisible(tab == Tab::Visualizing);
     thresholdSlider.setVisible(tab == Tab::Visualizing);
     thresholdLabel.setVisible(tab == Tab::Visualizing);
-    freqLowSlider.setVisible(tab == Tab::Visualizing);
-    freqLowLabel.setVisible(tab == Tab::Visualizing);
-    freqHighSlider.setVisible(tab == Tab::Visualizing);
-    freqHighLabel.setVisible(tab == Tab::Visualizing);
     floorSlider.setVisible(tab == Tab::Visualizing);
     floorLabel.setVisible(tab == Tab::Visualizing);
     lowLatencyButton.setVisible(tab == Tab::Visualizing);
@@ -386,10 +373,10 @@ void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> boun
     vizArea.removeFromLeft(15);
     gainReductionMeter->setBounds(vizArea);
 
-    // Knob row layout - 7 knobs + toggles
+    // Knob row layout - 5 knobs + toggles
     int knobSize = 70;
     int knobSpacing = 15;
-    int totalKnobWidth = 7 * knobSize + 6 * knobSpacing;
+    int totalKnobWidth = 5 * knobSize + 4 * knobSpacing;
 
     auto knobRow = knobArea.withSizeKeepingCentre(totalKnobWidth + 150, knobArea.getHeight());
 
@@ -407,10 +394,6 @@ void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> boun
     placeKnob(knobRow, releaseSlider, releaseLabel);
     knobRow.removeFromLeft(knobSpacing);
     placeKnob(knobRow, thresholdSlider, thresholdLabel);
-    knobRow.removeFromLeft(knobSpacing);
-    placeKnob(knobRow, freqLowSlider, freqLowLabel);
-    knobRow.removeFromLeft(knobSpacing);
-    placeKnob(knobRow, freqHighSlider, freqHighLabel);
     knobRow.removeFromLeft(knobSpacing);
     placeKnob(knobRow, floorSlider, floorLabel);
 

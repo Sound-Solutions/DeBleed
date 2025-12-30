@@ -9,9 +9,16 @@
 /**
  * NeuralGateEngine - ONNX Runtime inference wrapper for the DeBleed mask estimator.
  *
+ * Supports dual-stream input:
+ * - Single-stream (legacy): 129 input features
+ * - Dual-stream (v2): 257 input features [Stream A (129) | Stream B bass (128)]
+ *
+ * The input feature size is determined from the loaded ONNX model.
+ * Output mask is always 129 bins (corresponding to Stream A).
+ *
  * This class handles:
  * - Loading/hot-swapping ONNX models
- * - Running inference on magnitude spectrograms
+ * - Running inference on magnitude spectrograms or dual-stream features
  * - Thread-safe model updates
  * - Memory management for tensors
  *
@@ -23,7 +30,14 @@
 class NeuralGateEngine
 {
 public:
-    static constexpr int N_FREQ_BINS = 129;  // Matches Python trainer
+    // Output mask is always 129 bins (Stream A)
+    static constexpr int N_OUTPUT_BINS = 129;
+
+    // Maximum input features (dual-stream mode)
+    static constexpr int N_MAX_INPUT_FEATURES = 257;  // 129 + 128
+
+    // Legacy alias
+    static constexpr int N_FREQ_BINS = N_OUTPUT_BINS;
 
     NeuralGateEngine();
     ~NeuralGateEngine();
@@ -48,12 +62,22 @@ public:
     bool isModelLoaded() const { return modelLoaded.load(); }
 
     /**
-     * Run inference on magnitude spectrogram data.
-     * @param magnitude Input magnitude data [N_FREQ_BINS x numFrames]
+     * Run inference on input features.
+     * @param inputFeatures Input data - either single-stream [129 x frames] or dual-stream [257 x frames]
      * @param numFrames Number of STFT frames
-     * @return Pointer to mask output [N_FREQ_BINS x numFrames], or nullptr if no model
+     * @return Pointer to mask output [N_OUTPUT_BINS x numFrames], or nullptr if no model
      */
-    const float* process(const float* magnitude, int numFrames);
+    const float* process(const float* inputFeatures, int numFrames);
+
+    /**
+     * Check if the loaded model expects dual-stream input (257 features).
+     */
+    bool isDualStreamModel() const { return modelInputFeatures == N_MAX_INPUT_FEATURES; }
+
+    /**
+     * Get the number of input features the model expects.
+     */
+    int getModelInputFeatures() const { return modelInputFeatures; }
 
     /**
      * Get the output mask buffer (for when you need to access it after process).
@@ -104,6 +128,9 @@ private:
     // Input/output shape info
     std::vector<int64_t> inputShape;
     std::vector<int64_t> outputShape;
+
+    // Number of input features (129 for single-stream, 257 for dual-stream)
+    int modelInputFeatures = N_OUTPUT_BINS;  // Default to single-stream
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NeuralGateEngine)
 };

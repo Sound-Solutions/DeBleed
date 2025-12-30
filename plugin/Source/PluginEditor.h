@@ -79,10 +79,6 @@ private:
     juce::Label releaseLabel;
     juce::Slider thresholdSlider;
     juce::Label thresholdLabel;
-    juce::Slider freqLowSlider;
-    juce::Label freqLowLabel;
-    juce::Slider freqHighSlider;
-    juce::Label freqHighLabel;
     juce::Slider floorSlider;  // Range parameter
     juce::Label floorLabel;
     juce::Slider mixSlider;    // Hidden but kept for attachment
@@ -99,8 +95,6 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lowLatencyAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqLowAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqHighAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> floorAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> liveModeAttachment;

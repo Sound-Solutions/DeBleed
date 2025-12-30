@@ -50,6 +50,22 @@
             file="plugin/Source/DeBleedLookAndFeel.cpp"/>
       <FILE id="DeBleedLookAndFeel_h" name="DeBleedLookAndFeel.h" compile="0" resource="0"
             file="plugin/Source/DeBleedLookAndFeel.h"/>
+      <FILE id="IIRFilterBank_cpp" name="IIRFilterBank.cpp" compile="1" resource="0"
+            file="plugin/Source/IIRFilterBank.cpp"/>
+      <FILE id="IIRFilterBank_h" name="IIRFilterBank.h" compile="0" resource="0"
+            file="plugin/Source/IIRFilterBank.h"/>
+      <FILE id="EnvelopeFollower_cpp" name="EnvelopeFollower.cpp" compile="1" resource="0"
+            file="plugin/Source/EnvelopeFollower.cpp"/>
+      <FILE id="EnvelopeFollower_h" name="EnvelopeFollower.h" compile="0" resource="0"
+            file="plugin/Source/EnvelopeFollower.h"/>
+      <FILE id="BandMapper_cpp" name="BandMapper.cpp" compile="1" resource="0"
+            file="plugin/Source/BandMapper.cpp"/>
+      <FILE id="BandMapper_h" name="BandMapper.h" compile="0" resource="0"
+            file="plugin/Source/BandMapper.h"/>
+      <FILE id="SidechainAnalyzer_cpp" name="SidechainAnalyzer.cpp" compile="1" resource="0"
+            file="plugin/Source/SidechainAnalyzer.cpp"/>
+      <FILE id="SidechainAnalyzer_h" name="SidechainAnalyzer.h" compile="0" resource="0"
+            file="plugin/Source/SidechainAnalyzer.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

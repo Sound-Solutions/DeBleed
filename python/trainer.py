@@ -44,13 +44,48 @@ SAMPLE_RATE = 48000          # Standard professional audio rate
 CHUNK_DURATION = 3.0         # 3-second chunks for training
 CHUNK_SAMPLES = int(SAMPLE_RATE * CHUNK_DURATION)
 
-# STFT parameters optimized for low latency (<5ms at 48kHz)
-# Window size of 256 samples = 5.33ms at 48kHz
-# Hop size of 128 samples = 2.67ms at 48kHz
-N_FFT = 256
-HOP_LENGTH = 128
-WIN_LENGTH = 256
-N_FREQ_BINS = N_FFT // 2 + 1  # 129 frequency bins
+# =============================================================================
+# Dual-Stream STFT Configuration
+# =============================================================================
+# Stream A: Fast/Temporal (transients, high-frequency detail)
+# - 256-point FFT = 5.33ms window @ 48kHz
+# - ~187 Hz per bin resolution
+# - Good for transients and high-frequency content
+#
+# Stream B: Slow/Spectral (bass precision)
+# - 2048-point FFT = 42.67ms window @ 48kHz
+# - ~23.4 Hz per bin resolution
+# - Critical for distinguishing 60Hz from 150Hz
+#
+# Both streams use the same hop size for frame alignment.
+# =============================================================================
+
+# Stream A: Fast STFT (transients/highs) - original parameters
+N_FFT_A = 256
+WIN_LENGTH_A = 256
+N_FREQ_BINS_A = N_FFT_A // 2 + 1  # 129 frequency bins
+
+# Stream B: Slow STFT (bass precision)
+N_FFT_B = 2048
+WIN_LENGTH_B = 2048
+N_FREQ_BINS_B = N_FFT_B // 2 + 1  # 1025 frequency bins
+
+# We only use the lower portion of Stream B (up to ~1.5kHz)
+# This gives us fine bass resolution without redundant high-freq info
+STREAM_B_BINS_USED = 128  # Bins 0-127 = 0 to ~1.5kHz @ 48kHz
+
+# Common hop size for frame alignment
+HOP_LENGTH = 128  # 2.67ms @ 48kHz
+
+# Total input features to neural network
+# Stream A: 129 bins (full spectrum, coarse)
+# Stream B: 128 bins (bass detail, fine)
+N_TOTAL_FEATURES = N_FREQ_BINS_A + STREAM_B_BINS_USED  # 257 features
+
+# Legacy aliases for backward compatibility
+N_FFT = N_FFT_A
+WIN_LENGTH = WIN_LENGTH_A
+N_FREQ_BINS = N_FREQ_BINS_A  # Output mask is still 129 bins
 
 # SNR range for synthetic mixing (in dB)
 SNR_MIN = -5.0
@@ -143,6 +178,62 @@ def compute_stft(audio: torch.Tensor, n_fft: int = N_FFT, hop_length: int = HOP_
     return magnitude, phase
 
 
+def compute_dual_stream_stft(audio: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Compute dual-stream STFT for enhanced frequency resolution.
+
+    Stream A (Fast): 256-point FFT - good for transients, ~187Hz resolution
+    Stream B (Slow): 2048-point FFT - bass precision, ~23Hz resolution
+
+    Input: audio (batch, samples) or (samples,)
+    Output:
+        mag_a (batch, 129, frames) - Stream A magnitude (full spectrum)
+        phase_a (batch, 129, frames) - Stream A phase
+        mag_b_low (batch, 128, frames) - Stream B magnitude (bass bins only)
+        phase_b (batch, 1025, frames) - Stream B phase (full, for reconstruction)
+    """
+    if audio.dim() == 1:
+        audio = audio.unsqueeze(0)
+
+    # Stream A: Fast STFT (transients/highs)
+    window_a = torch.hann_window(WIN_LENGTH_A, device=audio.device)
+    stft_a = torch.stft(audio, n_fft=N_FFT_A, hop_length=HOP_LENGTH,
+                        win_length=WIN_LENGTH_A, window=window_a,
+                        return_complex=True, center=True)
+    mag_a = torch.abs(stft_a)
+    phase_a = torch.angle(stft_a)
+
+    # Stream B: Slow STFT (bass precision)
+    window_b = torch.hann_window(WIN_LENGTH_B, device=audio.device)
+    stft_b = torch.stft(audio, n_fft=N_FFT_B, hop_length=HOP_LENGTH,
+                        win_length=WIN_LENGTH_B, window=window_b,
+                        return_complex=True, center=True)
+    mag_b = torch.abs(stft_b)
+    phase_b = torch.angle(stft_b)
+
+    # Extract only the lower bins from Stream B (bass region)
+    # Bins 0-127 cover 0 to ~1.5kHz with ~23Hz resolution
+    mag_b_low = mag_b[:, :STREAM_B_BINS_USED, :]
+
+    return mag_a, phase_a, mag_b_low, phase_b
+
+
+def concatenate_dual_stream_features(mag_a: torch.Tensor, mag_b_low: torch.Tensor) -> torch.Tensor:
+    """
+    Concatenate dual-stream magnitude features for neural network input.
+
+    Input:
+        mag_a (batch, 129, frames) - Stream A full spectrum
+        mag_b_low (batch, 128, frames) - Stream B bass bins
+
+    Output:
+        features (batch, 257, frames) - Concatenated features
+            [0:129] = Stream A (coarse full spectrum)
+            [129:257] = Stream B bass (fine low-frequency detail)
+    """
+    return torch.cat([mag_a, mag_b_low], dim=1)
+
+
 def compute_istft(magnitude: torch.Tensor, phase: torch.Tensor, n_fft: int = N_FFT,
                    hop_length: int = HOP_LENGTH, win_length: int = WIN_LENGTH) -> torch.Tensor:
     """
@@ -190,28 +281,34 @@ class ConvBlock(nn.Module):
 
 class MaskEstimator(nn.Module):
     """
-    Lightweight mask estimation network inspired by DeepFilterNet.
+    Dual-stream mask estimation network inspired by DeepFilterNet.
 
-    Takes magnitude spectrogram as input and outputs a mask [0, 1] for each
-    time-frequency bin. The mask indicates how much of the target source
-    is present vs. bleed.
+    Takes concatenated dual-stream magnitude features:
+    - Stream A (129 bins): Full spectrum at ~187Hz resolution
+    - Stream B (128 bins): Bass region at ~23Hz resolution
 
-    Input: magnitude spectrogram (batch, freq_bins, frames)
-    Output: mask (batch, freq_bins, frames) in range [0, 1]
+    Outputs a mask [0, 1] for the 129 Stream A bins.
+
+    Input: dual-stream features (batch, 257, frames)
+           [0:129] = Stream A (coarse full spectrum)
+           [129:257] = Stream B bass (fine low-frequency detail)
+    Output: mask (batch, 129, frames) in range [0, 1]
     """
 
-    def __init__(self, n_freq_bins: int = N_FREQ_BINS, hidden_dim: int = 64):
+    def __init__(self, n_input_features: int = N_TOTAL_FEATURES,
+                 n_output_bins: int = N_FREQ_BINS, hidden_dim: int = 64):
         super().__init__()
 
-        self.n_freq_bins = n_freq_bins
+        self.n_input_features = n_input_features
+        self.n_output_bins = n_output_bins
         self.hidden_dim = hidden_dim
 
         # Input normalization parameters (learned)
-        self.input_norm = nn.GroupNorm(1, n_freq_bins)  # Instance norm equivalent
+        self.input_norm = nn.GroupNorm(1, n_input_features)  # Instance norm equivalent
 
-        # Encoder - compress frequency information
+        # Encoder - compress dual-stream frequency information
         self.encoder = nn.Sequential(
-            ConvBlock(n_freq_bins, hidden_dim * 2, kernel_size=5),
+            ConvBlock(n_input_features, hidden_dim * 2, kernel_size=5),
             ConvBlock(hidden_dim * 2, hidden_dim, kernel_size=5),
         )
 
@@ -227,26 +324,26 @@ class MaskEstimator(nn.Module):
             nn.PReLU(hidden_dim),
         )
 
-        # Decoder - expand back to frequency bins
+        # Decoder - expand back to output frequency bins
         self.decoder = nn.Sequential(
             ConvBlock(hidden_dim, hidden_dim * 2, kernel_size=5),
-            ConvBlock(hidden_dim * 2, n_freq_bins, kernel_size=5),
+            ConvBlock(hidden_dim * 2, n_output_bins, kernel_size=5),
         )
 
         # Final mask output
         self.mask_output = nn.Sequential(
-            nn.Conv1d(n_freq_bins, n_freq_bins, kernel_size=1),
+            nn.Conv1d(n_output_bins, n_output_bins, kernel_size=1),
             nn.Sigmoid()
         )
 
-    def forward(self, magnitude: torch.Tensor) -> torch.Tensor:
+    def forward(self, features: torch.Tensor) -> torch.Tensor:
         """
         Forward pass.
-        Input: magnitude spectrogram (batch, freq_bins, frames)
-        Output: mask (batch, freq_bins, frames) in range [0, 1]
+        Input: dual-stream features (batch, 257, frames)
+        Output: mask (batch, 129, frames) in range [0, 1]
         """
         # Normalize input
-        x = self.input_norm(magnitude)
+        x = self.input_norm(features)
 
         # Encode
         x = self.encoder(x)
@@ -328,15 +425,23 @@ class SyntheticMixtureDataset(Dataset):
         # Create mixture
         mixture = mix_at_snr(clean_chunk, noise_chunk, snr_db)
 
-        # Compute spectrograms
+        # Compute dual-stream spectrograms
         with torch.no_grad():
-            clean_mag, _ = compute_stft(clean_chunk)
-            mixture_mag, _ = compute_stft(mixture)
+            # Clean signal - dual stream
+            clean_mag_a, _, clean_mag_b_low, _ = compute_dual_stream_stft(clean_chunk)
 
-            # Compute ideal ratio mask (IRM)
-            ideal_mask = torch.clamp(clean_mag / (mixture_mag + 1e-8), 0.0, 1.0)
+            # Mixture signal - dual stream
+            mix_mag_a, _, mix_mag_b_low, _ = compute_dual_stream_stft(mixture)
 
-        return mixture_mag.squeeze(0), clean_mag.squeeze(0), ideal_mask.squeeze(0)
+            # Concatenate dual-stream features
+            mixture_features = concatenate_dual_stream_features(mix_mag_a, mix_mag_b_low)
+            clean_mag_a = clean_mag_a  # Keep Stream A for mask computation
+
+            # Compute ideal ratio mask (IRM) using Stream A only
+            # The mask is applied to Stream A (129 bins)
+            ideal_mask = torch.clamp(clean_mag_a / (mix_mag_a + 1e-8), 0.0, 1.0)
+
+        return mixture_features.squeeze(0), clean_mag_a.squeeze(0), ideal_mask.squeeze(0)
 
 
 # ============================================================================
@@ -369,21 +474,28 @@ class Trainer:
         total_loss = 0.0
         n_batches = len(self.train_loader)
 
-        for batch_idx, (mixture_mag, clean_mag, ideal_mask) in enumerate(self.train_loader):
-            mixture_mag = mixture_mag.to(self.device)
-            clean_mag = clean_mag.to(self.device)
+        for batch_idx, (mixture_features, clean_mag_a, ideal_mask) in enumerate(self.train_loader):
+            # mixture_features: (batch, 257, frames) - dual-stream concatenated
+            # clean_mag_a: (batch, 129, frames) - Stream A magnitude
+            # ideal_mask: (batch, 129, frames) - mask for Stream A
+
+            mixture_features = mixture_features.to(self.device)
+            clean_mag_a = clean_mag_a.to(self.device)
             ideal_mask = ideal_mask.to(self.device)
 
-            # Forward pass - predict mask
-            pred_mask = self.model(mixture_mag)
+            # Extract Stream A from dual-stream features for mask application
+            mixture_mag_a = mixture_features[:, :N_FREQ_BINS_A, :]
 
-            # Apply predicted mask
-            pred_clean_mag = mixture_mag * pred_mask
+            # Forward pass - predict mask from dual-stream features
+            pred_mask = self.model(mixture_features)
+
+            # Apply predicted mask to Stream A magnitude
+            pred_clean_mag = mixture_mag_a * pred_mask
 
             # Compute losses
             mask_loss = self.l1_loss(pred_mask, ideal_mask)
-            mag_loss = self.l1_loss(pred_clean_mag, clean_mag)
-            sc_loss = self.spectral_convergence_loss(pred_clean_mag, clean_mag)
+            mag_loss = self.l1_loss(pred_clean_mag, clean_mag_a)
+            sc_loss = self.spectral_convergence_loss(pred_clean_mag, clean_mag_a)
 
             # Combined loss
             loss = mask_loss + 0.5 * mag_loss + 0.1 * sc_loss
@@ -450,6 +562,9 @@ def save_checkpoint(output_path: str, model: MaskEstimator, trainer: 'Trainer',
         'clean_files': clean_files,
         'noise_files': noise_files,
         'hidden_dim': model.hidden_dim,
+        'n_input_features': model.n_input_features,
+        'n_output_bins': model.n_output_bins,
+        'dual_stream': True,
     }
 
     checkpoint_path = os.path.join(output_path, "checkpoint.pt")
@@ -473,21 +588,26 @@ def load_checkpoint(checkpoint_path: str, device: str) -> dict:
 
 def export_to_onnx(model: MaskEstimator, output_path: str,
                    model_name: str = 'model',
-                   n_freq_bins: int = N_FREQ_BINS, n_frames: int = 128):
+                   n_input_features: int = N_TOTAL_FEATURES, n_frames: int = 128):
     """
-    Export the mask estimation model to ONNX format.
+    Export the dual-stream mask estimation model to ONNX format.
 
-    The exported model takes magnitude spectrogram and returns a mask.
+    Input: Concatenated dual-stream features (batch, 257, frames)
+        - [0:129] = Stream A (256-point FFT, coarse full spectrum)
+        - [129:257] = Stream B bass (2048-point FFT, fine low-frequency)
+
+    Output: Mask (batch, 129, frames) for Stream A bins
+
     STFT/iSTFT is handled by the C++ plugin for efficiency.
     """
-    print("STATUS:Exporting model to ONNX...")
+    print("STATUS:Exporting dual-stream model to ONNX...")
     sys.stdout.flush()
 
     model.eval()
     device = next(model.parameters()).device
 
-    # Dummy input: (batch=1, freq_bins, frames)
-    dummy_input = torch.randn(1, n_freq_bins, n_frames, device=device)
+    # Dummy input: (batch=1, n_input_features=257, frames)
+    dummy_input = torch.randn(1, n_input_features, n_frames, device=device)
 
     onnx_path = os.path.join(output_path, f"{model_name}.onnx")
 
@@ -498,10 +618,10 @@ def export_to_onnx(model: MaskEstimator, output_path: str,
         export_params=True,
         opset_version=14,
         do_constant_folding=True,
-        input_names=['magnitude'],
+        input_names=['dual_stream_features'],
         output_names=['mask'],
         dynamic_axes={
-            'magnitude': {0: 'batch_size', 2: 'frames'},
+            'dual_stream_features': {0: 'batch_size', 2: 'frames'},
             'mask': {0: 'batch_size', 2: 'frames'}
         }
     )
@@ -513,22 +633,45 @@ def export_to_onnx(model: MaskEstimator, output_path: str,
 
 
 def save_metadata(output_path: str, model: MaskEstimator, history: dict):
-    """Save model metadata as JSON."""
+    """Save model metadata as JSON for dual-stream architecture."""
     metadata = {
         'sample_rate': SAMPLE_RATE,
-        'n_fft': N_FFT,
+
+        # Dual-stream STFT configuration
+        'dual_stream': True,
+        'stream_a': {
+            'n_fft': N_FFT_A,
+            'win_length': WIN_LENGTH_A,
+            'n_freq_bins': N_FREQ_BINS_A,
+            'description': 'Fast/temporal stream for transients and high frequencies',
+            'resolution_hz': SAMPLE_RATE / N_FFT_A
+        },
+        'stream_b': {
+            'n_fft': N_FFT_B,
+            'win_length': WIN_LENGTH_B,
+            'n_freq_bins': N_FREQ_BINS_B,
+            'bins_used': STREAM_B_BINS_USED,
+            'description': 'Slow/spectral stream for bass precision',
+            'resolution_hz': SAMPLE_RATE / N_FFT_B
+        },
         'hop_length': HOP_LENGTH,
-        'win_length': WIN_LENGTH,
+        'n_input_features': N_TOTAL_FEATURES,
+        'n_output_bins': N_FREQ_BINS,
+
+        # Legacy compatibility
+        'n_fft': N_FFT_A,
+        'win_length': WIN_LENGTH_A,
         'n_freq_bins': N_FREQ_BINS,
+
         'chunk_samples': CHUNK_SAMPLES,
-        'latency_samples': N_FFT,
-        'latency_ms': (N_FFT / SAMPLE_RATE) * 1000,
+        'latency_samples': N_FFT_B,  # Latency determined by larger FFT
+        'latency_ms': (N_FFT_B / SAMPLE_RATE) * 1000,
         'hidden_dim': model.hidden_dim,
         'final_loss': history['losses'][-1] if history['losses'] else None,
         'training_epochs': len(history['losses']),
-        'version': '1.0.0',
-        'model_type': 'mask_estimator',
-        'input_format': 'magnitude_spectrogram',
+        'version': '2.0.0',
+        'model_type': 'dual_stream_mask_estimator',
+        'input_format': 'dual_stream_magnitude_features',
         'output_format': 'mask'
     }
 
@@ -747,17 +890,27 @@ def main():
     )
 
     # Create model
-    print("STATUS:Creating model...")
+    print("STATUS:Creating dual-stream model...")
     sys.stdout.flush()
 
+    # Use checkpoint dimensions if available, otherwise use current config
+    n_input_features = N_TOTAL_FEATURES
+    n_output_bins = N_FREQ_BINS
+    if checkpoint is not None:
+        n_input_features = checkpoint.get('n_input_features', N_TOTAL_FEATURES)
+        n_output_bins = checkpoint.get('n_output_bins', N_FREQ_BINS)
+
     model = MaskEstimator(
-        n_freq_bins=N_FREQ_BINS,
+        n_input_features=n_input_features,
+        n_output_bins=n_output_bins,
         hidden_dim=hidden_dim
     )
 
     # Count parameters
     n_params = sum(p.numel() for p in model.parameters())
     print(f"STATUS:Model has {n_params:,} parameters")
+    print(f"STATUS:Input features: {n_input_features} (Stream A: {N_FREQ_BINS_A} + Stream B bass: {STREAM_B_BINS_USED})")
+    print(f"STATUS:Output bins: {n_output_bins}")
     sys.stdout.flush()
 
     # Create trainer
@@ -770,11 +923,16 @@ def main():
 
     # Load checkpoint state if continuing
     if checkpoint is not None:
-        model.load_state_dict(checkpoint['model_state_dict'])
-        trainer.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        trainer.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        print("STATUS:Loaded model and optimizer state from checkpoint")
-        sys.stdout.flush()
+        # Check if checkpoint is from an older single-stream model
+        if not checkpoint.get('dual_stream', False):
+            print("WARNING: Checkpoint is from single-stream model. Starting fresh with dual-stream architecture.")
+            sys.stdout.flush()
+        else:
+            model.load_state_dict(checkpoint['model_state_dict'])
+            trainer.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            trainer.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            print("STATUS:Loaded model and optimizer state from checkpoint")
+            sys.stdout.flush()
 
     # Train for remaining epochs
     total_epochs = start_epoch + args.epochs

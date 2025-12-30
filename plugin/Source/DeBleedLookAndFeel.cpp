@@ -201,10 +201,10 @@ void DeBleedLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton&
     g.setColour(juce::Colours::black.withAlpha(on ? 0.4f : 0.6f));
     g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
 
-    // Power icon
+    // Power icon (matching Kinetics style - gap at top for the power line)
     juce::Path icon;
     float iconR = r * 0.55f;
-    icon.addCentredArc(center.x, center.y, iconR, iconR, 0.0f, -2.5f, 2.5f, true);
+    icon.addCentredArc(center.x, center.y, iconR, iconR, 0.0f, 0.64f, 5.64f, true);
     icon.startNewSubPath(center.x, center.y - iconR + 1.0f);
     icon.lineTo(center.x, center.y);
 

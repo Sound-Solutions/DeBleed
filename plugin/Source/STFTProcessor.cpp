@@ -8,7 +8,7 @@ STFTProcessor::STFTProcessor()
 
 void STFTProcessor::createWindow()
 {
-    // Create Sine window for current FFT size
+    // Create Sine window for current FFT size (Stream A)
     // With 50% overlap, Sine * Sine sums to exactly 1.0 (perfect COLA)
     analysisWindow.resize(currentFFTSize);
     synthesisWindow.resize(currentFFTSize);
@@ -22,6 +22,17 @@ void STFTProcessor::createWindow()
 
     // COLA normalization factor for Sine window with 50% overlap = 1.0
     colaSum = 1.0f;
+}
+
+void STFTProcessor::createWindowB()
+{
+    // Create Sine window for Stream B (2048-point FFT)
+    analysisWindowB.resize(N_FFT_B);
+
+    for (int i = 0; i < N_FFT_B; ++i)
+    {
+        analysisWindowB[i] = std::sin(juce::MathConstants<float>::pi * i / N_FFT_B);
+    }
 }
 
 void STFTProcessor::prepare(double sampleRate, int maxBlockSize)
@@ -42,17 +53,19 @@ void STFTProcessor::prepare(double sampleRate, int maxBlockSize)
 
     currentFreqBins = currentFFTSize / 2 + 1;
 
-    // Create FFT
+    // ==========================================================================
+    // Stream A (Fast STFT)
+    // ==========================================================================
     fftOrder = static_cast<int>(std::log2(currentFFTSize));
     fft = std::make_unique<juce::dsp::FFT>(fftOrder);
 
-    // Create windows
+    // Create windows for Stream A
     createWindow();
 
     // Calculate maximum number of frames per block
     maxFrames = (maxBlockSize / currentHopLength) + 4;
 
-    // Allocate buffers
+    // Allocate Stream A buffers
     inputBuffer.resize(currentFFTSize, 0.0f);
     inputWritePos = 0;
 
@@ -69,7 +82,7 @@ void STFTProcessor::prepare(double sampleRate, int maxBlockSize)
     // for overlap-add to complete before samples are read
     outputWritePos = currentFFTSize;
 
-    // FFT work buffer
+    // FFT work buffer for Stream A
     fftWorkBuffer.resize(currentFFTSize * 2, 0.0f);
 
     // Interpolation buffers for low-latency mode
@@ -82,10 +95,37 @@ void STFTProcessor::prepare(double sampleRate, int maxBlockSize)
 
     // DEBUG: Buffer to store windowed frames for testing overlap-add
     windowedFrameBuffer.resize(currentFFTSize * maxFrames, 0.0f);
+
+    // ==========================================================================
+    // Stream B (Slow STFT for bass precision) - Dual Stream Mode
+    // ==========================================================================
+    if (dualStreamEnabled)
+    {
+        // Create Stream B FFT (2048-point)
+        fftOrderB = static_cast<int>(std::log2(N_FFT_B));
+        fftB = std::make_unique<juce::dsp::FFT>(fftOrderB);
+
+        // Create window for Stream B
+        createWindowB();
+
+        // Stream B input buffer (larger for 2048-point FFT)
+        inputBufferB.resize(N_FFT_B, 0.0f);
+        inputWritePosB = 0;
+
+        // Stream B output buffer (only low-frequency bins)
+        streamBLowMagBuffer.resize(STREAM_B_BINS_USED * maxFrames, 0.0f);
+
+        // FFT work buffer for Stream B
+        fftWorkBufferB.resize(N_FFT_B * 2, 0.0f);
+
+        // Concatenated dual-stream features buffer
+        dualStreamFeaturesBuffer.resize(N_TOTAL_FEATURES * maxFrames, 0.0f);
+    }
 }
 
 void STFTProcessor::reset()
 {
+    // Reset Stream A buffers
     std::fill(inputBuffer.begin(), inputBuffer.end(), 0.0f);
     inputWritePos = 0;
 
@@ -96,6 +136,15 @@ void STFTProcessor::reset()
     std::fill(outputBuffer.begin(), outputBuffer.end(), 0.0f);
     outputReadPos = 0;
     outputWritePos = currentFFTSize;  // Match prepare() - start ahead for overlap-add latency
+
+    // Reset Stream B buffers (dual-stream mode)
+    if (dualStreamEnabled)
+    {
+        std::fill(inputBufferB.begin(), inputBufferB.end(), 0.0f);
+        inputWritePosB = 0;
+        std::fill(streamBLowMagBuffer.begin(), streamBLowMagBuffer.end(), 0.0f);
+        std::fill(dualStreamFeaturesBuffer.begin(), dualStreamFeaturesBuffer.end(), 0.0f);
+    }
 }
 
 int STFTProcessor::processBlock(const float* input, int numSamples)
@@ -104,6 +153,9 @@ int STFTProcessor::processBlock(const float* input, int numSamples)
 
     for (int i = 0; i < numSamples; ++i)
     {
+        // ==========================================================================
+        // Stream A processing (256-point FFT)
+        // ==========================================================================
         inputBuffer[inputWritePos] = input[i];
         inputWritePos++;
 
@@ -116,6 +168,32 @@ int STFTProcessor::processBlock(const float* input, int numSamples)
                         (currentFFTSize - currentHopLength) * sizeof(float));
             inputWritePos = currentFFTSize - currentHopLength;
         }
+
+        // ==========================================================================
+        // Stream B processing (2048-point FFT) - Dual Stream Mode
+        // ==========================================================================
+        if (dualStreamEnabled)
+        {
+            inputBufferB[inputWritePosB] = input[i];
+            inputWritePosB++;
+
+            // Stream B uses larger FFT but same hop size for frame alignment
+            if (inputWritePosB >= N_FFT_B)
+            {
+                computeStreamBFrame(inputBufferB.data());
+
+                std::memmove(inputBufferB.data(),
+                            inputBufferB.data() + currentHopLength,
+                            (N_FFT_B - currentHopLength) * sizeof(float));
+                inputWritePosB = N_FFT_B - currentHopLength;
+            }
+        }
+    }
+
+    // After processing, concatenate dual-stream features
+    if (dualStreamEnabled && numFramesReady > 0)
+    {
+        concatenateDualStreamFeatures();
     }
 
     return numFramesReady;
@@ -346,5 +424,68 @@ void STFTProcessor::computeISTFTFrame(const float* magnitude, const float* phase
     for (int i = 0; i < currentFFTSize; ++i)
     {
         output[i] = fftWorkBuffer[i] * synthesisWindow[i];
+    }
+}
+
+// =============================================================================
+// Stream B (Dual-Stream) Processing Methods
+// =============================================================================
+
+void STFTProcessor::computeStreamBFrame(const float* frameData)
+{
+    if (numFramesReady >= maxFrames || !dualStreamEnabled || fftB == nullptr)
+        return;
+
+    // Apply analysis window for Stream B
+    for (int i = 0; i < N_FFT_B; ++i)
+    {
+        fftWorkBufferB[i] = frameData[i] * analysisWindowB[i];
+    }
+
+    // Zero-pad the rest
+    for (int i = N_FFT_B; i < N_FFT_B * 2; ++i)
+    {
+        fftWorkBufferB[i] = 0.0f;
+    }
+
+    // Forward FFT for Stream B
+    fftB->performRealOnlyForwardTransform(fftWorkBufferB.data());
+
+    // Extract only the low-frequency magnitude bins (0 to STREAM_B_BINS_USED)
+    // We match the frame index from Stream A (numFramesReady - 1 because A already incremented)
+    int frameIdx = numFramesReady - 1;
+    if (frameIdx < 0) frameIdx = 0;
+
+    float* magBPtr = streamBLowMagBuffer.data() + frameIdx * STREAM_B_BINS_USED;
+
+    // DC component
+    magBPtr[0] = std::abs(fftWorkBufferB[0]);
+
+    // Extract bins 1 to STREAM_B_BINS_USED-1
+    for (int bin = 1; bin < STREAM_B_BINS_USED; ++bin)
+    {
+        float real = fftWorkBufferB[bin * 2];
+        float imag = fftWorkBufferB[bin * 2 + 1];
+        magBPtr[bin] = std::sqrt(real * real + imag * imag);
+    }
+}
+
+void STFTProcessor::concatenateDualStreamFeatures()
+{
+    if (!dualStreamEnabled)
+        return;
+
+    // For each frame, concatenate [Stream A (129 bins) | Stream B bass (128 bins)]
+    for (int frame = 0; frame < numFramesReady; ++frame)
+    {
+        float* featPtr = dualStreamFeaturesBuffer.data() + frame * N_TOTAL_FEATURES;
+        const float* magAPtr = magnitudeBuffer.data() + frame * N_FREQ_BINS_A;
+        const float* magBPtr = streamBLowMagBuffer.data() + frame * STREAM_B_BINS_USED;
+
+        // Copy Stream A (129 bins)
+        std::memcpy(featPtr, magAPtr, N_FREQ_BINS_A * sizeof(float));
+
+        // Copy Stream B bass (128 bins)
+        std::memcpy(featPtr + N_FREQ_BINS_A, magBPtr, STREAM_B_BINS_USED * sizeof(float));
     }
 }
