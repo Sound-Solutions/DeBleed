@@ -3,7 +3,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "AudioDropZone.h"
-#include "SpectrogramVisualization.h"
+#include "RTAVisualization.h"
 #include "GainReductionMeter.h"
 
 /**
@@ -62,7 +62,7 @@ private:
     double progressValue = 0.0;
 
     // Visualization components
-    std::unique_ptr<SpectrogramVisualization> spectrogramView;
+    std::unique_ptr<RTAVisualization> rtaView;
     std::unique_ptr<GainReductionMeter> gainReductionMeter;
 
     // Parameter controls - existing

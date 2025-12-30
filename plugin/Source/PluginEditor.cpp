@@ -161,8 +161,8 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     addAndMakeVisible(floorLabel);
 
     // Visualization components
-    spectrogramView = std::make_unique<SpectrogramVisualization>(audioProcessor);
-    addAndMakeVisible(spectrogramView.get());
+    rtaView = std::make_unique<RTAVisualization>(audioProcessor);
+    addAndMakeVisible(rtaView.get());
 
     gainReductionMeter = std::make_unique<GainReductionMeter>();
     addAndMakeVisible(gainReductionMeter.get());
@@ -299,7 +299,7 @@ void DeBleedAudioProcessorEditor::resized()
     // Visualization area
     auto vizArea = bounds.removeFromTop(130);
     int meterWidth = 50;
-    spectrogramView->setBounds(vizArea.removeFromLeft(vizArea.getWidth() - meterWidth - 10));
+    rtaView->setBounds(vizArea.removeFromLeft(vizArea.getWidth() - meterWidth - 10));
     vizArea.removeFromLeft(10);
     gainReductionMeter->setBounds(vizArea);
 
@@ -383,8 +383,8 @@ void DeBleedAudioProcessorEditor::timerCallback()
     }
 
     // Update visualization
-    if (spectrogramView)
-        spectrogramView->updateFromQueue();
+    if (rtaView)
+        rtaView->updateFromQueue();
 
     if (gainReductionMeter)
     {
