@@ -19,11 +19,37 @@ const juce::String DeBleedAudioProcessor::PARAM_TIGHTNESS = "tightness";
 
 // Linkwitz-Riley Gate parameters
 const juce::String DeBleedAudioProcessor::PARAM_LR_ENABLED = "lrEnabled";
-const juce::String DeBleedAudioProcessor::PARAM_LR_SENSITIVITY = "lrSensitivity";
-const juce::String DeBleedAudioProcessor::PARAM_LR_ATTACK_MULT = "lrAttackMult";
-const juce::String DeBleedAudioProcessor::PARAM_LR_RELEASE_MULT = "lrReleaseMult";
-const juce::String DeBleedAudioProcessor::PARAM_LR_HOLD_MULT = "lrHoldMult";
-const juce::String DeBleedAudioProcessor::PARAM_LR_FLOOR = "lrFloor";
+
+// Per-band gate parameter IDs
+const std::array<juce::String, 6> DeBleedAudioProcessor::PARAM_GATE_THRESHOLD = {{
+    "gateBand0Threshold", "gateBand1Threshold", "gateBand2Threshold",
+    "gateBand3Threshold", "gateBand4Threshold", "gateBand5Threshold"
+}};
+const std::array<juce::String, 6> DeBleedAudioProcessor::PARAM_GATE_ATTACK = {{
+    "gateBand0Attack", "gateBand1Attack", "gateBand2Attack",
+    "gateBand3Attack", "gateBand4Attack", "gateBand5Attack"
+}};
+const std::array<juce::String, 6> DeBleedAudioProcessor::PARAM_GATE_RELEASE = {{
+    "gateBand0Release", "gateBand1Release", "gateBand2Release",
+    "gateBand3Release", "gateBand4Release", "gateBand5Release"
+}};
+const std::array<juce::String, 6> DeBleedAudioProcessor::PARAM_GATE_HOLD = {{
+    "gateBand0Hold", "gateBand1Hold", "gateBand2Hold",
+    "gateBand3Hold", "gateBand4Hold", "gateBand5Hold"
+}};
+const std::array<juce::String, 6> DeBleedAudioProcessor::PARAM_GATE_RANGE = {{
+    "gateBand0Range", "gateBand1Range", "gateBand2Range",
+    "gateBand3Range", "gateBand4Range", "gateBand5Range"
+}};
+const std::array<juce::String, 6> DeBleedAudioProcessor::PARAM_GATE_ENABLED = {{
+    "gateBand0Enabled", "gateBand1Enabled", "gateBand2Enabled",
+    "gateBand3Enabled", "gateBand4Enabled", "gateBand5Enabled"
+}};
+
+// Crossover frequency parameter IDs
+const std::array<juce::String, 5> DeBleedAudioProcessor::PARAM_GATE_CROSSOVER = {{
+    "gateCrossover0", "gateCrossover1", "gateCrossover2", "gateCrossover3", "gateCrossover4"
+}};
 
 DeBleedAudioProcessor::DeBleedAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -44,11 +70,23 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     parameters.addParameterListener(PARAM_LPF_BOUND, this);
     parameters.addParameterListener(PARAM_TIGHTNESS, this);
     parameters.addParameterListener(PARAM_LR_ENABLED, this);
-    parameters.addParameterListener(PARAM_LR_SENSITIVITY, this);
-    parameters.addParameterListener(PARAM_LR_ATTACK_MULT, this);
-    parameters.addParameterListener(PARAM_LR_RELEASE_MULT, this);
-    parameters.addParameterListener(PARAM_LR_HOLD_MULT, this);
-    parameters.addParameterListener(PARAM_LR_FLOOR, this);
+
+    // Per-band gate parameters
+    for (int b = 0; b < 6; ++b)
+    {
+        parameters.addParameterListener(PARAM_GATE_THRESHOLD[b], this);
+        parameters.addParameterListener(PARAM_GATE_ATTACK[b], this);
+        parameters.addParameterListener(PARAM_GATE_RELEASE[b], this);
+        parameters.addParameterListener(PARAM_GATE_HOLD[b], this);
+        parameters.addParameterListener(PARAM_GATE_RANGE[b], this);
+        parameters.addParameterListener(PARAM_GATE_ENABLED[b], this);
+    }
+
+    // Crossover parameters
+    for (int x = 0; x < 5; ++x)
+    {
+        parameters.addParameterListener(PARAM_GATE_CROSSOVER[x], this);
+    }
 
     // Initialize atomic values
     strength.store(*parameters.getRawParameterValue(PARAM_STRENGTH));
@@ -63,11 +101,23 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     lpfBound.store(*parameters.getRawParameterValue(PARAM_LPF_BOUND));
     tightness.store(*parameters.getRawParameterValue(PARAM_TIGHTNESS));
     lrEnabled.store(*parameters.getRawParameterValue(PARAM_LR_ENABLED) > 0.5f);
-    lrSensitivity.store(*parameters.getRawParameterValue(PARAM_LR_SENSITIVITY));
-    lrAttackMult.store(*parameters.getRawParameterValue(PARAM_LR_ATTACK_MULT));
-    lrReleaseMult.store(*parameters.getRawParameterValue(PARAM_LR_RELEASE_MULT));
-    lrHoldMult.store(*parameters.getRawParameterValue(PARAM_LR_HOLD_MULT));
-    lrFloorDb.store(*parameters.getRawParameterValue(PARAM_LR_FLOOR));
+
+    // Initialize per-band gate parameters
+    for (int b = 0; b < 6; ++b)
+    {
+        gateBandParams[b].threshold.store(*parameters.getRawParameterValue(PARAM_GATE_THRESHOLD[b]));
+        gateBandParams[b].attack.store(*parameters.getRawParameterValue(PARAM_GATE_ATTACK[b]));
+        gateBandParams[b].release.store(*parameters.getRawParameterValue(PARAM_GATE_RELEASE[b]));
+        gateBandParams[b].hold.store(*parameters.getRawParameterValue(PARAM_GATE_HOLD[b]));
+        gateBandParams[b].range.store(*parameters.getRawParameterValue(PARAM_GATE_RANGE[b]));
+        gateBandParams[b].enabled.store(*parameters.getRawParameterValue(PARAM_GATE_ENABLED[b]) > 0.5f);
+    }
+
+    // Initialize crossover frequencies
+    for (int x = 0; x < 5; ++x)
+    {
+        gateCrossovers[x].store(*parameters.getRawParameterValue(PARAM_GATE_CROSSOVER[x]));
+    }
 }
 
 DeBleedAudioProcessor::~DeBleedAudioProcessor()
@@ -84,11 +134,23 @@ DeBleedAudioProcessor::~DeBleedAudioProcessor()
     parameters.removeParameterListener(PARAM_LPF_BOUND, this);
     parameters.removeParameterListener(PARAM_TIGHTNESS, this);
     parameters.removeParameterListener(PARAM_LR_ENABLED, this);
-    parameters.removeParameterListener(PARAM_LR_SENSITIVITY, this);
-    parameters.removeParameterListener(PARAM_LR_ATTACK_MULT, this);
-    parameters.removeParameterListener(PARAM_LR_RELEASE_MULT, this);
-    parameters.removeParameterListener(PARAM_LR_HOLD_MULT, this);
-    parameters.removeParameterListener(PARAM_LR_FLOOR, this);
+
+    // Per-band gate parameters
+    for (int b = 0; b < 6; ++b)
+    {
+        parameters.removeParameterListener(PARAM_GATE_THRESHOLD[b], this);
+        parameters.removeParameterListener(PARAM_GATE_ATTACK[b], this);
+        parameters.removeParameterListener(PARAM_GATE_RELEASE[b], this);
+        parameters.removeParameterListener(PARAM_GATE_HOLD[b], this);
+        parameters.removeParameterListener(PARAM_GATE_RANGE[b], this);
+        parameters.removeParameterListener(PARAM_GATE_ENABLED[b], this);
+    }
+
+    // Crossover parameters
+    for (int x = 0; x < 5; ++x)
+    {
+        parameters.removeParameterListener(PARAM_GATE_CROSSOVER[x], this);
+    }
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::createParameterLayout()
@@ -133,11 +195,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         false
     ));
 
-    // Attack time (ms) - how fast gate opens
+    // Attack time (ms) - how fast cuts engage
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_ATTACK, 1},
         "Attack",
-        juce::NormalisableRange<float>(0.1f, 100.0f, 0.1f, 0.5f),  // Skewed for finer control at low end
+        juce::NormalisableRange<float>(0.1f, 500.0f, 0.1f, 0.4f),  // Extended to 500ms
         10.0f,
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
@@ -145,12 +207,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         nullptr
     ));
 
-    // Release time (ms) - how fast gate closes (gain falls toward floor)
+    // Release time (ms) - how fast cuts release back to unity
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_RELEASE, 1},
         "Release",
-        juce::NormalisableRange<float>(10.0f, 2000.0f, 1.0f, 0.4f),
-        500.0f,  // Slow release for smooth gate close
+        juce::NormalisableRange<float>(0.1f, 2000.0f, 0.1f, 0.4f),  // Extended down to 0.1ms
+        500.0f,  // Slow release for smooth behavior
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 0) + " ms"; },
@@ -226,72 +288,122 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
 
     // === Linkwitz-Riley 6-Band Gate Parameters ===
 
-    // LR Gate Enable
+    // Master gate enable
     params.push_back(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID{PARAM_LR_ENABLED, 1},
-        "LR Gate",
+        "Gate Enable",
         true  // Default: enabled
     ));
 
-    // LR Sensitivity - offsets threshold from neural mask (-100% = less gating, +100% = more gating)
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_LR_SENSITIVITY, 1},
-        "LR Sensitivity",
-        juce::NormalisableRange<float>(-100.0f, 100.0f, 1.0f),
-        0.0f,  // Default: no offset
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 0) + "%"; },
-        nullptr
-    ));
+    // Band names for display
+    static const std::array<juce::String, 6> bandNames = {{"Sub", "Low", "L-Mid", "Mid", "H-Mid", "High"}};
 
-    // LR Attack - gate attack time in ms (applied to mid band, other bands scale proportionally)
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_LR_ATTACK_MULT, 1},
-        "LR Attack",
-        juce::NormalisableRange<float>(0.5f, 100.0f, 0.1f, 0.4f),
-        6.0f,  // Default: 6ms (mid band reference)
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 1) + " ms"; },
-        nullptr
-    ));
+    // Default values per band (sub to high: slower to faster timing)
+    static const std::array<float, 6> defaultThreshold = {{-40.0f, -40.0f, -40.0f, -40.0f, -40.0f, -40.0f}};
+    static const std::array<float, 6> defaultAttack = {{35.0f, 20.0f, 12.0f, 6.0f, 3.0f, 1.5f}};
+    static const std::array<float, 6> defaultRelease = {{350.0f, 225.0f, 150.0f, 100.0f, 65.0f, 50.0f}};
+    static const std::array<float, 6> defaultHold = {{75.0f, 55.0f, 35.0f, 20.0f, 12.0f, 8.0f}};
+    static const std::array<float, 6> defaultRange = {{-60.0f, -60.0f, -60.0f, -60.0f, -60.0f, -60.0f}};
 
-    // LR Release - gate release time in ms (applied to mid band, other bands scale proportionally)
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_LR_RELEASE_MULT, 1},
-        "LR Release",
-        juce::NormalisableRange<float>(10.0f, 1000.0f, 1.0f, 0.4f),
-        100.0f,  // Default: 100ms (mid band reference)
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 0) + " ms"; },
-        nullptr
-    ));
+    // Per-band parameters (36 total)
+    for (int b = 0; b < 6; ++b)
+    {
+        // Threshold (-80 to 0 dB)
+        params.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID{PARAM_GATE_THRESHOLD[b], 1},
+            bandNames[b] + " Threshold",
+            juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f),
+            defaultThreshold[b],
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) { return juce::String(value, 1) + " dB"; },
+            nullptr
+        ));
 
-    // LR Hold - gate hold time in ms (applied to mid band, other bands scale proportionally)
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_LR_HOLD_MULT, 1},
-        "LR Hold",
-        juce::NormalisableRange<float>(1.0f, 200.0f, 1.0f, 0.5f),
-        20.0f,  // Default: 20ms (mid band reference)
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 0) + " ms"; },
-        nullptr
-    ));
+        // Attack (0.1 to 100 ms)
+        params.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID{PARAM_GATE_ATTACK[b], 1},
+            bandNames[b] + " Attack",
+            juce::NormalisableRange<float>(0.1f, 100.0f, 0.1f, 0.4f),
+            defaultAttack[b],
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) { return juce::String(value, 1) + " ms"; },
+            nullptr
+        ));
 
-    // LR Floor - maximum attenuation when gated
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_LR_FLOOR, 1},
-        "LR Floor",
-        juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f),
-        -60.0f,  // Default: -60dB
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 1) + " dB"; },
-        nullptr
-    ));
+        // Release (10 to 1000 ms)
+        params.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID{PARAM_GATE_RELEASE[b], 1},
+            bandNames[b] + " Release",
+            juce::NormalisableRange<float>(10.0f, 1000.0f, 1.0f, 0.4f),
+            defaultRelease[b],
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) { return juce::String(value, 0) + " ms"; },
+            nullptr
+        ));
+
+        // Hold (0 to 500 ms)
+        params.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID{PARAM_GATE_HOLD[b], 1},
+            bandNames[b] + " Hold",
+            juce::NormalisableRange<float>(0.0f, 500.0f, 1.0f, 0.5f),
+            defaultHold[b],
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) { return juce::String(value, 0) + " ms"; },
+            nullptr
+        ));
+
+        // Range (-80 to 0 dB)
+        params.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID{PARAM_GATE_RANGE[b], 1},
+            bandNames[b] + " Range",
+            juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f),
+            defaultRange[b],
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) { return juce::String(value, 1) + " dB"; },
+            nullptr
+        ));
+
+        // Band enable
+        params.push_back(std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID{PARAM_GATE_ENABLED[b], 1},
+            bandNames[b] + " Enable",
+            true
+        ));
+    }
+
+    // Crossover frequencies (5 crossovers)
+    // Ranges overlap to allow adjustment, but we enforce 1-octave minimum spacing in parameterChanged
+    static const std::array<float, 5> crossoverDefaults = {{80.0f, 250.0f, 800.0f, 2500.0f, 8000.0f}};
+    static const std::array<std::pair<float, float>, 5> crossoverRanges = {{
+        {40.0f, 160.0f},      // X0: Sub/Low boundary
+        {100.0f, 500.0f},     // X1: Low/L-Mid boundary
+        {300.0f, 1500.0f},    // X2: L-Mid/Mid boundary
+        {1000.0f, 5000.0f},   // X3: Mid/H-Mid boundary
+        {3000.0f, 12000.0f}   // X4: H-Mid/High boundary
+    }};
+
+    for (int x = 0; x < 5; ++x)
+    {
+        params.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID{PARAM_GATE_CROSSOVER[x], 1},
+            "Crossover " + juce::String(x + 1),
+            juce::NormalisableRange<float>(crossoverRanges[x].first, crossoverRanges[x].second, 1.0f, 0.5f),
+            crossoverDefaults[x],
+            juce::String(),
+            juce::AudioProcessorParameter::genericParameter,
+            [](float value, int) {
+                if (value >= 1000.0f)
+                    return juce::String(value / 1000.0f, 1) + " kHz";
+                return juce::String(value, 0) + " Hz";
+            },
+            nullptr
+        ));
+    }
 
     return {params.begin(), params.end()};
 }
@@ -330,16 +442,57 @@ void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, fl
         tightness.store(newValue);
     else if (parameterID == PARAM_LR_ENABLED)
         lrEnabled.store(newValue > 0.5f);
-    else if (parameterID == PARAM_LR_SENSITIVITY)
-        lrSensitivity.store(newValue);
-    else if (parameterID == PARAM_LR_ATTACK_MULT)
-        lrAttackMult.store(newValue);
-    else if (parameterID == PARAM_LR_RELEASE_MULT)
-        lrReleaseMult.store(newValue);
-    else if (parameterID == PARAM_LR_HOLD_MULT)
-        lrHoldMult.store(newValue);
-    else if (parameterID == PARAM_LR_FLOOR)
-        lrFloorDb.store(newValue);
+    else
+    {
+        // Check per-band gate parameters
+        for (int b = 0; b < 6; ++b)
+        {
+            if (parameterID == PARAM_GATE_THRESHOLD[b])
+            {
+                gateBandParams[b].threshold.store(newValue);
+                return;
+            }
+            if (parameterID == PARAM_GATE_ATTACK[b])
+            {
+                gateBandParams[b].attack.store(newValue);
+                return;
+            }
+            if (parameterID == PARAM_GATE_RELEASE[b])
+            {
+                gateBandParams[b].release.store(newValue);
+                return;
+            }
+            if (parameterID == PARAM_GATE_HOLD[b])
+            {
+                gateBandParams[b].hold.store(newValue);
+                return;
+            }
+            if (parameterID == PARAM_GATE_RANGE[b])
+            {
+                gateBandParams[b].range.store(newValue);
+                return;
+            }
+            if (parameterID == PARAM_GATE_ENABLED[b])
+            {
+                gateBandParams[b].enabled.store(newValue > 0.5f);
+                return;
+            }
+        }
+
+        // Check crossover parameters
+        for (int x = 0; x < 5; ++x)
+        {
+            if (parameterID == PARAM_GATE_CROSSOVER[x])
+            {
+                // Enforce minimum 1-octave spacing between crossovers
+                float minAllowed = (x > 0) ? gateCrossovers[x - 1].load() * 2.0f : 40.0f;
+                float maxAllowed = (x < 4) ? gateCrossovers[x + 1].load() / 2.0f : 12000.0f;
+                float constrainedValue = juce::jlimit(minAllowed, maxAllowed, newValue);
+                gateCrossovers[x].store(constrainedValue);
+                return;
+            }
+        }
+    }
 }
 
 int DeBleedAudioProcessor::freqToBin(float freqHz) const
@@ -513,49 +666,28 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     const float* rawMask = sidechainAnalyzer.getRawMask();
 
     // === AUDIO PATH: 6-Band Linkwitz-Riley Gate (Broadband Macro Gating) ===
-    // Calculate band mask averages from neural mask
-    // Mask is 129 bins at ~187.5 Hz/bin (48kHz/256 FFT)
-    // Bands: Sub(20-80), Low(80-250), Mid-Low(250-800), Mid(800-2.5k), High-Mid(2.5k-8k), High(8k-20k)
-    std::array<float, LinkwitzRileyGate::NUM_BANDS> bandMaskAverages;
-    if (rawMask != nullptr)
-    {
-        // Crossover frequencies: 80, 250, 800, 2500, 8000 Hz
-        // At 187.5 Hz/bin: bins ~0-1, 1-2, 2-4, 4-13, 13-43, 43-128
-        static constexpr float BIN_HZ = 187.5f;  // 48000/256
-        static constexpr std::array<float, 7> BAND_EDGES = {{20.0f, 80.0f, 250.0f, 800.0f, 2500.0f, 8000.0f, 20000.0f}};
-
-        for (int b = 0; b < LinkwitzRileyGate::NUM_BANDS; ++b)
-        {
-            int startBin = static_cast<int>(BAND_EDGES[b] / BIN_HZ);
-            int endBin = static_cast<int>(BAND_EDGES[b + 1] / BIN_HZ);
-            startBin = std::clamp(startBin, 0, 128);
-            endBin = std::clamp(endBin, 1, 129);
-
-            float sum = 0.0f;
-            int count = 0;
-            for (int bin = startBin; bin < endBin; ++bin)
-            {
-                sum += rawMask[bin];
-                ++count;
-            }
-            bandMaskAverages[b] = (count > 0) ? (sum / static_cast<float>(count)) : 1.0f;
-        }
-    }
-    else
-    {
-        bandMaskAverages.fill(1.0f);  // Unity (pass through)
-    }
-
-    // Update gate parameters (ms values - scaled per band internally)
+    // Signal-level gate with per-band user-controlled parameters
     linkwitzGate.setEnabled(lrEnabled.load());
-    linkwitzGate.setSensitivity(lrSensitivity.load());
-    linkwitzGate.setAttackMs(lrAttackMult.load());    // Now ms value, not multiplier
-    linkwitzGate.setReleaseMs(lrReleaseMult.load());  // Now ms value, not multiplier
-    linkwitzGate.setHoldMs(lrHoldMult.load());        // Now ms value, not multiplier
-    linkwitzGate.setFloorDb(lrFloorDb.load());
 
-    // Process gate (broadband macro gating)
-    linkwitzGate.process(buffer, bandMaskAverages);
+    // Update per-band gate parameters from atomic storage
+    for (int b = 0; b < 6; ++b)
+    {
+        linkwitzGate.setBandThreshold(b, gateBandParams[b].threshold.load());
+        linkwitzGate.setBandAttack(b, gateBandParams[b].attack.load());
+        linkwitzGate.setBandRelease(b, gateBandParams[b].release.load());
+        linkwitzGate.setBandHold(b, gateBandParams[b].hold.load());
+        linkwitzGate.setBandRange(b, gateBandParams[b].range.load());
+        linkwitzGate.setBandEnabled(b, gateBandParams[b].enabled.load());
+    }
+
+    // Update crossover frequencies
+    for (int x = 0; x < 5; ++x)
+    {
+        linkwitzGate.setCrossover(x, gateCrossovers[x].load());
+    }
+
+    // Process gate (signal-level detection per band)
+    linkwitzGate.process(buffer);
 
     // === AUDIO PATH: Dynamic Hunter Filters (Surgical Micro Cuts) ===
     // The ActiveFilterPool finds valleys in the mask and assigns 32 filters to chase them

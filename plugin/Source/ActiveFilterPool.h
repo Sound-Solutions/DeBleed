@@ -66,7 +66,7 @@ public:
     /**
      * Set release time in ms (compressor-style: how fast cuts RELEASE back to unity).
      */
-    void setReleaseMs(float ms) { releaseMs = juce::jlimit(1.0f, 2000.0f, ms); }
+    void setReleaseMs(float ms) { releaseMs = juce::jlimit(0.1f, 2000.0f, ms); }
 
     /**
      * Set tightness in ms (minimum time a hunter stays at its frequency).

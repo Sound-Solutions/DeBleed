@@ -74,6 +74,10 @@
             file="plugin/Source/LinkwitzRileyGate.cpp"/>
       <FILE id="LinkwitzRileyGate_h" name="LinkwitzRileyGate.h" compile="0" resource="0"
             file="plugin/Source/LinkwitzRileyGate.h"/>
+      <FILE id="GateBandSelector_cpp" name="GateBandSelector.cpp" compile="1" resource="0"
+            file="plugin/Source/GateBandSelector.cpp"/>
+      <FILE id="GateBandSelector_h" name="GateBandSelector.h" compile="0" resource="0"
+            file="plugin/Source/GateBandSelector.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

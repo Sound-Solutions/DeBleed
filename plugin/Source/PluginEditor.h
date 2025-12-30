@@ -6,6 +6,7 @@
 #include "RTAVisualization.h"
 #include "GainReductionMeter.h"
 #include "DeBleedLookAndFeel.h"
+#include "GateBandSelector.h"
 
 /**
  * DeBleedAudioProcessorEditor - GUI for the DeBleed Neural Gate plugin.
@@ -94,16 +95,7 @@ private:
 
     // Row 2: Gate controls
     juce::ToggleButton lrEnabledButton;
-    juce::Slider lrSensitivitySlider;
-    juce::Label lrSensitivityLabel;
-    juce::Slider lrAttackMultSlider;
-    juce::Label lrAttackMultLabel;
-    juce::Slider lrReleaseMultSlider;
-    juce::Label lrReleaseMultLabel;
-    juce::Slider lrHoldMultSlider;
-    juce::Label lrHoldMultLabel;
-    juce::Slider lrFloorSlider;
-    juce::Label lrFloorLabel;
+    std::unique_ptr<GateBandSelector> gateBandSelector;
 
     // Toggle buttons
     juce::ToggleButton lowLatencyButton;
@@ -127,11 +119,7 @@ private:
 
     // Gate parameter attachments
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lrEnabledAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrSensitivityAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrAttackMultAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrReleaseMultAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrHoldMultAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrFloorAttachment;
+    // Note: Per-band gate attachments will be added in Phase 4
 
     // Training log
     juce::TextEditor logTextBox;

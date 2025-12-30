@@ -145,11 +145,9 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     lrEnabledButton.setColour(juce::ToggleButton::textColourId, juce::Colours::white.withAlpha(0.8f));
     addAndMakeVisible(lrEnabledButton);
 
-    setupKnob(lrSensitivitySlider, lrSensitivityLabel, "Sens", DeBleedLookAndFeel::purpleAccent);
-    setupKnob(lrAttackMultSlider, lrAttackMultLabel, "G.Atk", DeBleedLookAndFeel::purpleAccent);
-    setupKnob(lrReleaseMultSlider, lrReleaseMultLabel, "G.Rel", DeBleedLookAndFeel::purpleAccent);
-    setupKnob(lrHoldMultSlider, lrHoldMultLabel, "G.Hold", DeBleedLookAndFeel::purpleAccent);
-    setupKnob(lrFloorSlider, lrFloorLabel, "G.Floor", DeBleedLookAndFeel::purpleAccent);
+    // Gate band selector with per-band knobs
+    gateBandSelector = std::make_unique<GateBandSelector>(audioProcessor);
+    addAndMakeVisible(gateBandSelector.get());
 
     // Mix slider (hidden)
     mixSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -204,16 +202,7 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     // Gate parameter attachments
     lrEnabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_ENABLED, lrEnabledButton);
-    lrSensitivityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_SENSITIVITY, lrSensitivitySlider);
-    lrAttackMultAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_ATTACK_MULT, lrAttackMultSlider);
-    lrReleaseMultAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_RELEASE_MULT, lrReleaseMultSlider);
-    lrHoldMultAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_HOLD_MULT, lrHoldMultSlider);
-    lrFloorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_FLOOR, lrFloorSlider);
+    // Note: Per-band gate attachments will be added in Phase 4
 
     // Log text box (hidden by default)
     logTextBox.setMultiLine(true);
@@ -306,16 +295,8 @@ void DeBleedAudioProcessorEditor::setActiveTab(Tab tab)
 
     // Row 2 - Gate controls
     lrEnabledButton.setVisible(tab == Tab::Visualizing);
-    lrSensitivitySlider.setVisible(tab == Tab::Visualizing);
-    lrSensitivityLabel.setVisible(tab == Tab::Visualizing);
-    lrAttackMultSlider.setVisible(tab == Tab::Visualizing);
-    lrAttackMultLabel.setVisible(tab == Tab::Visualizing);
-    lrReleaseMultSlider.setVisible(tab == Tab::Visualizing);
-    lrReleaseMultLabel.setVisible(tab == Tab::Visualizing);
-    lrHoldMultSlider.setVisible(tab == Tab::Visualizing);
-    lrHoldMultLabel.setVisible(tab == Tab::Visualizing);
-    lrFloorSlider.setVisible(tab == Tab::Visualizing);
-    lrFloorLabel.setVisible(tab == Tab::Visualizing);
+    if (gateBandSelector)
+        gateBandSelector->setVisible(tab == Tab::Visualizing);
 
     resized();
     repaint();
@@ -484,18 +465,13 @@ void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> boun
     knobRow2.removeFromLeft(knobSpacing + 5);
     auto gateToggleArea = knobRow2.removeFromLeft(40);
     lrEnabledButton.setBounds(gateToggleArea.withSizeKeepingCentre(40, 22).translated(0, 20));
-    knobRow2.removeFromLeft(5);
 
-    // Gate section
-    placeKnob(knobRow2, lrSensitivitySlider, lrSensitivityLabel);
-    knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, lrAttackMultSlider, lrAttackMultLabel);
-    knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, lrReleaseMultSlider, lrReleaseMultLabel);
-    knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, lrHoldMultSlider, lrHoldMultLabel);
-    knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, lrFloorSlider, lrFloorLabel);
+    // Gate band selector (remaining space in row 2)
+    knobRow2.removeFromLeft(5);
+    if (gateBandSelector)
+    {
+        gateBandSelector->setBounds(knobRow2.withHeight(row2.getHeight()));
+    }
 }
 
 void DeBleedAudioProcessorEditor::timerCallback()

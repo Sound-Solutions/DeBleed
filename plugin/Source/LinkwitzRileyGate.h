@@ -6,7 +6,7 @@
 /**
  * LinkwitzRileyGate - 6-band multiband gate with Linkwitz-Riley crossovers.
  *
- * Provides "macro" broadband gating while hunters provide "micro" surgical cuts.
+ * Fully user-controlled traditional signal-level gate with per-band parameters.
  * Uses LR-4 (24dB/octave) crossovers for phase-coherent band splitting.
  *
  * Bands:
@@ -18,9 +18,9 @@
  *   5: High      (8k-20k Hz)
  *
  * Key features:
- * - Neural-driven: Gate triggers based on average mask value per band
- * - Adaptive timing: Engine auto-determines attack/release/hold per band
- * - User controls scale the auto values via multipliers
+ * - Signal-level detection: Gate triggers based on RMS level per band
+ * - Per-band parameters: Threshold, attack, release, hold, range, enable
+ * - Adjustable crossover frequencies
  */
 class LinkwitzRileyGate
 {
@@ -33,22 +33,16 @@ public:
         80.0f, 250.0f, 800.0f, 2500.0f, 8000.0f
     }};
 
-    // Auto timing per band (slower for lows, faster for highs)
-    struct AutoTiming
+    // Per-band parameters
+    struct BandParams
     {
-        float attackMs;
-        float releaseMs;
-        float holdMs;
+        float thresholdDb = -40.0f;  // -80 to 0 dB
+        float attackMs = 5.0f;       // 0.1 to 100 ms
+        float releaseMs = 100.0f;    // 10 to 1000 ms
+        float holdMs = 50.0f;        // 0 to 500 ms
+        float rangeDb = -60.0f;      // -80 to 0 dB (max attenuation)
+        bool enabled = true;
     };
-
-    static constexpr std::array<AutoTiming, NUM_BANDS> AUTO_BAND_TIMING = {{
-        {35.0f, 350.0f, 75.0f},   // Sub: slow - preserve transients
-        {20.0f, 225.0f, 55.0f},   // Low: moderate
-        {12.0f, 150.0f, 35.0f},   // Low-Mid: medium
-        {6.0f, 100.0f, 20.0f},    // Mid: faster
-        {3.0f, 65.0f, 12.0f},     // High-Mid: fast
-        {1.5f, 50.0f, 8.0f}       // High: very fast
-    }};
 
     LinkwitzRileyGate();
     ~LinkwitzRileyGate() = default;
@@ -58,48 +52,46 @@ public:
 
     /**
      * Process audio through the multiband gate.
+     * Gate triggers based on signal level in each band.
      * @param buffer Audio to process in-place
-     * @param bandMaskAverages Array of 6 average mask values per band (0.0-1.0)
      */
-    void process(juce::AudioBuffer<float>& buffer, const std::array<float, NUM_BANDS>& bandMaskAverages);
+    void process(juce::AudioBuffer<float>& buffer);
 
-    // User global controls (ms values - applied to mid band, other bands scale proportionally)
-    void setSensitivity(float percent) { sensitivity = juce::jlimit(-100.0f, 100.0f, percent); }
-    void setAttackMs(float ms) { attackMs = juce::jlimit(0.5f, 100.0f, ms); }
-    void setReleaseMs(float ms) { releaseMs = juce::jlimit(10.0f, 1000.0f, ms); }
-    void setHoldMs(float ms) { holdMs = juce::jlimit(1.0f, 200.0f, ms); }
-    void setFloorDb(float db) { floorDb = juce::jlimit(-80.0f, 0.0f, db); }
+    // Master enable/disable
+    void setEnabled(bool enabled) { this->masterEnabled = enabled; }
+    bool isEnabled() const { return masterEnabled; }
 
-    // Enable/disable the gate
-    void setEnabled(bool enabled) { this->enabled = enabled; }
-    bool isEnabled() const { return enabled; }
+    // Per-band parameter setters
+    void setBandThreshold(int band, float db);
+    void setBandAttack(int band, float ms);
+    void setBandRelease(int band, float ms);
+    void setBandHold(int band, float ms);
+    void setBandRange(int band, float db);
+    void setBandEnabled(int band, bool enabled);
+
+    // Set all parameters for a band at once
+    void setBandParams(int band, const BandParams& params);
+
+    // Crossover frequency setters
+    void setCrossover(int index, float hz);
+    std::array<float, NUM_CROSSOVERS> getCrossoverFrequencies() const { return crossoverFreqs; }
 
     // Get current band states for visualization
     struct BandState
     {
-        float currentGain;      // 0.0-1.0
-        bool gateOpen;          // true = passing signal
-        float maskAverage;      // Current mask average
+        float currentGain;      // 0.0-1.0 (1.0 = unity, lower = gating)
+        bool gateOpen;          // true = passing signal (above threshold)
+        float signalLevelDb;    // Current detected signal level in dB
+        float thresholdDb;      // Current threshold setting
     };
     std::array<BandState, NUM_BANDS> getBandStates() const;
 
 private:
     double sampleRate = 48000.0;
-    bool enabled = true;
+    bool masterEnabled = true;
 
-    // User controls (ms values - these are the "mid band" reference, other bands scale proportionally)
-    float sensitivity = 0.0f;    // -100% to +100% - offsets threshold
-    float attackMs = 6.0f;       // Mid band attack (others scale: sub=5.8x, high=0.25x)
-    float releaseMs = 100.0f;    // Mid band release (others scale similarly)
-    float holdMs = 20.0f;        // Mid band hold (others scale similarly)
-    float floorDb = -60.0f;      // Maximum attenuation when gated
-
-    // Band scaling factors relative to mid band (index 3)
-    // These are computed from AUTO_BAND_TIMING ratios
-    static constexpr int MID_BAND_INDEX = 3;
-    float getBandAttackMs(int band) const;
-    float getBandReleaseMs(int band) const;
-    float getBandHoldMs(int band) const;
+    // Per-band parameters
+    std::array<BandParams, NUM_BANDS> bandParams;
 
     // Crossover frequencies
     std::array<float, NUM_CROSSOVERS> crossoverFreqs = DEFAULT_CROSSOVERS;
@@ -117,21 +109,33 @@ private:
     // Band processing buffers
     std::array<juce::AudioBuffer<float>, NUM_BANDS> bandBuffers;
 
+    // Signal level detector per band (RMS envelope)
+    struct LevelDetector
+    {
+        float rmsEnvelopeDb = -100.0f;   // Smoothed RMS level in dB
+        float detectorCoeff = 0.0f;      // Smoothing coefficient
+    };
+    std::array<LevelDetector, NUM_BANDS> levelDetectors;
+
     // Gate envelope per band
     struct GateEnvelope
     {
-        float currentGain = 1.0f;
-        float targetGain = 1.0f;
-        int holdCounter = 0;
-        bool isGating = false;
-        float lastMaskAverage = 1.0f;
+        float currentGain = 1.0f;        // Current applied gain (0 to 1)
+        float targetGain = 1.0f;         // Target gain
+        int holdCounter = 0;             // Samples remaining in hold phase
+        bool isGating = false;           // True when gate is closed/closing
     };
     std::array<GateEnvelope, NUM_BANDS> gateEnvelopes;
 
     void splitBands(const juce::AudioBuffer<float>& input);
     void recombineBands(juce::AudioBuffer<float>& output);
     void updateCrossoverCoefficients();
-    void processGateEnvelope(int band, float maskAverage, int numSamples);
+
+    // Detect signal level in a band (returns dB)
+    float detectBandLevel(int band, int numSamples);
+
+    // Process gate envelope for a band using signal level detection
+    void processGateEnvelope(int band, float signalLevelDb, int numSamples);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LinkwitzRileyGate)
 };

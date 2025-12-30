@@ -2,14 +2,26 @@
 
 LinkwitzRileyGate::LinkwitzRileyGate()
 {
-    // Initialize band buffers and envelopes
+    // Initialize with default per-band timing (scaled from sub to high)
+    static const std::array<float, NUM_BANDS> defaultAttacks = {{35.0f, 20.0f, 12.0f, 6.0f, 3.0f, 1.5f}};
+    static const std::array<float, NUM_BANDS> defaultReleases = {{350.0f, 225.0f, 150.0f, 100.0f, 65.0f, 50.0f}};
+    static const std::array<float, NUM_BANDS> defaultHolds = {{75.0f, 55.0f, 35.0f, 20.0f, 12.0f, 8.0f}};
+
     for (int b = 0; b < NUM_BANDS; ++b)
     {
+        bandParams[b].thresholdDb = -40.0f;
+        bandParams[b].attackMs = defaultAttacks[b];
+        bandParams[b].releaseMs = defaultReleases[b];
+        bandParams[b].holdMs = defaultHolds[b];
+        bandParams[b].rangeDb = -60.0f;
+        bandParams[b].enabled = true;
+
         gateEnvelopes[b].currentGain = 1.0f;
         gateEnvelopes[b].targetGain = 1.0f;
         gateEnvelopes[b].holdCounter = 0;
         gateEnvelopes[b].isGating = false;
-        gateEnvelopes[b].lastMaskAverage = 1.0f;
+
+        levelDetectors[b].rmsEnvelopeDb = -100.0f;
     }
 }
 
@@ -49,6 +61,15 @@ void LinkwitzRileyGate::prepare(double newSampleRate, int maxBlockSize)
         bandBuffers[b].clear();
     }
 
+    // Initialize level detectors with ~5ms time constant
+    float detectorTimeMs = 5.0f;
+    float detectorCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * detectorTimeMs / 1000.0f));
+    for (auto& detector : levelDetectors)
+    {
+        detector.detectorCoeff = detectorCoeff;
+        detector.rmsEnvelopeDb = -100.0f;
+    }
+
     // Reset envelopes
     for (auto& env : gateEnvelopes)
     {
@@ -81,6 +102,11 @@ void LinkwitzRileyGate::reset()
         env.isGating = false;
     }
 
+    for (auto& detector : levelDetectors)
+    {
+        detector.rmsEnvelopeDb = -100.0f;
+    }
+
     for (auto& buf : bandBuffers)
     {
         buf.clear();
@@ -97,7 +123,6 @@ void LinkwitzRileyGate::updateCrossoverCoefficients()
         for (int ch = 0; ch < 2; ++ch)
         {
             // LR-4 = two cascaded Butterworth at same frequency
-            // Q for Butterworth = 0.7071 (1/sqrt(2))
             xover.lp1[ch].setCutoffFrequency(freq);
             xover.lp2[ch].setCutoffFrequency(freq);
             xover.hp1[ch].setCutoffFrequency(freq);
@@ -116,10 +141,6 @@ void LinkwitzRileyGate::splitBands(const juce::AudioBuffer<float>& input)
     {
         buf.clear();
     }
-
-    // Start with full signal going into band splitting
-    // We process crossovers sequentially: each crossover splits off the high band
-    // remaining low content goes to next crossover
 
     for (int ch = 0; ch < numChannels; ++ch)
     {
@@ -143,9 +164,9 @@ void LinkwitzRileyGate::splitBands(const juce::AudioBuffer<float>& input)
                 float hp = xover.hp1[ch].processSample(0, sample);
                 hp = xover.hp2[ch].processSample(0, hp);
 
-                // Low goes to current band, high goes to next iteration
+                // Low goes to current band, high continues to next crossover
                 bandBuffers[x].setSample(ch, s, lp);
-                sample = hp;  // Continue splitting the high portion
+                sample = hp;
             }
 
             // Whatever remains after all crossovers goes to the highest band
@@ -171,110 +192,112 @@ void LinkwitzRileyGate::recombineBands(juce::AudioBuffer<float>& output)
     }
 }
 
-// Band scaling: user ms values are the "mid band" reference (index 3)
-// Other bands scale proportionally based on AUTO_BAND_TIMING ratios
-float LinkwitzRileyGate::getBandAttackMs(int band) const
+float LinkwitzRileyGate::detectBandLevel(int band, int numSamples)
 {
-    float scale = AUTO_BAND_TIMING[band].attackMs / AUTO_BAND_TIMING[MID_BAND_INDEX].attackMs;
-    return attackMs * scale;
-}
+    auto& detector = levelDetectors[band];
+    const auto& buffer = bandBuffers[band];
+    const int numChannels = juce::jmin(buffer.getNumChannels(), 2);
 
-float LinkwitzRileyGate::getBandReleaseMs(int band) const
-{
-    float scale = AUTO_BAND_TIMING[band].releaseMs / AUTO_BAND_TIMING[MID_BAND_INDEX].releaseMs;
-    return releaseMs * scale;
-}
+    // Calculate RMS over the block
+    float sumSquares = 0.0f;
+    int totalSamples = 0;
 
-float LinkwitzRileyGate::getBandHoldMs(int band) const
-{
-    float scale = AUTO_BAND_TIMING[band].holdMs / AUTO_BAND_TIMING[MID_BAND_INDEX].holdMs;
-    return holdMs * scale;
-}
-
-void LinkwitzRileyGate::processGateEnvelope(int band, float maskAverage, int numSamples)
-{
-    auto& env = gateEnvelopes[band];
-
-    // Store for visualization
-    env.lastMaskAverage = maskAverage;
-
-    // Calculate threshold with hysteresis to prevent chattering
-    // Base threshold: 0.6 = gate triggers when neural network detects 40%+ bleed
-    // sensitivity > 0 = lower threshold = more aggressive gating
-    // sensitivity < 0 = higher threshold = less aggressive gating
-    float thresholdOffset = sensitivity / 100.0f * 0.3f;  // +/-30% offset at full sensitivity
-    float openThreshold = 0.7f - thresholdOffset;   // Threshold to open gate (pass signal)
-    float closeThreshold = 0.5f - thresholdOffset;  // Threshold to close gate (attenuate)
-
-    // Hysteresis: use different thresholds for opening vs closing
-    float threshold = env.isGating ? openThreshold : closeThreshold;
-
-    // Gate closes when mask indicates bleed (low values = bleed detected)
-    bool shouldGate = maskAverage < threshold;
-
-    // Get band-scaled timing (user ms values scaled per band)
-    float bandAttackMs = getBandAttackMs(band);
-    float bandReleaseMs = getBandReleaseMs(band);
-    float bandHoldMs = getBandHoldMs(band);
-
-    // Convert to coefficients
-    float attackCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * bandAttackMs / 1000.0f));
-    float releaseCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * bandReleaseMs / 1000.0f));
-    int holdSamples = static_cast<int>(bandHoldMs * sampleRate / 1000.0f);
-
-    // Floor gain - the maximum attenuation when gated
-    float floorGain = juce::Decibels::decibelsToGain(floorDb);
-
-    // Scale target gain proportionally to mask depth (not just binary on/off)
-    // This creates smoother, more natural gating behavior
-    // When mask=0.5 and threshold=0.6: depth = (0.6-0.5)/(0.6-0) = 0.17 → slight gating
-    // When mask=0.1 and threshold=0.6: depth = (0.6-0.1)/(0.6-0) = 0.83 → heavy gating
-    float gateDepth = 0.0f;
-    if (shouldGate)
+    for (int ch = 0; ch < numChannels; ++ch)
     {
-        // Calculate how far below threshold we are (0-1 range)
-        float closeThresholdLocal = closeThreshold;
-        gateDepth = juce::jlimit(0.0f, 1.0f, (closeThresholdLocal - maskAverage) / closeThresholdLocal);
+        const float* data = buffer.getReadPointer(ch);
+        for (int s = 0; s < numSamples; ++s)
+        {
+            sumSquares += data[s] * data[s];
+            ++totalSamples;
+        }
     }
 
-    // Gate state machine with hold time
-    if (shouldGate)
+    float rms = (totalSamples > 0) ? std::sqrt(sumSquares / static_cast<float>(totalSamples)) : 0.0f;
+    float rmsDb = juce::Decibels::gainToDecibels(rms, -100.0f);
+
+    // Smooth the RMS envelope (ballistics-style: fast attack, slow release for detection)
+    float targetDb = rmsDb;
+    float coeff = detector.detectorCoeff;
+
+    // Use faster attack for level detection
+    if (targetDb > detector.rmsEnvelopeDb)
     {
+        coeff = 0.3f;  // Fast attack for level detection
+    }
+
+    detector.rmsEnvelopeDb = detector.rmsEnvelopeDb * coeff + targetDb * (1.0f - coeff);
+
+    return detector.rmsEnvelopeDb;
+}
+
+void LinkwitzRileyGate::processGateEnvelope(int band, float signalLevelDb, int numSamples)
+{
+    auto& env = gateEnvelopes[band];
+    const auto& params = bandParams[band];
+
+    // Skip if band is disabled
+    if (!params.enabled)
+    {
+        env.currentGain = 1.0f;
+        env.targetGain = 1.0f;
+        env.isGating = false;
+        return;
+    }
+
+    // Hysteresis: 3dB difference between open and close thresholds
+    float openThreshold = params.thresholdDb;
+    float closeThreshold = params.thresholdDb - 3.0f;
+
+    // Gate logic: signal above threshold = gate open, below = gate closing
+    bool signalAboveThreshold = signalLevelDb > (env.isGating ? openThreshold : closeThreshold);
+
+    // Convert timing to coefficients
+    float attackCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * params.attackMs / 1000.0f));
+    float releaseCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * params.releaseMs / 1000.0f));
+    int holdSamples = static_cast<int>(params.holdMs * sampleRate / 1000.0f);
+
+    // Floor gain (maximum attenuation)
+    float floorGain = juce::Decibels::decibelsToGain(params.rangeDb);
+
+    // Gate state machine with hold time
+    if (!signalAboveThreshold)
+    {
+        // Signal below threshold - close gate
         env.isGating = true;
         env.holdCounter = holdSamples;  // Reset hold counter while gating
-
-        // Target gain interpolates between unity and floor based on depth
-        env.targetGain = 1.0f - gateDepth * (1.0f - floorGain);
+        env.targetGain = floorGain;
     }
     else
     {
+        // Signal above threshold
         if (env.isGating)
         {
-            // Hold phase - stay at current attenuation
+            // Was gating - check hold time
             if (env.holdCounter > 0)
             {
                 env.holdCounter -= numSamples;
-                // During hold, maintain current target (don't jump to unity)
+                // Stay at current attenuation during hold
             }
             else
             {
-                // Hold finished - start opening
+                // Hold finished - open gate
                 env.isGating = false;
                 env.targetGain = 1.0f;
             }
         }
         else
         {
+            // Not gating - stay open
             env.targetGain = 1.0f;
         }
     }
 
-    // Smooth the gain
-    // Gate closing (gain decreasing) = attack time
-    // Gate opening (gain increasing) = release time
+    // Apply smoothing (attack for closing, release for opening)
+    // Note: Gate closing = gain decreasing = use attack
+    //       Gate opening = gain increasing = use release
     float coeff = (env.targetGain < env.currentGain) ? attackCoeff : releaseCoeff;
 
-    // Apply smoothing over the block
+    // Smooth over the block
     for (int s = 0; s < numSamples; ++s)
     {
         env.currentGain = env.currentGain * coeff + env.targetGain * (1.0f - coeff);
@@ -283,9 +306,9 @@ void LinkwitzRileyGate::processGateEnvelope(int band, float maskAverage, int num
     env.currentGain = juce::jlimit(floorGain, 1.0f, env.currentGain);
 }
 
-void LinkwitzRileyGate::process(juce::AudioBuffer<float>& buffer, const std::array<float, NUM_BANDS>& bandMaskAverages)
+void LinkwitzRileyGate::process(juce::AudioBuffer<float>& buffer)
 {
-    if (!enabled)
+    if (!masterEnabled)
         return;
 
     const int numSamples = buffer.getNumSamples();
@@ -294,17 +317,17 @@ void LinkwitzRileyGate::process(juce::AudioBuffer<float>& buffer, const std::arr
     // Split into bands
     splitBands(buffer);
 
-    // Process gate envelope for each band
+    // Process each band: detect level, compute gate envelope, apply gain
     for (int b = 0; b < NUM_BANDS; ++b)
     {
-        processGateEnvelope(b, bandMaskAverages[b], numSamples);
-    }
+        // Detect signal level in this band
+        float signalLevelDb = detectBandLevel(b, numSamples);
 
-    // Apply gain to each band
-    for (int b = 0; b < NUM_BANDS; ++b)
-    {
+        // Process gate envelope
+        processGateEnvelope(b, signalLevelDb, numSamples);
+
+        // Apply gain to band buffer
         float gain = gateEnvelopes[b].currentGain;
-
         for (int ch = 0; ch < numChannels; ++ch)
         {
             bandBuffers[b].applyGain(ch, 0, numSamples, gain);
@@ -315,6 +338,58 @@ void LinkwitzRileyGate::process(juce::AudioBuffer<float>& buffer, const std::arr
     recombineBands(buffer);
 }
 
+// Per-band parameter setters
+void LinkwitzRileyGate::setBandThreshold(int band, float db)
+{
+    if (band >= 0 && band < NUM_BANDS)
+        bandParams[band].thresholdDb = juce::jlimit(-80.0f, 0.0f, db);
+}
+
+void LinkwitzRileyGate::setBandAttack(int band, float ms)
+{
+    if (band >= 0 && band < NUM_BANDS)
+        bandParams[band].attackMs = juce::jlimit(0.1f, 100.0f, ms);
+}
+
+void LinkwitzRileyGate::setBandRelease(int band, float ms)
+{
+    if (band >= 0 && band < NUM_BANDS)
+        bandParams[band].releaseMs = juce::jlimit(10.0f, 1000.0f, ms);
+}
+
+void LinkwitzRileyGate::setBandHold(int band, float ms)
+{
+    if (band >= 0 && band < NUM_BANDS)
+        bandParams[band].holdMs = juce::jlimit(0.0f, 500.0f, ms);
+}
+
+void LinkwitzRileyGate::setBandRange(int band, float db)
+{
+    if (band >= 0 && band < NUM_BANDS)
+        bandParams[band].rangeDb = juce::jlimit(-80.0f, 0.0f, db);
+}
+
+void LinkwitzRileyGate::setBandEnabled(int band, bool enabled)
+{
+    if (band >= 0 && band < NUM_BANDS)
+        bandParams[band].enabled = enabled;
+}
+
+void LinkwitzRileyGate::setBandParams(int band, const BandParams& params)
+{
+    if (band >= 0 && band < NUM_BANDS)
+        bandParams[band] = params;
+}
+
+void LinkwitzRileyGate::setCrossover(int index, float hz)
+{
+    if (index >= 0 && index < NUM_CROSSOVERS)
+    {
+        crossoverFreqs[index] = juce::jlimit(20.0f, 20000.0f, hz);
+        updateCrossoverCoefficients();
+    }
+}
+
 std::array<LinkwitzRileyGate::BandState, LinkwitzRileyGate::NUM_BANDS> LinkwitzRileyGate::getBandStates() const
 {
     std::array<BandState, NUM_BANDS> states;
@@ -323,7 +398,8 @@ std::array<LinkwitzRileyGate::BandState, LinkwitzRileyGate::NUM_BANDS> LinkwitzR
     {
         states[b].currentGain = gateEnvelopes[b].currentGain;
         states[b].gateOpen = !gateEnvelopes[b].isGating;
-        states[b].maskAverage = gateEnvelopes[b].lastMaskAverage;
+        states[b].signalLevelDb = levelDetectors[b].rmsEnvelopeDb;
+        states[b].thresholdDb = bandParams[b].thresholdDb;
     }
 
     return states;

@@ -87,11 +87,18 @@ public:
 
     // Linkwitz-Riley Gate parameters
     static const juce::String PARAM_LR_ENABLED;
-    static const juce::String PARAM_LR_SENSITIVITY;
-    static const juce::String PARAM_LR_ATTACK_MULT;
-    static const juce::String PARAM_LR_RELEASE_MULT;
-    static const juce::String PARAM_LR_HOLD_MULT;
-    static const juce::String PARAM_LR_FLOOR;
+
+    // Per-band gate parameters (6 bands × 6 params = 36)
+    // Band names: SUB(0), LOW(1), LMID(2), MID(3), HMID(4), HIGH(5)
+    static const std::array<juce::String, 6> PARAM_GATE_THRESHOLD;  // -80 to 0 dB
+    static const std::array<juce::String, 6> PARAM_GATE_ATTACK;     // 0.1 to 100 ms
+    static const std::array<juce::String, 6> PARAM_GATE_RELEASE;    // 10 to 1000 ms
+    static const std::array<juce::String, 6> PARAM_GATE_HOLD;       // 0 to 500 ms
+    static const std::array<juce::String, 6> PARAM_GATE_RANGE;      // -80 to 0 dB
+    static const std::array<juce::String, 6> PARAM_GATE_ENABLED;    // bool per band
+
+    // Crossover frequencies (5 crossovers between 6 bands)
+    static const std::array<juce::String, 5> PARAM_GATE_CROSSOVER;  // Adjustable Hz
 
     // Visualization data for thread-safe audio->GUI transfer
     struct VisualizationData
@@ -150,6 +157,18 @@ public:
     // Access to the filter pool for visualization
     const ActiveFilterPool& getFilterPool() const { return activeFilterPool; }
 
+    // Access to the Linkwitz-Riley gate for visualization
+    const LinkwitzRileyGate& getLinkwitzGate() const { return linkwitzGate; }
+
+    // Get crossover frequencies for visualization
+    std::array<float, 5> getCrossoverFrequencies() const
+    {
+        std::array<float, 5> freqs;
+        for (int i = 0; i < 5; ++i)
+            freqs[i] = gateCrossovers[i].load();
+        return freqs;
+    }
+
 private:
     // Create parameter layout
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
@@ -175,11 +194,27 @@ private:
 
     // Linkwitz-Riley Gate parameters
     std::atomic<bool> lrEnabled{true};
-    std::atomic<float> lrSensitivity{0.0f};    // -100% to +100% threshold offset
-    std::atomic<float> lrAttackMult{1.0f};     // 0.25x to 4x
-    std::atomic<float> lrReleaseMult{1.0f};    // 0.25x to 4x
-    std::atomic<float> lrHoldMult{1.0f};       // 0.25x to 4x
-    std::atomic<float> lrFloorDb{-60.0f};      // Maximum attenuation
+
+    // Per-band gate parameters (atomic arrays)
+    struct GateBandParams
+    {
+        std::atomic<float> threshold{-40.0f};   // dB
+        std::atomic<float> attack{5.0f};        // ms
+        std::atomic<float> release{100.0f};     // ms
+        std::atomic<float> hold{50.0f};         // ms
+        std::atomic<float> range{-60.0f};       // dB
+        std::atomic<bool> enabled{true};
+    };
+    std::array<GateBandParams, 6> gateBandParams;
+
+    // Crossover frequencies (atomic)
+    std::array<std::atomic<float>, 5> gateCrossovers{{
+        std::atomic<float>{80.0f},
+        std::atomic<float>{250.0f},
+        std::atomic<float>{800.0f},
+        std::atomic<float>{2500.0f},
+        std::atomic<float>{8000.0f}
+    }};
 
     // Visualization data
     VisualizationData visualizationData;

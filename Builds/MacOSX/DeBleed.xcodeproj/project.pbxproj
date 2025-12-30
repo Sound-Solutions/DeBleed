@@ -43,6 +43,7 @@
 		43DA834545B0DB7629531D55 /* ActiveFilterPool.cpp */ = {isa = PBXBuildFile; fileRef = 7D5B415FFEF1A44E60DD6083; };
 		4603A67B45CC8D2AE774C0EB /* VST3 */ = {isa = PBXBuildFile; fileRef = 861F1F5882E6EDD716819666; };
 		473604E816B47F627E10AA0B /* Metal.framework */ = {isa = PBXBuildFile; fileRef = 512B9AFA1DD7C7A5351FCC11; settings = { ATTRIBUTES = (Weak, ); }; };
+		487AA272743131C971D6D8A6 /* LinkwitzRileyGate.cpp */ = {isa = PBXBuildFile; fileRef = 603287E39908AD37A68601A0; };
 		4A1BC0D955D8E7B76546969F /* TrainerProcess.cpp */ = {isa = PBXBuildFile; fileRef = 46D488FB65667A4C2EF58515; };
 		4A6EDB754CED6A25C65C8C80 /* AudioDropZone.cpp */ = {isa = PBXBuildFile; fileRef = 39AD446504209B10549A5E12; };
 		4BCDE0A0B0A800E04972D116 /* AudioUnit.framework */ = {isa = PBXBuildFile; fileRef = 0A04EC362B79DF91EAE2EC33; };
@@ -61,6 +62,7 @@
 		83244953AF9FF90354A4AAFA /* include_juce_audio_basics.mm */ = {isa = PBXBuildFile; fileRef = 7A6DD4C1995D0554912CF6DF; };
 		9126B7CB35A62DC5E8E892C1 /* DiscRecording.framework */ = {isa = PBXBuildFile; fileRef = 2A3C276CD42A72E7693CD967; };
 		A2E84910233FFA855277B881 /* Security.framework */ = {isa = PBXBuildFile; fileRef = 0EDD3B772972F23E76878F1C; };
+		A39EB5CA0285A4FF833833D0 /* GateBandSelector.cpp */ = {isa = PBXBuildFile; fileRef = A6FC2907B5CE227BB0CBE3C0; };
 		A96DDECA2351612CB5A5A1FC /* include_juce_core_CompilationTime.cpp */ = {isa = PBXBuildFile; fileRef = 7D4F26E98BDAB010607C4CF8; };
 		AC36B91F5C356FFBBAD462E9 /* AU */ = {isa = PBXBuildFile; fileRef = 81DD2684868E054497F44CA4; };
 		B9479005A4A2AA5192DD5837 /* Standalone Plugin */ = {isa = PBXBuildFile; fileRef = 88755AAFDAE2D55A011D3018; };
@@ -130,9 +132,11 @@
 		56160FD77F82443BA98B062C /* PluginProcessor.cpp */ /* PluginProcessor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = PluginProcessor.cpp; path = ../../plugin/Source/PluginProcessor.cpp; sourceTree = SOURCE_ROOT; };
 		56850993E3E1B1659EF512BF /* AudioDropZone.h */ /* AudioDropZone.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AudioDropZone.h; path = ../../plugin/Source/AudioDropZone.h; sourceTree = SOURCE_ROOT; };
 		5D39CE25CB5BA190FE7DD465 /* juce_audio_processors_headless */ /* juce_audio_processors_headless */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_processors_headless; path = /Applications/JUCE/modules/juce_audio_processors_headless; sourceTree = "<absolute>"; };
+		5DDB38B80E99F403E0838A59 /* GateBandSelector.h */ /* GateBandSelector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = GateBandSelector.h; path = ../../plugin/Source/GateBandSelector.h; sourceTree = SOURCE_ROOT; };
 		5DE04145E36774807CE8C6B3 /* include_juce_audio_plugin_client_Standalone.cpp */ /* include_juce_audio_plugin_client_Standalone.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_audio_plugin_client_Standalone.cpp; path = ../../JuceLibraryCode/include_juce_audio_plugin_client_Standalone.cpp; sourceTree = SOURCE_ROOT; };
 		5EACDA8ED1DD70AE6F9E8C61 /* Accelerate.framework */ /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		5F099C0333A65FD6D32D76B1 /* WebKit.framework */ /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		603287E39908AD37A68601A0 /* LinkwitzRileyGate.cpp */ /* LinkwitzRileyGate.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LinkwitzRileyGate.cpp; path = ../../plugin/Source/LinkwitzRileyGate.cpp; sourceTree = SOURCE_ROOT; };
 		684AD16462281DFB513C5ACC /* Shared Code */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libDeBleed.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AA8438062EDF2E41E5209AF /* Info-VST3_Manifest_Helper.plist */ /* Info-VST3_Manifest_Helper.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Info-VST3_Manifest_Helper.plist"; path = "Info-VST3_Manifest_Helper.plist"; sourceTree = SOURCE_ROOT; };
 		6EE82BD5D63AF908037630EE /* juce_audio_basics */ /* juce_audio_basics */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_basics; path = /Applications/JUCE/modules/juce_audio_basics; sourceTree = "<absolute>"; };
@@ -158,6 +162,7 @@
 		9E5F8423AE7CFDDAA4A93548 /* juce_audio_formats */ /* juce_audio_formats */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_formats; path = /Applications/JUCE/modules/juce_audio_formats; sourceTree = "<absolute>"; };
 		9F53C5636E461FE71AE1786C /* QuartzCore.framework */ /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		A5173B645649D790AF8431CD /* NeuralGateEngine.cpp */ /* NeuralGateEngine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = NeuralGateEngine.cpp; path = ../../plugin/Source/NeuralGateEngine.cpp; sourceTree = SOURCE_ROOT; };
+		A6FC2907B5CE227BB0CBE3C0 /* GateBandSelector.cpp */ /* GateBandSelector.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = GateBandSelector.cpp; path = ../../plugin/Source/GateBandSelector.cpp; sourceTree = SOURCE_ROOT; };
 		A90D017B38C32682CCB2620A /* DeBleedLookAndFeel.cpp */ /* DeBleedLookAndFeel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = DeBleedLookAndFeel.cpp; path = ../../plugin/Source/DeBleedLookAndFeel.cpp; sourceTree = SOURCE_ROOT; };
 		AB5C59DF26AF5D56B3EA2D31 /* include_juce_audio_utils.mm */ /* include_juce_audio_utils.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_utils.mm; path = ../../JuceLibraryCode/include_juce_audio_utils.mm; sourceTree = SOURCE_ROOT; };
 		ABC39D5F7ECB212834055D20 /* RecentFilesMenuTemplate.nib */ /* RecentFilesMenuTemplate.nib */ = {isa = PBXFileReference; lastKnownFileType = file.nib; name = RecentFilesMenuTemplate.nib; path = RecentFilesMenuTemplate.nib; sourceTree = SOURCE_ROOT; };
@@ -173,6 +178,7 @@
 		C0876A495A640BE585632EA5 /* VST3 Manifest Helper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = juce_vst3_helper; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0ABAC711AE6CDFF81606936 /* AudioToolbox.framework */ /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		C1C3302681ED944C8DD7F683 /* juce_core */ /* juce_core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_core; path = /Applications/JUCE/modules/juce_core; sourceTree = "<absolute>"; };
+		C4B2F7D160DE67109B02FA96 /* LinkwitzRileyGate.h */ /* LinkwitzRileyGate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LinkwitzRileyGate.h; path = ../../plugin/Source/LinkwitzRileyGate.h; sourceTree = SOURCE_ROOT; };
 		D2242C35E5359BDA92CDB83C /* juce_events */ /* juce_events */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_events; path = /Applications/JUCE/modules/juce_events; sourceTree = "<absolute>"; };
 		D4653C0FB0604D4D37A5AB56 /* IIRFilterBank.h */ /* IIRFilterBank.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IIRFilterBank.h; path = ../../plugin/Source/IIRFilterBank.h; sourceTree = SOURCE_ROOT; };
 		D9612BDB6C0119C135A7F097 /* STFTProcessor.cpp */ /* STFTProcessor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = STFTProcessor.cpp; path = ../../plugin/Source/STFTProcessor.cpp; sourceTree = SOURCE_ROOT; };
@@ -304,6 +310,10 @@
 				532A0F7E09EED552030612F9,
 				7D5B415FFEF1A44E60DD6083,
 				37F90F5CEBE4E3ECEA196FA1,
+				603287E39908AD37A68601A0,
+				C4B2F7D160DE67109B02FA96,
+				A6FC2907B5CE227BB0CBE3C0,
+				5DDB38B80E99F403E0838A59,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -934,6 +944,8 @@
 				3564F1CDC81F7067E0797C13,
 				F61F10BF49731A1A68F8805C,
 				43DA834545B0DB7629531D55,
+				487AA272743131C971D6D8A6,
+				A39EB5CA0285A4FF833833D0,
 				83244953AF9FF90354A4AAFA,
 				167FA7EF3EF53C2A6A7F29FF,
 				C7A87105A26B7016B6DBE44D,
