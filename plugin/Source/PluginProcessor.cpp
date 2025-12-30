@@ -245,39 +245,39 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         nullptr
     ));
 
-    // LR Attack Multiplier - scales auto-determined attack times
+    // LR Attack - gate attack time in ms (applied to mid band, other bands scale proportionally)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_LR_ATTACK_MULT, 1},
         "LR Attack",
-        juce::NormalisableRange<float>(0.25f, 4.0f, 0.01f, 0.5f),
-        1.0f,  // Default: 1x (use auto timing)
+        juce::NormalisableRange<float>(0.5f, 100.0f, 0.1f, 0.4f),
+        6.0f,  // Default: 6ms (mid band reference)
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 2) + "x"; },
+        [](float value, int) { return juce::String(value, 1) + " ms"; },
         nullptr
     ));
 
-    // LR Release Multiplier - scales auto-determined release times
+    // LR Release - gate release time in ms (applied to mid band, other bands scale proportionally)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_LR_RELEASE_MULT, 1},
         "LR Release",
-        juce::NormalisableRange<float>(0.25f, 4.0f, 0.01f, 0.5f),
-        1.0f,  // Default: 1x (use auto timing)
+        juce::NormalisableRange<float>(10.0f, 1000.0f, 1.0f, 0.4f),
+        100.0f,  // Default: 100ms (mid band reference)
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 2) + "x"; },
+        [](float value, int) { return juce::String(value, 0) + " ms"; },
         nullptr
     ));
 
-    // LR Hold Multiplier - scales auto-determined hold times
+    // LR Hold - gate hold time in ms (applied to mid band, other bands scale proportionally)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_LR_HOLD_MULT, 1},
         "LR Hold",
-        juce::NormalisableRange<float>(0.25f, 4.0f, 0.01f, 0.5f),
-        1.0f,  // Default: 1x (use auto timing)
+        juce::NormalisableRange<float>(1.0f, 200.0f, 1.0f, 0.5f),
+        20.0f,  // Default: 20ms (mid band reference)
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 2) + "x"; },
+        [](float value, int) { return juce::String(value, 0) + " ms"; },
         nullptr
     ));
 
@@ -546,12 +546,12 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         bandMaskAverages.fill(1.0f);  // Unity (pass through)
     }
 
-    // Update gate parameters
+    // Update gate parameters (ms values - scaled per band internally)
     linkwitzGate.setEnabled(lrEnabled.load());
     linkwitzGate.setSensitivity(lrSensitivity.load());
-    linkwitzGate.setAttackMult(lrAttackMult.load());
-    linkwitzGate.setReleaseMult(lrReleaseMult.load());
-    linkwitzGate.setHoldMult(lrHoldMult.load());
+    linkwitzGate.setAttackMs(lrAttackMult.load());    // Now ms value, not multiplier
+    linkwitzGate.setReleaseMs(lrReleaseMult.load());  // Now ms value, not multiplier
+    linkwitzGate.setHoldMs(lrHoldMult.load());        // Now ms value, not multiplier
     linkwitzGate.setFloorDb(lrFloorDb.load());
 
     // Process gate (broadband macro gating)

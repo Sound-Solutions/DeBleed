@@ -63,11 +63,11 @@ public:
      */
     void process(juce::AudioBuffer<float>& buffer, const std::array<float, NUM_BANDS>& bandMaskAverages);
 
-    // User global controls (multipliers that scale auto timing)
+    // User global controls (ms values - applied to mid band, other bands scale proportionally)
     void setSensitivity(float percent) { sensitivity = juce::jlimit(-100.0f, 100.0f, percent); }
-    void setAttackMult(float mult) { attackMult = juce::jlimit(0.25f, 4.0f, mult); }
-    void setReleaseMult(float mult) { releaseMult = juce::jlimit(0.25f, 4.0f, mult); }
-    void setHoldMult(float mult) { holdMult = juce::jlimit(0.25f, 4.0f, mult); }
+    void setAttackMs(float ms) { attackMs = juce::jlimit(0.5f, 100.0f, ms); }
+    void setReleaseMs(float ms) { releaseMs = juce::jlimit(10.0f, 1000.0f, ms); }
+    void setHoldMs(float ms) { holdMs = juce::jlimit(1.0f, 200.0f, ms); }
     void setFloorDb(float db) { floorDb = juce::jlimit(-80.0f, 0.0f, db); }
 
     // Enable/disable the gate
@@ -87,12 +87,19 @@ private:
     double sampleRate = 48000.0;
     bool enabled = true;
 
-    // User controls
+    // User controls (ms values - these are the "mid band" reference, other bands scale proportionally)
     float sensitivity = 0.0f;    // -100% to +100% - offsets threshold
-    float attackMult = 1.0f;     // 0.25x to 4x - scales auto attack
-    float releaseMult = 1.0f;    // 0.25x to 4x - scales auto release
-    float holdMult = 1.0f;       // 0.25x to 4x - scales auto hold
+    float attackMs = 6.0f;       // Mid band attack (others scale: sub=5.8x, high=0.25x)
+    float releaseMs = 100.0f;    // Mid band release (others scale similarly)
+    float holdMs = 20.0f;        // Mid band hold (others scale similarly)
     float floorDb = -60.0f;      // Maximum attenuation when gated
+
+    // Band scaling factors relative to mid band (index 3)
+    // These are computed from AUTO_BAND_TIMING ratios
+    static constexpr int MID_BAND_INDEX = 3;
+    float getBandAttackMs(int band) const;
+    float getBandReleaseMs(int band) const;
+    float getBandHoldMs(int band) const;
 
     // Crossover frequencies
     std::array<float, NUM_CROSSOVERS> crossoverFreqs = DEFAULT_CROSSOVERS;

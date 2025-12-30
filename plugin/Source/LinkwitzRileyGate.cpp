@@ -171,61 +171,94 @@ void LinkwitzRileyGate::recombineBands(juce::AudioBuffer<float>& output)
     }
 }
 
+// Band scaling: user ms values are the "mid band" reference (index 3)
+// Other bands scale proportionally based on AUTO_BAND_TIMING ratios
+float LinkwitzRileyGate::getBandAttackMs(int band) const
+{
+    float scale = AUTO_BAND_TIMING[band].attackMs / AUTO_BAND_TIMING[MID_BAND_INDEX].attackMs;
+    return attackMs * scale;
+}
+
+float LinkwitzRileyGate::getBandReleaseMs(int band) const
+{
+    float scale = AUTO_BAND_TIMING[band].releaseMs / AUTO_BAND_TIMING[MID_BAND_INDEX].releaseMs;
+    return releaseMs * scale;
+}
+
+float LinkwitzRileyGate::getBandHoldMs(int band) const
+{
+    float scale = AUTO_BAND_TIMING[band].holdMs / AUTO_BAND_TIMING[MID_BAND_INDEX].holdMs;
+    return holdMs * scale;
+}
+
 void LinkwitzRileyGate::processGateEnvelope(int band, float maskAverage, int numSamples)
 {
     auto& env = gateEnvelopes[band];
-    const auto& timing = AUTO_BAND_TIMING[band];
 
     // Store for visualization
     env.lastMaskAverage = maskAverage;
 
-    // Calculate threshold from mask average
-    // sensitivity > 0 = lower threshold = more gating
-    // sensitivity < 0 = higher threshold = less gating
-    // Threshold in linear terms: if mask < threshold, gate closes
-    float thresholdOffset = sensitivity / 100.0f * 0.5f;  // +/-50% offset at full sensitivity
-    float threshold = 0.8f - thresholdOffset;  // Base threshold 0.8, adjustable
+    // Calculate threshold with hysteresis to prevent chattering
+    // Base threshold: 0.6 = gate triggers when neural network detects 40%+ bleed
+    // sensitivity > 0 = lower threshold = more aggressive gating
+    // sensitivity < 0 = higher threshold = less aggressive gating
+    float thresholdOffset = sensitivity / 100.0f * 0.3f;  // +/-30% offset at full sensitivity
+    float openThreshold = 0.7f - thresholdOffset;   // Threshold to open gate (pass signal)
+    float closeThreshold = 0.5f - thresholdOffset;  // Threshold to close gate (attenuate)
 
-    // Determine if we should be gating
+    // Hysteresis: use different thresholds for opening vs closing
+    float threshold = env.isGating ? openThreshold : closeThreshold;
+
+    // Gate closes when mask indicates bleed (low values = bleed detected)
     bool shouldGate = maskAverage < threshold;
 
-    // Calculate timing with user multipliers
-    float attackMs = timing.attackMs * attackMult;
-    float releaseMs = timing.releaseMs * releaseMult;
-    float holdMs = timing.holdMs * holdMult;
+    // Get band-scaled timing (user ms values scaled per band)
+    float bandAttackMs = getBandAttackMs(band);
+    float bandReleaseMs = getBandReleaseMs(band);
+    float bandHoldMs = getBandHoldMs(band);
 
     // Convert to coefficients
-    float attackCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * attackMs / 1000.0f));
-    float releaseCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * releaseMs / 1000.0f));
-    int holdSamples = static_cast<int>(holdMs * sampleRate / 1000.0f);
+    float attackCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * bandAttackMs / 1000.0f));
+    float releaseCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * bandReleaseMs / 1000.0f));
+    int holdSamples = static_cast<int>(bandHoldMs * sampleRate / 1000.0f);
 
-    // Floor gain
+    // Floor gain - the maximum attenuation when gated
     float floorGain = juce::Decibels::decibelsToGain(floorDb);
 
-    // Gate state machine
+    // Scale target gain proportionally to mask depth (not just binary on/off)
+    // This creates smoother, more natural gating behavior
+    // When mask=0.5 and threshold=0.6: depth = (0.6-0.5)/(0.6-0) = 0.17 → slight gating
+    // When mask=0.1 and threshold=0.6: depth = (0.6-0.1)/(0.6-0) = 0.83 → heavy gating
+    float gateDepth = 0.0f;
     if (shouldGate)
     {
-        if (!env.isGating)
-        {
-            env.isGating = true;
-            env.holdCounter = holdSamples;
-        }
+        // Calculate how far below threshold we are (0-1 range)
+        float closeThresholdLocal = closeThreshold;
+        gateDepth = juce::jlimit(0.0f, 1.0f, (closeThresholdLocal - maskAverage) / closeThresholdLocal);
+    }
 
-        // Target is the floor
-        env.targetGain = floorGain;
+    // Gate state machine with hold time
+    if (shouldGate)
+    {
+        env.isGating = true;
+        env.holdCounter = holdSamples;  // Reset hold counter while gating
+
+        // Target gain interpolates between unity and floor based on depth
+        env.targetGain = 1.0f - gateDepth * (1.0f - floorGain);
     }
     else
     {
         if (env.isGating)
         {
-            // Hold phase - stay closed
+            // Hold phase - stay at current attenuation
             if (env.holdCounter > 0)
             {
                 env.holdCounter -= numSamples;
-                env.targetGain = floorGain;
+                // During hold, maintain current target (don't jump to unity)
             }
             else
             {
+                // Hold finished - start opening
                 env.isGating = false;
                 env.targetGain = 1.0f;
             }
@@ -237,8 +270,8 @@ void LinkwitzRileyGate::processGateEnvelope(int band, float maskAverage, int num
     }
 
     // Smooth the gain
-    // Gate closing (gain decreasing) = attack
-    // Gate opening (gain increasing) = release
+    // Gate closing (gain decreasing) = attack time
+    // Gate opening (gain increasing) = release time
     float coeff = (env.targetGain < env.currentGain) ? attackCoeff : releaseCoeff;
 
     // Apply smoothing over the block
@@ -247,7 +280,7 @@ void LinkwitzRileyGate::processGateEnvelope(int band, float maskAverage, int num
         env.currentGain = env.currentGain * coeff + env.targetGain * (1.0f - coeff);
     }
 
-    env.currentGain = juce::jlimit(0.001f, 1.0f, env.currentGain);
+    env.currentGain = juce::jlimit(floorGain, 1.0f, env.currentGain);
 }
 
 void LinkwitzRileyGate::process(juce::AudioBuffer<float>& buffer, const std::array<float, NUM_BANDS>& bandMaskAverages)

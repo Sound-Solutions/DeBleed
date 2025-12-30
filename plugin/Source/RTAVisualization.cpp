@@ -339,11 +339,11 @@ float RTAVisualization::getCombinedGainAtFreq(float freq) const
         if (!hunter.active)
             continue;
 
-        // Calculate dynamic Q based on gain (matches ActiveFilterPool logic: Q 4-16)
-        float dynamicQ = 4.0f + (1.0f - hunter.gain) * 12.0f;
+        // Use the actual Q from the hunter (width-adaptive)
+        float actualQ = hunter.q;
 
         // Get the peak filter magnitude response at this frequency
-        float peakMag = getPeakFilterMagnitude(freq, hunter.freq, dynamicQ,
+        float peakMag = getPeakFilterMagnitude(freq, hunter.freq, actualQ,
             juce::Decibels::gainToDecibels(std::max(hunter.gain, 0.01f)));
 
         // Apply this filter's effect (multiply gains for series processing)

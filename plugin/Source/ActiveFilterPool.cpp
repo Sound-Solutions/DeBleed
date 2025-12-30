@@ -163,15 +163,10 @@ void ActiveFilterPool::updateTargets(const float* mask)
         }
     }
 
-    // Sort by depth (deepest cuts first - these get priority)
-    std::sort(targets.begin(), targets.end(),
-              [](const FilterTarget& a, const FilterTarget& b)
-              {
-                  return a.gain < b.gain;
-              });
-
     // === FREQUENCY BUCKET SYSTEM ===
-    // Lows: can stack (no spacing), Mids/Highs: minimum spacing for coverage
+    // Split targets by band FIRST, then sort each band independently by depth.
+    // This ensures each band gets its fair share of hunters regardless of
+    // whether other bands have deeper cuts.
 
     struct BandConfig
     {
@@ -190,7 +185,7 @@ void ActiveFilterPool::updateTargets(const float* mask)
     std::vector<FilterTarget> selectedTargets;
     selectedTargets.reserve(MAX_FILTERS);
 
-    // Process each frequency band with band-specific spacing rules
+    // Process each frequency band independently
     for (const auto& band : bands)
     {
         // Clamp band to HPF/LPF bounds
@@ -199,13 +194,27 @@ void ActiveFilterPool::updateTargets(const float* mask)
         if (bandMin >= bandMax)
             continue;
 
-        std::vector<FilterTarget> bandSelection;
-
+        // Collect targets for THIS band only
+        std::vector<FilterTarget> bandTargets;
         for (const auto& target : targets)
         {
-            if (target.freq < bandMin || target.freq >= bandMax)
-                continue;
+            if (target.freq >= bandMin && target.freq < bandMax)
+            {
+                bandTargets.push_back(target);
+            }
+        }
 
+        // Sort THIS band's targets by depth (deepest first)
+        std::sort(bandTargets.begin(), bandTargets.end(),
+                  [](const FilterTarget& a, const FilterTarget& b)
+                  {
+                      return a.gain < b.gain;
+                  });
+
+        // Select from this band with spacing rules
+        std::vector<FilterTarget> bandSelection;
+        for (const auto& target : bandTargets)
+        {
             if (static_cast<int>(bandSelection.size()) >= band.maxFilters)
                 break;
 
