@@ -363,11 +363,15 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
         if (rawMask != nullptr)
         {
+            // rawMask is 257 bins: [0..128] = Stream A, [129..256] = Stream B
+            const float* streamB = rawMask + VisualizationData::N_FREQ_BINS;  // Point to Stream B
+
             for (int frame = 0; frame < numFrames; ++frame)
             {
                 visualizationData.pushFrame(
                     magnitude + frame * STFTProcessor::N_FREQ_BINS,
-                    rawMask  // Use sidechain analyzer's mask for visualization
+                    rawMask,   // Stream A: first 129 bins
+                    streamB    // Stream B: next 128 bins (high-res lows)
                 );
             }
         }

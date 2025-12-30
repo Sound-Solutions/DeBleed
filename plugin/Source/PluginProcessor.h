@@ -85,19 +85,21 @@ public:
     struct VisualizationData
     {
         static constexpr int N_FREQ_BINS = 129;
+        static constexpr int STREAM_B_BINS = 128;
         static constexpr int FIFO_SIZE = 64;
 
         struct FrameData
         {
             std::array<float, N_FREQ_BINS> magnitude{};
-            std::array<float, N_FREQ_BINS> mask{};
+            std::array<float, N_FREQ_BINS> mask{};       // Stream A: 187.5 Hz/bin
+            std::array<float, STREAM_B_BINS> maskB{};    // Stream B: 23.4 Hz/bin (high-res lows)
         };
 
         juce::AbstractFifo fifo{FIFO_SIZE};
         std::array<FrameData, FIFO_SIZE> frameBuffer;
         std::atomic<float> averageGainReductionDb{0.0f};
 
-        void pushFrame(const float* mag, const float* msk)
+        void pushFrame(const float* mag, const float* msk, const float* mskB = nullptr)
         {
             int start1, size1, start2, size2;
             fifo.prepareToWrite(1, start1, size1, start2, size2);
@@ -105,6 +107,10 @@ public:
             {
                 std::memcpy(frameBuffer[start1].magnitude.data(), mag, N_FREQ_BINS * sizeof(float));
                 std::memcpy(frameBuffer[start1].mask.data(), msk, N_FREQ_BINS * sizeof(float));
+                if (mskB != nullptr)
+                    std::memcpy(frameBuffer[start1].maskB.data(), mskB, STREAM_B_BINS * sizeof(float));
+                else
+                    frameBuffer[start1].maskB.fill(1.0f);  // Default to unity if not provided
                 fifo.finishedWrite(1);
             }
         }

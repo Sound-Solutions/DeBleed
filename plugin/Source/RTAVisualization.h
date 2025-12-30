@@ -20,6 +20,7 @@ class RTAVisualization : public juce::Component
 {
 public:
     static constexpr int N_FREQ_BINS = 129;
+    static constexpr int STREAM_B_BINS = 128;  // High-res low frequency bins
     // Hybrid 32+160 topology
     static constexpr int NUM_IIR_BANDS = 192;
     static constexpr int NUM_LOW_BANDS = 32;
@@ -46,7 +47,8 @@ private:
 
     // Display buffers (smoothed for display)
     std::array<float, N_FREQ_BINS> displayMagnitudeDb;  // Input spectrum in dB
-    std::array<float, N_FREQ_BINS> displayMask;         // Mask values 0-1
+    std::array<float, N_FREQ_BINS> displayMask;         // Mask values 0-1 (Stream A)
+    std::array<float, STREAM_B_BINS> displayMaskB;      // Mask values 0-1 (Stream B: high-res lows)
 
     // Smoothing parameters
     static constexpr float minDecayRate = 1.5f;   // dB per frame for bass
@@ -60,6 +62,7 @@ private:
     int freqToBin(float freq) const;
     float getInterpolatedMagnitude(float binIndex) const;
     float getInterpolatedMask(float binIndex) const;
+    float getInterpolatedMaskB(float binIndex) const;
 
     // Drawing functions
     void drawBackground(juce::Graphics& g);

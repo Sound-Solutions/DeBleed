@@ -111,10 +111,12 @@ private:
     // Parameters
     static constexpr float SMOOTHING_TIME = 0.020f;      // 20ms for freq/gain smoothing
     static constexpr float VALLEY_THRESHOLD = 0.95f;     // Only hunt if gain < this
+    static constexpr float HYSTERESIS_GAIN = 0.1f;       // 10% gain change required to reassign
+    static constexpr float HYSTERESIS_FREQ = 0.2f;       // ~3 semitones freq change required
     static constexpr float FREQ_UPDATE_THRESH = 10.0f;   // Hz change needed to update coeffs
     static constexpr float GAIN_UPDATE_THRESH = 0.02f;   // Gain change needed to update coeffs
-    static constexpr float MIN_Q = 2.0f;                 // Q for light cuts
-    static constexpr float MAX_Q = 12.0f;                // Q for deep cuts
+    static constexpr float MIN_Q = 4.0f;                 // Q for light cuts (tighter)
+    static constexpr float MAX_Q = 16.0f;                // Q for deep cuts (sharper)
     static constexpr float MIN_FREQ = 20.0f;             // Minimum filter frequency
     static constexpr float MAX_FREQ = 20000.0f;          // Maximum filter frequency
 

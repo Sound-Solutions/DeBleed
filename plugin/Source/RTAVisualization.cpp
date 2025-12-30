@@ -7,6 +7,7 @@ RTAVisualization::RTAVisualization(DeBleedAudioProcessor& processor)
     // Initialize display buffers to low values
     displayMagnitudeDb.fill(-100.0f);
     displayMask.fill(1.0f);
+    displayMaskB.fill(1.0f);
 }
 
 void RTAVisualization::updateFromQueue()
@@ -43,8 +44,14 @@ void RTAVisualization::updateFromQueue()
         // Clamp to display range
         displayMagnitudeDb[i] = std::clamp(displayMagnitudeDb[i], MIN_DB - 40.0f, MAX_DB);
 
-        // Smooth mask values
+        // Smooth mask values (Stream A)
         displayMask[i] = displayMask[i] * (1.0f - maskSmoothCoeff) + frame.mask[i] * maskSmoothCoeff;
+    }
+
+    // Smooth Stream B mask (high-resolution lows)
+    for (int i = 0; i < STREAM_B_BINS; ++i)
+    {
+        displayMaskB[i] = displayMaskB[i] * (1.0f - maskSmoothCoeff) + frame.maskB[i] * maskSmoothCoeff;
     }
 
     repaint();
@@ -108,6 +115,17 @@ float RTAVisualization::getInterpolatedMask(float binIndex) const
 
     float frac = binIndex - static_cast<float>(i);
     return displayMask[i] * (1.0f - frac) + displayMask[i + 1] * frac;
+}
+
+float RTAVisualization::getInterpolatedMaskB(float binIndex) const
+{
+    // Linear interpolation for Stream B mask (high-resolution lows)
+    int i = static_cast<int>(binIndex);
+    if (i < 0 || i >= STREAM_B_BINS - 1)
+        return displayMaskB[std::clamp(i, 0, STREAM_B_BINS - 1)];
+
+    float frac = binIndex - static_cast<float>(i);
+    return displayMaskB[i] * (1.0f - frac) + displayMaskB[i + 1] * frac;
 }
 
 void RTAVisualization::paint(juce::Graphics& g)
@@ -321,8 +339,8 @@ float RTAVisualization::getCombinedGainAtFreq(float freq) const
         if (!hunter.active)
             continue;
 
-        // Calculate dynamic Q based on gain (matches ActiveFilterPool logic)
-        float dynamicQ = 2.0f + (1.0f - hunter.gain) * 10.0f;
+        // Calculate dynamic Q based on gain (matches ActiveFilterPool logic: Q 4-16)
+        float dynamicQ = 4.0f + (1.0f - hunter.gain) * 12.0f;
 
         // Get the peak filter magnitude response at this frequency
         float peakMag = getPeakFilterMagnitude(freq, hunter.freq, dynamicQ,
@@ -343,17 +361,30 @@ void RTAVisualization::drawReductionCurve(juce::Graphics& g)
 
     // === DRAW RAW NEURAL MASK (cyan outline) ===
     // This shows what the neural network is actually requesting
+    // Uses DUAL-BAND: Stream B (23.4 Hz/bin) for lows, Stream A (187.5 Hz/bin) for mids/highs
     juce::Path maskCurve;
     bool maskStarted = false;
 
     const float pixelStep = 2.0f;
+    static constexpr float CROSSOVER_FREQ = 1500.0f;  // Stream B to Stream A crossover
 
     for (float x = 0; x < width; x += pixelStep)
     {
         float freq = pixelToFreq(x, width);
-        float binIndex = freq * 256.0f / 48000.0f;
+        float maskGain;
 
-        float maskGain = getInterpolatedMask(binIndex);
+        if (freq < CROSSOVER_FREQ)
+        {
+            // Use Stream B for lows (23.4 Hz/bin resolution at 48kHz, 2048-point FFT)
+            float binIndex = freq * 2048.0f / 48000.0f;
+            maskGain = getInterpolatedMaskB(binIndex);
+        }
+        else
+        {
+            // Use Stream A for mids/highs (187.5 Hz/bin resolution at 48kHz, 256-point FFT)
+            float binIndex = freq * 256.0f / 48000.0f;
+            maskGain = getInterpolatedMask(binIndex);
+        }
 
         // Convert mask to dB (mask is 0-1 linear gain)
         float maskDb = 20.0f * std::log10f(std::max(maskGain, 0.0001f));
@@ -373,7 +404,7 @@ void RTAVisualization::drawReductionCurve(juce::Graphics& g)
         }
     }
 
-    // Draw raw mask as cyan dashed line
+    // Draw raw mask as cyan line
     g.setColour(juce::Colours::cyan.withAlpha(0.4f));
     g.strokePath(maskCurve, juce::PathStrokeType(1.0f));
 

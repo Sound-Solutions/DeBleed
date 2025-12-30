@@ -253,8 +253,23 @@ void ActiveFilterPool::updateTargets(const float* mask)
         // Clamp frequency to valid range
         targetFreq = juce::jlimit(MIN_FREQ, MAX_FREQ, targetFreq);
 
-        h.smoothFreq.setTargetValue(targetFreq);
-        h.smoothGain.setTargetValue(targetGain);
+        // Get current hunter targets for hysteresis check
+        float currentTargetGain = h.smoothGain.getTargetValue();
+        float currentTargetFreq = h.smoothFreq.getTargetValue();
+
+        // Hysteresis: only update if change exceeds threshold
+        float gainDelta = std::abs(targetGain - currentTargetGain);
+        float freqRatio = (currentTargetFreq > 0.0f)
+            ? std::abs(std::log2(targetFreq / currentTargetFreq))
+            : 1.0f;  // Force update if current freq is invalid
+
+        bool shouldUpdate = (gainDelta > HYSTERESIS_GAIN) || (freqRatio > HYSTERESIS_FREQ);
+
+        if (shouldUpdate || !h.active)
+        {
+            h.smoothFreq.setTargetValue(targetFreq);
+            h.smoothGain.setTargetValue(targetGain);
+        }
         h.active = true;
     }
 
