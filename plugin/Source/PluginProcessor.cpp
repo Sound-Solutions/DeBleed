@@ -14,6 +14,7 @@ const juce::String DeBleedAudioProcessor::PARAM_FREQ_LOW = "freqLow";
 const juce::String DeBleedAudioProcessor::PARAM_FREQ_HIGH = "freqHigh";
 const juce::String DeBleedAudioProcessor::PARAM_THRESHOLD = "threshold";
 const juce::String DeBleedAudioProcessor::PARAM_FLOOR = "floor";
+const juce::String DeBleedAudioProcessor::PARAM_LIVE_MODE = "liveMode";
 
 DeBleedAudioProcessor::DeBleedAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -180,6 +181,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 1) + " dB"; },
         nullptr
+    ));
+
+    // Live Mode - prevents accidental training during live shows (UI-only, no audio effect)
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID{PARAM_LIVE_MODE, 1},
+        "Live Mode",
+        false  // Default: off (training enabled)
     ));
 
     return {params.begin(), params.end()};

@@ -14,7 +14,9 @@ TrainerProcess::~TrainerProcess()
 bool TrainerProcess::startTraining(const juce::String& cleanDir,
                                     const juce::String& noiseDir,
                                     const juce::String& outDir,
-                                    int numEpochs)
+                                    const juce::String& name,
+                                    int numEpochs,
+                                    bool continueFromCheckpointFlag)
 {
     if (isThreadRunning())
     {
@@ -25,7 +27,9 @@ bool TrainerProcess::startTraining(const juce::String& cleanDir,
     cleanAudioDir = cleanDir;
     noiseAudioDir = noiseDir;
     outputDir = outDir;
+    modelName = name.isEmpty() ? "model" : name;
     epochs = numEpochs;
+    continueFromCheckpoint = continueFromCheckpointFlag;
 
     // Validate directories
     juce::File cleanFile(cleanDir);
@@ -105,8 +109,23 @@ juce::String TrainerProcess::findTrainerExecutable()
                                      .getParentDirectory()   // Builds
                                      .getParentDirectory();  // DeBleed project root
 
+    // For VST3: /path/to/DeBleed.vst3/Contents/MacOS/
+    // The .vst3 bundle itself
+    juce::File vst3Bundle = pluginDir.getParentDirectory().getParentDirectory();
+    juce::File vst3Resources = vst3Bundle.getChildFile("Contents/Resources");
+
     // Check various locations
     juce::StringArray searchPaths = {
+        // User Application Support - primary location for installed trainer
+        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+            .getChildFile("DeBleed/trainer.py").getFullPathName(),
+        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+            .getChildFile("DeBleed/python/trainer.py").getFullPathName(),
+
+        // VST3 bundle Resources folder
+        vst3Resources.getChildFile("trainer.py").getFullPathName(),
+        vst3Resources.getChildFile("python/trainer.py").getFullPathName(),
+
         // Development paths (relative to project root)
         projectRoot.getChildFile("python/trainer.py").getFullPathName(),
 
@@ -114,11 +133,8 @@ juce::String TrainerProcess::findTrainerExecutable()
         appBundle.getChildFile("Contents/Resources/trainer.py").getFullPathName(),
         appBundle.getChildFile("Contents/Resources/python/trainer.py").getFullPathName(),
 
-        // User Application Support (for installed trainer)
-        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-            .getChildFile("DeBleed/trainer.py").getFullPathName(),
-        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-            .getChildFile("DeBleed/python/trainer.py").getFullPathName(),
+        // Hardcoded development path (for debugging)
+        "/Users/ksellarsm4lt/Documents/DeBleed/python/trainer.py",
 
         // Legacy paths
         pluginDir.getChildFile("trainer").getFullPathName(),
@@ -127,13 +143,19 @@ juce::String TrainerProcess::findTrainerExecutable()
         pluginDir.getParentDirectory().getChildFile("Resources/trainer.py").getFullPathName(),
     };
 
+    DBG("Searching for trainer executable...");
     for (const auto& path : searchPaths)
     {
+        DBG("  Checking: " << path);
         juce::File f(path);
         if (f.existsAsFile())
+        {
+            DBG("  Found trainer at: " << path);
             return path;
+        }
     }
 
+    DBG("  Trainer not found in any location!");
     return {};
 }
 
@@ -195,8 +217,23 @@ juce::StringArray TrainerProcess::buildCommandLine()
     args.add("--output_path");
     args.add(outputDir);
 
+    args.add("--model_name");
+    args.add(modelName);
+
     args.add("--epochs");
     args.add(juce::String(epochs));
+
+    // Add continue training flags if resuming from checkpoint
+    if (continueFromCheckpoint)
+    {
+        juce::File checkpointPath = juce::File(outputDir).getChildFile("checkpoint.pt");
+        if (checkpointPath.existsAsFile())
+        {
+            args.add("--checkpoint_path");
+            args.add(checkpointPath.getFullPathName());
+            args.add("--continue_training");
+        }
+    }
 
     return args;
 }

@@ -5,30 +5,21 @@
 #include "AudioDropZone.h"
 #include "RTAVisualization.h"
 #include "GainReductionMeter.h"
+#include "DeBleedLookAndFeel.h"
 
 /**
  * DeBleedAudioProcessorEditor - GUI for the DeBleed Neural Gate plugin.
  *
- * Layout:
- * +------------------------------------------+
- * |  DeBleed - Neural Gate                   |
- * +------------------------------------------+
- * |  +------------------+  +---------------+ |
- * |  | Target Vocals    |  | Stage Noise   | |
- * |  | (Drop Zone)      |  | (Drop Zone)   | |
- * |  +------------------+  +---------------+ |
- * +------------------------------------------+
- * |  [    Progress Bar                     ] |
- * |  [ Train Model ]                         |
- * +------------------------------------------+
- * |  Strength: [========]  Mix: [========]   |
- * |  [ ] Bypass              Model: Loaded   |
- * +------------------------------------------+
+ * Two-tab layout with Kinetics-style knobs:
+ * - Training tab: Drop zones, progress, train buttons
+ * - Visualizing tab: Large RTA, knobs
  */
 class DeBleedAudioProcessorEditor : public juce::AudioProcessorEditor,
                                      public juce::Timer
 {
 public:
+    enum class Tab { Training, Visualizing };
+
     explicit DeBleedAudioProcessorEditor(DeBleedAudioProcessor&);
     ~DeBleedAudioProcessorEditor() override;
 
@@ -37,73 +28,82 @@ public:
     void timerCallback() override;
 
 private:
-    void startTraining();
-    void startTrainingWithName(const juce::String& modelName);
+    void setActiveTab(Tab tab);
+    void layoutTrainingTab(juce::Rectangle<int> bounds);
+    void layoutVisualizingTab(juce::Rectangle<int> bounds);
+
+    void startNewTraining();
+    void continueTraining();
+    void startTrainingWithName(const juce::String& modelName, bool isContinuation);
     void loadModel();
     void onTrainingProgress(int progress, const juce::String& status);
     void onTrainingComplete(bool success, const juce::String& modelPath, const juce::String& error);
     void updateModelStatus();
     void updateLatencyLabel();
+    void updateContinueButtonState();
 
     DeBleedAudioProcessor& audioProcessor;
+    DeBleedLookAndFeel customLookAndFeel;
 
-    // Header
+    // Current tab
+    Tab currentTab = Tab::Training;
+
+    // Header components
     juce::Label titleLabel;
+    juce::TextButton trainingTabButton;
+    juce::TextButton visualizingTabButton;
+    juce::ToggleButton bypassButton;
+    juce::ToggleButton liveModeButton;  // Live/Train toggle
 
-    // Drop zones
+    // Training tab components
     AudioDropZone cleanDropZone;
     AudioDropZone noiseDropZone;
-
-    // Training controls
     juce::ProgressBar progressBar;
-    juce::TextButton trainButton;
+    juce::TextButton trainNewButton;
+    juce::TextButton continueTrainingButton;
     juce::TextButton loadModelButton;
     juce::Label statusLabel;
+    juce::Label modelStatusLabel;
     double progressValue = 0.0;
 
     // Visualization components
     std::unique_ptr<RTAVisualization> rtaView;
     std::unique_ptr<GainReductionMeter> gainReductionMeter;
 
-    // Parameter controls - existing
+    // Parameter knobs (rotary style)
     juce::Slider strengthSlider;
     juce::Label strengthLabel;
-    juce::Slider mixSlider;
-    juce::Label mixLabel;
-    juce::ToggleButton bypassButton;
-    juce::ToggleButton lowLatencyButton;
-    juce::Label latencyLabel;
-
-    // Parameter controls - new
     juce::Slider attackSlider;
     juce::Label attackLabel;
     juce::Slider releaseSlider;
     juce::Label releaseLabel;
+    juce::Slider thresholdSlider;
+    juce::Label thresholdLabel;
     juce::Slider freqLowSlider;
     juce::Label freqLowLabel;
     juce::Slider freqHighSlider;
     juce::Label freqHighLabel;
-    juce::Slider thresholdSlider;
-    juce::Label thresholdLabel;
-    juce::Slider floorSlider;
+    juce::Slider floorSlider;  // Range parameter
     juce::Label floorLabel;
+    juce::Slider mixSlider;    // Hidden but kept for attachment
+    juce::Label mixLabel;
 
-    // Model status
-    juce::Label modelStatusLabel;
+    // Toggle buttons
+    juce::ToggleButton lowLatencyButton;
+    juce::Label latencyLabel;
 
-    // Parameter attachments - existing
+    // Parameter attachments
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> strengthAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lowLatencyAttachment;
-
-    // Parameter attachments - new
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqLowAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqHighAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> floorAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> liveModeAttachment;
 
     // Training log
     juce::TextEditor logTextBox;
@@ -113,8 +113,8 @@ private:
     juce::String cleanAudioPath;
     juce::String noiseAudioPath;
 
-    // Look and feel
-    juce::LookAndFeel_V4 lookAndFeel;
+    // Track last trained model for continue training
+    juce::String lastTrainedModelDir;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessorEditor)
 };

@@ -46,13 +46,17 @@ public:
      * @param cleanAudioDir Directory containing target vocal audio files
      * @param noiseAudioDir Directory containing bleed/noise audio files
      * @param outputDir Directory for output model and metadata
+     * @param modelName Name for the output model file (without .onnx extension)
      * @param epochs Number of training epochs
+     * @param continueFromCheckpoint If true, resume from checkpoint.pt in outputDir
      * @return true if training started successfully
      */
     bool startTraining(const juce::String& cleanAudioDir,
                        const juce::String& noiseAudioDir,
                        const juce::String& outputDir,
-                       int epochs = 50);
+                       const juce::String& modelName = "model",
+                       int epochs = 50,
+                       bool continueFromCheckpoint = false);
 
     /**
      * Cancel the current training process.
@@ -127,7 +131,9 @@ private:
     juce::String cleanAudioDir;
     juce::String noiseAudioDir;
     juce::String outputDir;
+    juce::String modelName;
     int epochs = 50;
+    bool continueFromCheckpoint = false;
 
     // Trainer executable path
     juce::String trainerPath;

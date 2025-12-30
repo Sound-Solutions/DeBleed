@@ -435,10 +435,44 @@ class Trainer:
 
 
 # ============================================================================
+# Checkpoint Save/Load
+# ============================================================================
+
+def save_checkpoint(output_path: str, model: MaskEstimator, trainer: 'Trainer',
+                    epoch: int, history: dict, clean_files: List[str], noise_files: List[str]):
+    """Save a training checkpoint for continuation."""
+    checkpoint = {
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': trainer.optimizer.state_dict(),
+        'scheduler_state_dict': trainer.scheduler.state_dict(),
+        'history': history,
+        'clean_files': clean_files,
+        'noise_files': noise_files,
+        'hidden_dim': model.hidden_dim,
+    }
+
+    checkpoint_path = os.path.join(output_path, "checkpoint.pt")
+    torch.save(checkpoint, checkpoint_path)
+    print(f"STATUS:Checkpoint saved to {checkpoint_path}")
+    sys.stdout.flush()
+
+
+def load_checkpoint(checkpoint_path: str, device: str) -> dict:
+    """Load a training checkpoint."""
+    print(f"STATUS:Loading checkpoint from {checkpoint_path}...")
+    sys.stdout.flush()
+
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    return checkpoint
+
+
+# ============================================================================
 # ONNX Export
 # ============================================================================
 
 def export_to_onnx(model: MaskEstimator, output_path: str,
+                   model_name: str = 'model',
                    n_freq_bins: int = N_FREQ_BINS, n_frames: int = 128):
     """
     Export the mask estimation model to ONNX format.
@@ -455,7 +489,7 @@ def export_to_onnx(model: MaskEstimator, output_path: str,
     # Dummy input: (batch=1, freq_bins, frames)
     dummy_input = torch.randn(1, n_freq_bins, n_frames, device=device)
 
-    onnx_path = os.path.join(output_path, "model.onnx")
+    onnx_path = os.path.join(output_path, f"{model_name}.onnx")
 
     torch.onnx.export(
         model,
@@ -541,6 +575,13 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--model_name',
+        type=str,
+        default='model',
+        help='Name for the output model file (without .onnx extension)'
+    )
+
+    parser.add_argument(
         '--epochs',
         type=int,
         default=50,
@@ -583,6 +624,19 @@ def parse_args():
         help='Device to use for training'
     )
 
+    parser.add_argument(
+        '--checkpoint_path',
+        type=str,
+        default=None,
+        help='Path to checkpoint file to resume from'
+    )
+
+    parser.add_argument(
+        '--continue_training',
+        action='store_true',
+        help='Continue training from checkpoint'
+    )
+
     return parser.parse_args()
 
 
@@ -607,6 +661,8 @@ def main():
     print(f"STATUS:Noise audio dir: {args.noise_audio_dir}")
     print(f"STATUS:Output path: {args.output_path}")
     print(f"STATUS:Epochs: {args.epochs}")
+    if args.continue_training:
+        print(f"STATUS:Continuing from checkpoint: {args.checkpoint_path}")
     sys.stdout.flush()
 
     # Determine device
@@ -616,6 +672,21 @@ def main():
 
     # Create output directory
     os.makedirs(args.output_path, exist_ok=True)
+
+    # Check if continuing from checkpoint
+    checkpoint = None
+    start_epoch = 0
+    history = {'losses': []}
+    hidden_dim = args.hidden_dim
+
+    if args.continue_training and args.checkpoint_path:
+        if os.path.exists(args.checkpoint_path):
+            checkpoint = load_checkpoint(args.checkpoint_path, device)
+            start_epoch = checkpoint['epoch'] + 1
+            history = checkpoint.get('history', {'losses': []})
+            hidden_dim = checkpoint.get('hidden_dim', args.hidden_dim)
+            print(f"STATUS:Resuming from epoch {start_epoch}")
+            sys.stdout.flush()
 
     # Collect audio files
     print("STATUS:Collecting audio files...")
@@ -628,6 +699,27 @@ def main():
         print(f"ERROR:{e}")
         sys.exit(1)
 
+    # If continuing, merge with previously used files (additive training)
+    if checkpoint is not None:
+        prev_clean = checkpoint.get('clean_files', [])
+        prev_noise = checkpoint.get('noise_files', [])
+
+        # Add new files that aren't already in the list
+        existing_clean = set(prev_clean)
+        existing_noise = set(prev_noise)
+
+        for f in clean_files:
+            if f not in existing_clean:
+                prev_clean.append(f)
+        for f in noise_files:
+            if f not in existing_noise:
+                prev_noise.append(f)
+
+        clean_files = prev_clean
+        noise_files = prev_noise
+        print(f"STATUS:Merged training data - now {len(clean_files)} clean, {len(noise_files)} noise files")
+        sys.stdout.flush()
+
     if len(clean_files) == 0:
         print(f"ERROR:No audio files found in {args.clean_audio_dir}")
         sys.exit(1)
@@ -636,7 +728,7 @@ def main():
         print(f"ERROR:No audio files found in {args.noise_audio_dir}")
         sys.exit(1)
 
-    print(f"STATUS:Found {len(clean_files)} clean files and {len(noise_files)} noise files")
+    print(f"STATUS:Using {len(clean_files)} clean files and {len(noise_files)} noise files")
     sys.stdout.flush()
 
     # Create dataset and dataloader
@@ -660,7 +752,7 @@ def main():
 
     model = MaskEstimator(
         n_freq_bins=N_FREQ_BINS,
-        hidden_dim=args.hidden_dim
+        hidden_dim=hidden_dim
     )
 
     # Count parameters
@@ -668,7 +760,7 @@ def main():
     print(f"STATUS:Model has {n_params:,} parameters")
     sys.stdout.flush()
 
-    # Create trainer and train
+    # Create trainer
     trainer = Trainer(
         model=model,
         train_loader=train_loader,
@@ -676,10 +768,39 @@ def main():
         device=device
     )
 
-    history = trainer.train(epochs=args.epochs)
+    # Load checkpoint state if continuing
+    if checkpoint is not None:
+        model.load_state_dict(checkpoint['model_state_dict'])
+        trainer.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        trainer.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        print("STATUS:Loaded model and optimizer state from checkpoint")
+        sys.stdout.flush()
+
+    # Train for remaining epochs
+    total_epochs = start_epoch + args.epochs
+    print(f"STATUS:Training from epoch {start_epoch + 1} to {total_epochs}...")
+    sys.stdout.flush()
+
+    for epoch in range(start_epoch, total_epochs):
+        avg_loss = trainer.train_epoch(epoch - start_epoch, args.epochs)
+        history['losses'].append(avg_loss)
+
+        # Report progress
+        progress = int(((epoch - start_epoch + 1) / args.epochs) * 100)
+        print(f"EPOCH:{epoch + 1}/{total_epochs}")
+        print(f"LOSS:{avg_loss:.6f}")
+        print(f"PROGRESS:{progress}")
+        sys.stdout.flush()
+
+    print("STATUS:Training complete!")
+    sys.stdout.flush()
+
+    # Save checkpoint for future continuation
+    save_checkpoint(args.output_path, model, trainer, total_epochs - 1, history,
+                   clean_files, noise_files)
 
     # Export to ONNX
-    onnx_path = export_to_onnx(model, args.output_path)
+    onnx_path = export_to_onnx(model, args.output_path, args.model_name)
 
     # Save metadata
     metadata_path = save_metadata(args.output_path, model, history)

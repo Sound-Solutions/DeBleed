@@ -145,12 +145,13 @@ void NeuralGateEngine::unloadModel()
 
 const float* NeuralGateEngine::process(const float* magnitude, int numFrames)
 {
+    // Calculate number of elements for pass-through
+    int numElements = std::min(numFrames * N_FREQ_BINS,
+                               static_cast<int>(outputBuffer.size()));
+
     // If no model loaded, return pass-through mask (all 1.0s)
     if (!modelLoaded.load())
     {
-        // Fill output with 1.0 (pass-through)
-        int numElements = std::min(numFrames * N_FREQ_BINS,
-                                    static_cast<int>(outputBuffer.size()));
         std::fill(outputBuffer.begin(), outputBuffer.begin() + numElements, 1.0f);
         return outputBuffer.data();
     }
@@ -158,15 +159,31 @@ const float* NeuralGateEngine::process(const float* magnitude, int numFrames)
     // Check buffer size
     if (numFrames > maxFramesAllocated || numFrames <= 0)
     {
-        // Return pass-through for invalid input
         std::fill(outputBuffer.begin(), outputBuffer.end(), 1.0f);
+        return outputBuffer.data();
+    }
+
+    // Try to acquire the lock without blocking (real-time safe)
+    // If we can't get the lock, the model is being swapped - return pass-through
+    std::unique_lock<std::mutex> lock(modelMutex, std::try_to_lock);
+    if (!lock.owns_lock())
+    {
+        // Model is being loaded/unloaded, return pass-through
+        std::fill(outputBuffer.begin(), outputBuffer.begin() + numElements, 1.0f);
+        return outputBuffer.data();
+    }
+
+    // Double-check model is still loaded after acquiring lock
+    if (!session || !modelLoaded.load())
+    {
+        std::fill(outputBuffer.begin(), outputBuffer.begin() + numElements, 1.0f);
         return outputBuffer.data();
     }
 
     try
     {
         // Copy input data to our buffer
-        int numElements = numFrames * N_FREQ_BINS;
+        numElements = numFrames * N_FREQ_BINS;
         std::memcpy(inputBuffer.data(), magnitude, numElements * sizeof(float));
 
         // Create input tensor - model expects [batch, freq_bins, frames]

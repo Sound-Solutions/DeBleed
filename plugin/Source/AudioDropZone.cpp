@@ -9,21 +9,21 @@ void AudioDropZone::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
-    // Background
+    // Background - match DeBleed dark theme
     juce::Colour bgColour = isDraggingOver
-        ? juce::Colour(0xff3a5a7c)  // Highlighted when dragging
-        : juce::Colour(0xff2a3a4c); // Normal dark background
+        ? juce::Colours::white.withAlpha(0.1f)   // Highlighted when dragging
+        : juce::Colour(0xff141618);               // panelBackground
 
     g.setColour(bgColour);
     g.fillRoundedRectangle(bounds, 8.0f);
 
-    // Border
+    // Border - subtle
     juce::Colour borderColour = isDraggingOver
-        ? juce::Colour(0xff5a9ad8)
-        : (hasValidSelection() ? juce::Colour(0xff4a8a5c) : juce::Colour(0xff4a5a6c));
+        ? juce::Colour(0xff00b4ff)  // cyan accent
+        : (hasValidSelection() ? juce::Colour(0xff5aaa6c) : juce::Colours::white.withAlpha(0.15f));
 
     g.setColour(borderColour);
-    g.drawRoundedRectangle(bounds.reduced(1.0f), 8.0f, 2.0f);
+    g.drawRoundedRectangle(bounds.reduced(1.0f), 8.0f, 1.5f);
 
     // Content
     auto contentBounds = bounds.reduced(12.0f);

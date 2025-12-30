@@ -18,8 +18,8 @@ void GainReductionMeter::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    // Background
-    g.setColour(juce::Colour(0xff0a1520));
+    // Background - match DeBleed dark theme
+    g.setColour(juce::Colour(0xff0c0c0e));  // visualizerBackground
     g.fillRect(bounds);
 
     // Meter area (leave space for scale on left)
@@ -28,7 +28,7 @@ void GainReductionMeter::paint(juce::Graphics& g)
     meterArea.reduce(2, 2);
 
     // Draw meter background
-    g.setColour(juce::Colour(0xff1a2a3c));
+    g.setColour(juce::Colour(0xff141618));  // panelBackground
     g.fillRect(meterArea);
 
     // Calculate meter fill (0 dB at top, -60 dB at bottom)
@@ -40,11 +40,11 @@ void GainReductionMeter::paint(juce::Graphics& g)
     int fillHeight = static_cast<int>((1.0f - normalized) * meterArea.getHeight());
     auto fillArea = meterArea.removeFromTop(fillHeight);
 
-    // Gradient fill - red at top (most reduction) to yellow at bottom (less reduction)
+    // Gradient fill - bright purple at top (most reduction) to darker purple at bottom
     juce::ColourGradient gradient(
-        juce::Colour(0xffff4444),  // Red at top (most reduction)
+        juce::Colour(0xffcc66ff),  // Bright purple/magenta at top (most reduction)
         static_cast<float>(fillArea.getCentreX()), static_cast<float>(fillArea.getY()),
-        juce::Colour(0xffffaa44),  // Orange/yellow at bottom
+        juce::Colour(0xff800080),  // Purple accent at bottom (matches Range knob)
         static_cast<float>(fillArea.getCentreX()), static_cast<float>(fillArea.getBottom()),
         false
     );
@@ -52,7 +52,7 @@ void GainReductionMeter::paint(juce::Graphics& g)
     g.fillRect(fillArea);
 
     // Draw border
-    g.setColour(juce::Colour(0xff3a4a5c));
+    g.setColour(juce::Colours::white.withAlpha(0.1f));
     g.drawRect(bounds.removeFromRight(bounds.getWidth()), 1);
 
     // Draw scale

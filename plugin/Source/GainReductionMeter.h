@@ -26,7 +26,7 @@ private:
 
     // Meter smoothing coefficients
     static constexpr float METER_ATTACK = 0.3f;
-    static constexpr float METER_RELEASE = 0.05f;
+    static constexpr float METER_RELEASE = 0.15f;  // Faster recovery for accuracy
 
     // Draw dB scale markers
     void drawScale(juce::Graphics& g, juce::Rectangle<int> bounds);

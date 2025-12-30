@@ -46,6 +46,10 @@
             file="plugin/Source/GainReductionMeter.cpp"/>
       <FILE id="GainReductionMeter_h" name="GainReductionMeter.h" compile="0" resource="0"
             file="plugin/Source/GainReductionMeter.h"/>
+      <FILE id="DeBleedLookAndFeel_cpp" name="DeBleedLookAndFeel.cpp" compile="1" resource="0"
+            file="plugin/Source/DeBleedLookAndFeel.cpp"/>
+      <FILE id="DeBleedLookAndFeel_h" name="DeBleedLookAndFeel.h" compile="0" resource="0"
+            file="plugin/Source/DeBleedLookAndFeel.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

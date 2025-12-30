@@ -79,6 +79,7 @@ public:
     static const juce::String PARAM_FREQ_HIGH;
     static const juce::String PARAM_THRESHOLD;
     static const juce::String PARAM_FLOOR;
+    static const juce::String PARAM_LIVE_MODE;
 
     // Visualization data for thread-safe audio->GUI transfer
     struct VisualizationData

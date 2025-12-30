@@ -126,8 +126,8 @@ void RTAVisualization::resized()
 
 void RTAVisualization::drawBackground(juce::Graphics& g)
 {
-    // Dark background matching user's RTA
-    g.fillAll(juce::Colour::fromRGB(20, 22, 25));
+    // Dark background matching DeBleed theme
+    g.fillAll(juce::Colour::fromRGB(12, 12, 14));  // visualizerBackground
 }
 
 void RTAVisualization::drawGrid(juce::Graphics& g)
@@ -311,14 +311,14 @@ void RTAVisualization::drawReductionCurve(juce::Graphics& g)
     fillPath.lineTo(0, dividerY);
     fillPath.closeSubPath();
 
-    // Fill with red/orange gradient
+    // Fill with purple gradient (matches Range knob and GR meter)
     juce::ColourGradient gradient(
-        juce::Colour(0xffff6644).withAlpha(0.35f), 0, dividerY,
-        juce::Colour(0xffff4444).withAlpha(0.1f), 0, static_cast<float>(getHeight()), false);
+        juce::Colour(0xffcc66ff).withAlpha(0.35f), 0, dividerY,  // Bright purple
+        juce::Colour(0xff800080).withAlpha(0.1f), 0, static_cast<float>(getHeight()), false);  // Purple accent
     g.setGradientFill(gradient);
     g.fillPath(fillPath);
 
     // Stroke curve
-    g.setColour(juce::Colour(0xffff6644).withAlpha(0.8f));
+    g.setColour(juce::Colour(0xffcc66ff).withAlpha(0.8f));  // Bright purple
     g.strokePath(curve, juce::PathStrokeType(1.5f));
 }
