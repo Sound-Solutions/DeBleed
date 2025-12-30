@@ -283,60 +283,56 @@ float RTAVisualization::getBandpassMagnitude(float freq, float centerFreq, float
     return 1.0f / std::sqrt(denominator);
 }
 
+float RTAVisualization::getPeakFilterMagnitude(float freq, float centerFreq, float Q, float gainDb) const
+{
+    // 2nd-order peaking EQ magnitude response
+    // At center frequency: |H(fc)| = gain
+    // Away from center: approaches unity
+    //
+    // Simplified approximation for visualization:
+    // |H(f)| ≈ 1 + (gain - 1) * bandpassShape
+    // where bandpassShape = 1 / sqrt(1 + Q² * ((f/fc) - (fc/f))²)
+
+    if (freq <= 0.0f || centerFreq <= 0.0f)
+        return 1.0f;
+
+    float gainLinear = juce::Decibels::decibelsToGain(gainDb);
+
+    float ratio = freq / centerFreq;
+    float term = ratio - (1.0f / ratio);
+    float denominator = 1.0f + Q * Q * term * term;
+    float bandpassShape = 1.0f / std::sqrt(denominator);
+
+    // Interpolate between unity (1.0) and target gain based on bandpass shape
+    return 1.0f + (gainLinear - 1.0f) * bandpassShape;
+}
+
 float RTAVisualization::getCombinedGainAtFreq(float freq) const
 {
-    // Get the IIR band data from processor
-    const auto& bandGains = audioProcessor.getIIRBandGains();
-    const auto& centerFreqs = audioProcessor.getIIRCenterFrequencies();
+    // Get the hunter filter states from processor
+    auto hunterStates = audioProcessor.getHunterStates();
 
-    // Split & Sum topology: Output = Sum(Bandpass * mask) * normalization
-    // NO dry path - signal is fully decomposed and reassembled
-    // mask = 0 means true silence, mask = 1 means unity
+    // Start with unity gain
+    float combinedGain = 1.0f;
 
-    float totalGain = 0.0f;  // NO DRY - start at zero
-    float totalUnityResponse = 0.0f;  // For normalization calculation
-
-    for (int i = 0; i < NUM_IIR_BANDS; ++i)
+    // Each active hunter contributes a peak/notch at its frequency
+    for (const auto& hunter : hunterStates)
     {
-        float mask = bandGains[i];
+        if (!hunter.active)
+            continue;
 
-        // Calculate Q based on neighbor spacing (same formula as IIRFilterBank)
-        // No 1.2f multiplier - tighter Q for 192-band hybrid topology
-        float Q = BANDPASS_Q;
-        if (i == 0 && NUM_IIR_BANDS > 1)
-        {
-            float bw = centerFreqs[1] - centerFreqs[0];
-            Q = centerFreqs[0] / bw;
-        }
-        else if (i == NUM_IIR_BANDS - 1 && NUM_IIR_BANDS > 1)
-        {
-            float bw = centerFreqs[NUM_IIR_BANDS - 1] - centerFreqs[NUM_IIR_BANDS - 2];
-            Q = centerFreqs[NUM_IIR_BANDS - 1] / bw;
-        }
-        else if (NUM_IIR_BANDS > 2)
-        {
-            float bwLower = centerFreqs[i] - centerFreqs[i - 1];
-            float bwUpper = centerFreqs[i + 1] - centerFreqs[i];
-            float bw = (bwLower + bwUpper) * 0.5f;
-            Q = centerFreqs[i] / bw;
-        }
+        // Calculate dynamic Q based on gain (matches ActiveFilterPool logic)
+        float dynamicQ = 2.0f + (1.0f - hunter.gain) * 10.0f;
 
-        Q = juce::jlimit(2.0f, 50.0f, Q);  // Tighter Q for hybrid 192-band topology
+        // Get the peak filter magnitude response at this frequency
+        float peakMag = getPeakFilterMagnitude(freq, hunter.freq, dynamicQ,
+            juce::Decibels::gainToDecibels(std::max(hunter.gain, 0.01f)));
 
-        float bpMag = getBandpassMagnitude(freq, centerFreqs[i], Q);
-
-        // Accumulate weighted bandpass response
-        totalGain += bpMag * mask;
-
-        // Also track what unity response would be (for normalization)
-        totalUnityResponse += bpMag;
+        // Apply this filter's effect (multiply gains for series processing)
+        combinedGain *= peakMag;
     }
 
-    // Normalize so unity masks = flat response
-    if (totalUnityResponse > 0.001f)
-        totalGain /= totalUnityResponse;
-
-    return std::max(totalGain, 0.0001f);  // Prevent log(0)
+    return std::max(combinedGain, 0.0001f);  // Prevent log(0)
 }
 
 void RTAVisualization::drawReductionCurve(juce::Graphics& g)
@@ -345,16 +341,51 @@ void RTAVisualization::drawReductionCurve(juce::Graphics& g)
     const float dividerY = getDividerY();
     const float reductionHeight = getReductionHeight();
 
-    juce::Path curve;
-    bool pathStarted = false;
+    // === DRAW RAW NEURAL MASK (cyan outline) ===
+    // This shows what the neural network is actually requesting
+    juce::Path maskCurve;
+    bool maskStarted = false;
 
     const float pixelStep = 2.0f;
 
     for (float x = 0; x < width; x += pixelStep)
     {
         float freq = pixelToFreq(x, width);
+        float binIndex = freq * 256.0f / 48000.0f;
 
-        // Get combined frequency response from all 64 IIR bands
+        float maskGain = getInterpolatedMask(binIndex);
+
+        // Convert mask to dB (mask is 0-1 linear gain)
+        float maskDb = 20.0f * std::log10f(std::max(maskGain, 0.0001f));
+        maskDb = std::clamp(maskDb, MIN_REDUCTION_DB, 0.0f);
+
+        float normY = juce::jmap(maskDb, 0.0f, MIN_REDUCTION_DB, 0.0f, 1.0f);
+        float y = dividerY + reductionHeight * normY;
+
+        if (!maskStarted)
+        {
+            maskCurve.startNewSubPath(x, y);
+            maskStarted = true;
+        }
+        else
+        {
+            maskCurve.lineTo(x, y);
+        }
+    }
+
+    // Draw raw mask as cyan dashed line
+    g.setColour(juce::Colours::cyan.withAlpha(0.4f));
+    g.strokePath(maskCurve, juce::PathStrokeType(1.0f));
+
+    // === DRAW HUNTER FILTER RESPONSE (purple filled) ===
+    juce::Path curve;
+    bool pathStarted = false;
+
+    for (float x = 0; x < width; x += pixelStep)
+    {
+        float freq = pixelToFreq(x, width);
+
+        // Get combined frequency response from all 32 hunters
         float gainLinear = getCombinedGainAtFreq(freq);
 
         // Convert to dB

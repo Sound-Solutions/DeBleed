@@ -66,6 +66,10 @@
             file="plugin/Source/SidechainAnalyzer.cpp"/>
       <FILE id="SidechainAnalyzer_h" name="SidechainAnalyzer.h" compile="0" resource="0"
             file="plugin/Source/SidechainAnalyzer.h"/>
+      <FILE id="ActiveFilterPool_cpp" name="ActiveFilterPool.cpp" compile="1" resource="0"
+            file="plugin/Source/ActiveFilterPool.cpp"/>
+      <FILE id="ActiveFilterPool_h" name="ActiveFilterPool.h" compile="0" resource="0"
+            file="plugin/Source/ActiveFilterPool.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

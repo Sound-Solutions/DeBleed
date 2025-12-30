@@ -106,6 +106,12 @@ public:
      */
     float getAverageGainReduction() const;
 
+    // Debug test mode - bypasses NN and sets a test pattern
+    void setDebugTestMode(bool enabled) { debugTestMode = enabled; }
+    bool isDebugTestMode() const { return debugTestMode; }
+    void setDebugTestBand(int band) { debugTestBand = band; }  // Which band to cut
+    void setDebugTestWidth(int width) { debugTestWidth = width; }  // How many bands to cut (1 = single band)
+
 private:
     // Components
     STFTProcessor stftProcessor;
@@ -125,6 +131,13 @@ private:
     float strength = 1.0f;
     float thresholdDb = 0.0f;
     float floorDb = -60.0f;
+
+    // Debug test mode - SET TO TRUE TO TEST FILTER BANK ISOLATION
+    // When true: bypasses NN, cuts ONLY the specified band(s), all others at unity
+    // This lets you hear if the filter bank itself causes smoothing/bleeding
+    bool debugTestMode = false;  // <-- DISABLED (normal operation)
+    int debugTestBand = 150;     // Band to cut (~8kHz with 192-band hybrid)
+    int debugTestWidth = 10;     // Width: try 10 bands to see a deeper notch
 
     // Sample rate
     double sampleRate = 48000.0;

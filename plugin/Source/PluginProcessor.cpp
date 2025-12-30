@@ -202,14 +202,15 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
         ? static_cast<int>(std::ceil(samplesPerBlock * resampleRatio)) + 16
         : samplesPerBlock;
 
-    // === NEW: IIR Filter Bank (Zero-Latency Audio Path) ===
-    iirFilterBank.prepare(sampleRate, samplesPerBlock);
+    // === NEW: Dynamic Hunter Filter Pool (Zero-Latency Audio Path) ===
+    activeFilterPool.prepare(sampleRate, samplesPerBlock);
 
-    // Copy center frequencies for visualization
-    visualizationCenterFreqs = iirFilterBank.getCenterFrequencies();
-
-    // === NEW: Sidechain Analyzer (Control Path) ===
-    sidechainAnalyzer.prepare(TARGET_SAMPLE_RATE, resampledBlockSize, iirFilterBank.getCenterFrequencies());
+    // === Sidechain Analyzer (Control Path) ===
+    // Note: We still use 192-band analysis internally, but filter pool uses raw 129-bin mask
+    std::array<float, 192> dummyFreqs;  // Sidechain analyzer expects this but we don't use it anymore
+    for (int i = 0; i < 192; ++i)
+        dummyFreqs[i] = 20.0f * std::pow(1000.0f, static_cast<float>(i) / 191.0f);
+    sidechainAnalyzer.prepare(TARGET_SAMPLE_RATE, resampledBlockSize, dummyFreqs);
 
     // Allocate sidechain buffer
     sidechainBuffer.resize(resampledBlockSize, 0.0f);
@@ -254,7 +255,7 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
 
 void DeBleedAudioProcessor::releaseResources()
 {
-    iirFilterBank.reset();
+    activeFilterPool.reset();
     sidechainAnalyzer.reset();
     stftProcessor.reset();
 }
@@ -343,14 +344,14 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Run sidechain analysis (STFT → Neural Net → Band Mapping → Envelopes)
     sidechainAnalyzer.analyze(analysisInput, analysisNumSamples);
 
-    // Get smoothed band gains from analysis
-    const auto& bandGains = sidechainAnalyzer.getBandGains();
+    // Get raw neural mask (129 bins) for the hunter filter pool
+    const float* rawMask = sidechainAnalyzer.getRawMask();
 
-    // === AUDIO PATH: Apply gains to IIR filter bank ===
-    iirFilterBank.setAllBandGains(bandGains);
-
-    // Process audio through IIR filter bank (ZERO LATENCY)
-    iirFilterBank.process(buffer);
+    // === AUDIO PATH: Dynamic Hunter Filters ===
+    // The ActiveFilterPool finds valleys in the mask and assigns 32 filters to chase them
+    activeFilterPool.setStrength(currentStrength);
+    activeFilterPool.setFloorDb(floorDb.load());
+    activeFilterPool.process(buffer, rawMask);
 
     // === VISUALIZATION ===
     // Also run through legacy STFT for visualization data
@@ -455,14 +456,9 @@ void DeBleedAudioProcessor::setStateInformation(const void* data, int sizeInByte
     }
 }
 
-const std::array<float, DeBleedAudioProcessor::NUM_IIR_BANDS>& DeBleedAudioProcessor::getIIRBandGains() const
+std::array<ActiveFilterPool::FilterState, DeBleedAudioProcessor::NUM_HUNTERS> DeBleedAudioProcessor::getHunterStates() const
 {
-    return sidechainAnalyzer.getBandGains();
-}
-
-const std::array<float, DeBleedAudioProcessor::NUM_IIR_BANDS>& DeBleedAudioProcessor::getIIRCenterFrequencies() const
-{
-    return visualizationCenterFreqs;
+    return activeFilterPool.getFilterStates();
 }
 
 // Plugin instantiation

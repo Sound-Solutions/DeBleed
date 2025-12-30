@@ -4,7 +4,7 @@
 #include "NeuralGateEngine.h"
 #include "STFTProcessor.h"
 #include "TrainerProcess.h"
-#include "IIRFilterBank.h"
+#include "ActiveFilterPool.h"
 #include "SidechainAnalyzer.h"
 
 /**
@@ -125,13 +125,12 @@ public:
 
     VisualizationData& getVisualizationData() { return visualizationData; }
 
-    // IIR band data for visualization (192 bands: hybrid 32+160 topology)
-    static constexpr int NUM_IIR_BANDS = 192;
-    const std::array<float, NUM_IIR_BANDS>& getIIRBandGains() const;
-    const std::array<float, NUM_IIR_BANDS>& getIIRCenterFrequencies() const;
+    // Hunter filter states for visualization (32 dynamic filters)
+    static constexpr int NUM_HUNTERS = ActiveFilterPool::MAX_FILTERS;
+    std::array<ActiveFilterPool::FilterState, NUM_HUNTERS> getHunterStates() const;
 
-    // 192-band center frequencies for visualization (hybrid 32+160 topology)
-    std::array<float, NUM_IIR_BANDS> visualizationCenterFreqs;
+    // Access to the filter pool for visualization
+    const ActiveFilterPool& getFilterPool() const { return activeFilterPool; }
 
 private:
     // Create parameter layout
@@ -163,8 +162,8 @@ private:
     NeuralGateEngine neuralEngine;
     STFTProcessor stftProcessor;
 
-    // NEW: Zero-latency IIR-based processing
-    IIRFilterBank iirFilterBank;
+    // NEW: Dynamic Hunter Filter Pool (32 surgical filters)
+    ActiveFilterPool activeFilterPool;
     SidechainAnalyzer sidechainAnalyzer;
 
     // Training process

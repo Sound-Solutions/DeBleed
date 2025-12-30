@@ -22,12 +22,15 @@ public:
     static constexpr int N_FREQ_BINS = 129;
     // Hybrid 32+160 topology
     static constexpr int NUM_IIR_BANDS = 192;
+    static constexpr int NUM_LOW_BANDS = 32;
+    static constexpr int NUM_HIGH_BANDS = 160;
+    static constexpr float CROSSOVER_FREQ = 500.0f;
     static constexpr float MIN_FREQ = 20.0f;
     static constexpr float MAX_FREQ = 20000.0f;
     static constexpr float MIN_DB = -60.0f;
     static constexpr float MAX_DB = 12.0f;
     static constexpr float MIN_REDUCTION_DB = -40.0f;
-    static constexpr float BANDPASS_Q = 2.0f;  // Must match IIRFilterBank
+    static constexpr float BANDPASS_Q = 2.0f;  // Default Q for visualization
 
     explicit RTAVisualization(DeBleedAudioProcessor& processor);
     ~RTAVisualization() override = default;
@@ -67,6 +70,7 @@ private:
 
     // IIR frequency response calculation
     float getBandpassMagnitude(float freq, float centerFreq, float Q) const;
+    float getPeakFilterMagnitude(float freq, float centerFreq, float Q, float gainDb) const;
     float getCombinedGainAtFreq(float freq) const;
 
     // Layout helpers

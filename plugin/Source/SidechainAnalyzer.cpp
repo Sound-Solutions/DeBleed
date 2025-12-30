@@ -42,6 +42,28 @@ void SidechainAnalyzer::reset()
 
 void SidechainAnalyzer::analyze(const float* input, int numSamples)
 {
+    // DEBUG TEST MODE: Bypass NN and use a test pattern
+    // This isolates whether smoothing comes from NN or filter bank
+    if (debugTestMode)
+    {
+        // Set all bands to unity (full pass)
+        rawBandGains.fill(1.0f);
+
+        // Cut the specified band(s) to floor
+        float floorLinear = juce::Decibels::decibelsToGain(floorDb);
+        int startBand = juce::jmax(0, debugTestBand - debugTestWidth / 2);
+        int endBand = juce::jmin(NUM_IIR_BANDS - 1, debugTestBand + debugTestWidth / 2);
+
+        for (int b = startBand; b <= endBand; ++b)
+        {
+            rawBandGains[b] = floorLinear;  // Full cut
+        }
+
+        // Apply envelope followers and return (skip all NN processing)
+        envelopeBank.processBlock(rawBandGains, smoothedBandGains, numSamples);
+        return;
+    }
+
     // Run dual-stream STFT analysis
     int numFrames = stftProcessor.processBlock(input, numSamples);
 
