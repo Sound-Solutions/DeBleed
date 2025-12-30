@@ -270,9 +270,8 @@ void RTAVisualization::drawDividerLine(juce::Graphics& g)
 
 float RTAVisualization::getBandpassMagnitude(float freq, float centerFreq, float Q) const
 {
-    // Approximate 2nd-order bandpass magnitude response
+    // 2nd-order bandpass magnitude response
     // |H(f)| = 1 / sqrt(1 + Q² * ((f/fc) - (fc/f))²)
-    // This gives 1.0 at f=fc, falling off on either side
 
     if (freq <= 0.0f || centerFreq <= 0.0f)
         return 0.0f;
@@ -290,22 +289,51 @@ float RTAVisualization::getCombinedGainAtFreq(float freq) const
     const auto& bandGains = audioProcessor.getIIRBandGains();
     const auto& centerFreqs = audioProcessor.getIIRCenterFrequencies();
 
-    // Combined gain = 1.0 + Sum(BandpassMagnitude * GainCoeff)
-    // Where GainCoeff = (mask - 1.0), so negative for cuts
-    float totalGain = 1.0f;
+    // Split & Sum topology: Output = Sum(Bandpass * mask) * normalization
+    // NO dry path - signal is fully decomposed and reassembled
+    // mask = 0 means true silence, mask = 1 means unity
+
+    float totalGain = 0.0f;  // NO DRY - start at zero
+    float totalUnityResponse = 0.0f;  // For normalization calculation
 
     for (int i = 0; i < NUM_IIR_BANDS; ++i)
     {
         float mask = bandGains[i];
-        float gainCoeff = mask - 1.0f;  // Negative for cuts
 
-        // Only contribute if there's actual cut happening
-        if (std::abs(gainCoeff) > 0.001f)
+        // Calculate Q based on neighbor spacing (same formula as IIRFilterBank)
+        float Q = BANDPASS_Q;
+        if (i == 0 && NUM_IIR_BANDS > 1)
         {
-            float bpMag = getBandpassMagnitude(freq, centerFreqs[i], BANDPASS_Q);
-            totalGain += bpMag * gainCoeff;
+            float bw = centerFreqs[1] - centerFreqs[0];
+            Q = centerFreqs[0] / (bw * 1.2f);
         }
+        else if (i == NUM_IIR_BANDS - 1 && NUM_IIR_BANDS > 1)
+        {
+            float bw = centerFreqs[NUM_IIR_BANDS - 1] - centerFreqs[NUM_IIR_BANDS - 2];
+            Q = centerFreqs[NUM_IIR_BANDS - 1] / (bw * 1.2f);
+        }
+        else if (NUM_IIR_BANDS > 2)
+        {
+            float bwLower = centerFreqs[i] - centerFreqs[i - 1];
+            float bwUpper = centerFreqs[i + 1] - centerFreqs[i];
+            float bw = (bwLower + bwUpper) * 0.5f;
+            Q = centerFreqs[i] / (bw * 1.2f);
+        }
+
+        Q = juce::jlimit(4.0f, 30.0f, Q);
+
+        float bpMag = getBandpassMagnitude(freq, centerFreqs[i], Q);
+
+        // Accumulate weighted bandpass response
+        totalGain += bpMag * mask;
+
+        // Also track what unity response would be (for normalization)
+        totalUnityResponse += bpMag;
     }
+
+    // Normalize so unity masks = flat response
+    if (totalUnityResponse > 0.001f)
+        totalGain /= totalUnityResponse;
 
     return std::max(totalGain, 0.0001f);  // Prevent log(0)
 }

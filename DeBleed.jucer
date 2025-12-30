@@ -91,6 +91,8 @@
   <EXPORTFORMATS>
     <XCODE_MAC targetFolder="Builds/MacOSX" xcodeValidArchs="arm64,x86_64" extraLinkerFlags="-lonnxruntime"
                externalLibraries="onnxruntime"
+               microphonePermissionNeeded="1"
+               microphonePermissionText="DeBleed needs microphone access to process live audio input in standalone mode."
                prebuildCommand="&quot;${PROJECT_DIR}/../../scripts/update_timestamp.sh&quot; &quot;${PROJECT_DIR}/../..&quot;"
                postbuildCommand="&quot;${PROJECT_DIR}/../../scripts/touch_bundles.sh&quot; &quot;${PRODUCT_NAME}&quot; &quot;${BUILT_PRODUCTS_DIR}&quot;">
       <CONFIGURATIONS>

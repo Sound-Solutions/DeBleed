@@ -40,6 +40,13 @@ void BandMapper::prepare(double newSampleRate, const std::array<float, NUM_IIR_B
 
         // Find overlapping FFT bins using triangular weighting
         // Weight based on log-frequency distance (octave distance)
+        //
+        // With 64 bands spanning 10 octaves (20Hz-20kHz), each band covers ~0.156 octaves.
+        // Use a window width of ~0.12 octaves (slightly narrower than band spacing)
+        // to ensure each band primarily responds to its own frequency region.
+        // Too wide = bands "grab each other", losing mask resolution.
+        const float octaveWidth = 0.12f;  // Was 0.5f - too wide!
+
         for (int bin = 1; bin < NUM_FFT_BINS; ++bin)  // Skip DC
         {
             float binFreq = binFrequencies[bin];
@@ -49,10 +56,6 @@ void BandMapper::prepare(double newSampleRate, const std::array<float, NUM_IIR_B
 
             // Calculate octave distance
             float octaveDistance = std::abs(std::log2(binFreq / centerFreq));
-
-            // Use triangular window within ±0.5 octaves
-            // This provides smooth interpolation between adjacent bands
-            const float octaveWidth = 0.5f;
 
             if (octaveDistance < octaveWidth)
             {
@@ -82,10 +85,13 @@ void BandMapper::map(const float* fftMask, std::array<float, NUM_IIR_BANDS>& ban
     {
         const auto& mapping = mappings[band];
 
-        // If no bins mapped (shouldn't happen normally), use unity
+        // If no bins mapped, use nearest bin (fallback for narrow window)
         if (mapping.binIndices.empty())
         {
-            bandGains[band] = 1.0f;
+            float centerFreq = bandCenterFreqs[band];
+            float binIndexF = centerFreq * 256.0f / static_cast<float>(sampleRate);
+            int bin = juce::jlimit(1, NUM_FFT_BINS - 1, static_cast<int>(binIndexF + 0.5f));
+            bandGains[band] = juce::jlimit(0.0f, 1.0f, fftMask[bin]);
             continue;
         }
 
@@ -144,4 +150,92 @@ void BandMapper::mapWithStrength(const float* fftMask,
 void BandMapper::setFrequencyRange(float /*lowHz*/, float /*highHz*/)
 {
     // Frequency range filtering removed - all bands respond to neural mask
+}
+
+void BandMapper::mapDualStream(const float* dualMask, std::array<float, NUM_IIR_BANDS>& bandGains)
+{
+    // Dual-stream mask layout:
+    // dualMask[0..128] = Stream A (129 bins, ~187Hz resolution, for highs)
+    // dualMask[129..256] = Stream B (128 bins, ~23Hz resolution, for bass)
+    //
+    // DIRECT mapping: Each IIR band gets the mask value from the nearest bin.
+    // No weighted averaging - this preserves the mask resolution from the neural network.
+
+    // Bin spacing constants (assuming 48kHz sample rate)
+    const float streamABinHz = 48000.0f / 256.0f;   // ~187.5 Hz per bin
+    const float streamBBinHz = 48000.0f / 2048.0f;  // ~23.4 Hz per bin
+
+    for (int band = 0; band < NUM_IIR_BANDS; ++band)
+    {
+        float centerFreq = bandCenterFreqs[band];
+
+        if (centerFreq < BASS_CROSSOVER_HZ)
+        {
+            // BASS BANDS: Use Stream B's high-resolution bins (23.4Hz per bin)
+            // Direct linear interpolation between nearest bins
+            float binIndexF = centerFreq / streamBBinHz;
+            int binLow = static_cast<int>(binIndexF);
+            int binHigh = binLow + 1;
+
+            binLow = juce::jlimit(0, NUM_STREAM_B_BINS - 1, binLow);
+            binHigh = juce::jlimit(0, NUM_STREAM_B_BINS - 1, binHigh);
+
+            float frac = binIndexF - static_cast<float>(binLow);
+            frac = juce::jlimit(0.0f, 1.0f, frac);
+
+            // Stream B mask starts at index 129
+            float maskLow = dualMask[NUM_STREAM_A_BINS + binLow];
+            float maskHigh = dualMask[NUM_STREAM_A_BINS + binHigh];
+
+            bandGains[band] = maskLow * (1.0f - frac) + maskHigh * frac;
+        }
+        else
+        {
+            // HIGH BANDS: Use Stream A bins - DIRECT mapping with linear interpolation
+            // No weighted averaging across multiple bins
+            float binIndexF = centerFreq / streamABinHz;
+            int binLow = static_cast<int>(binIndexF);
+            int binHigh = binLow + 1;
+
+            binLow = juce::jlimit(1, NUM_STREAM_A_BINS - 1, binLow);
+            binHigh = juce::jlimit(1, NUM_STREAM_A_BINS - 1, binHigh);
+
+            float frac = binIndexF - static_cast<float>(binLow);
+            frac = juce::jlimit(0.0f, 1.0f, frac);
+
+            float maskLow = dualMask[binLow];
+            float maskHigh = dualMask[binHigh];
+
+            bandGains[band] = juce::jlimit(0.0f, 1.0f, maskLow * (1.0f - frac) + maskHigh * frac);
+        }
+    }
+}
+
+void BandMapper::mapDualStreamWithStrength(const float* dualMask,
+                                            std::array<float, NUM_IIR_BANDS>& bandGains,
+                                            float strength)
+{
+    // First get raw mapped values
+    mapDualStream(dualMask, bandGains);
+
+    // Apply strength scaling (same as mapWithStrength)
+    for (int band = 0; band < NUM_IIR_BANDS; ++band)
+    {
+        float rawGain = bandGains[band];
+
+        if (strength <= 1.0f)
+        {
+            // Interpolate between unity and raw gain
+            bandGains[band] = 1.0f + (rawGain - 1.0f) * strength;
+        }
+        else
+        {
+            // Exaggerate the effect for strength > 1
+            float exaggeration = strength - 1.0f;
+            float extraReduction = (1.0f - rawGain) * exaggeration;
+            bandGains[band] = rawGain - extraReduction;
+        }
+
+        bandGains[band] = juce::jlimit(0.0f, 1.0f, bandGains[band]);
+    }
 }

@@ -125,10 +125,13 @@ public:
 
     VisualizationData& getVisualizationData() { return visualizationData; }
 
-    // IIR band data for visualization
+    // IIR band data for visualization (64 bands for neural network output)
     static constexpr int NUM_IIR_BANDS = 64;
     const std::array<float, NUM_IIR_BANDS>& getIIRBandGains() const;
     const std::array<float, NUM_IIR_BANDS>& getIIRCenterFrequencies() const;
+
+    // 64-band center frequencies for visualization (calculated from FFT bins)
+    std::array<float, NUM_IIR_BANDS> visualizationCenterFreqs;
 
 private:
     // Create parameter layout
@@ -145,8 +148,8 @@ private:
     std::atomic<bool> needsReinit{false};
 
     // New parameters
-    std::atomic<float> attackMs{10.0f};
-    std::atomic<float> releaseMs{500.0f};
+    std::atomic<float> attackMs{0.1f};   // Fast attack = gate opens quickly
+    std::atomic<float> releaseMs{500.0f}; // Slow release = gate closes slowly
     std::atomic<float> threshold{0.0f};
     std::atomic<float> floorDb{-60.0f};
 

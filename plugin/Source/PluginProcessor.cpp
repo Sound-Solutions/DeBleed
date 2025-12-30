@@ -107,12 +107,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         nullptr
     ));
 
-    // Release time (ms) - how fast gate closes
+    // Release time (ms) - how fast gate closes (gain falls toward floor)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_RELEASE, 1},
         "Release",
-        juce::NormalisableRange<float>(10.0f, 2000.0f, 1.0f, 0.4f),  // Skewed for finer control at low end
-        500.0f,
+        juce::NormalisableRange<float>(10.0f, 2000.0f, 1.0f, 0.4f),
+        500.0f,  // Slow release for smooth gate close
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 0) + " ms"; },
@@ -204,6 +204,9 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
 
     // === NEW: IIR Filter Bank (Zero-Latency Audio Path) ===
     iirFilterBank.prepare(sampleRate, samplesPerBlock);
+
+    // Copy center frequencies for visualization
+    visualizationCenterFreqs = iirFilterBank.getCenterFrequencies();
 
     // === NEW: Sidechain Analyzer (Control Path) ===
     sidechainAnalyzer.prepare(TARGET_SAMPLE_RATE, resampledBlockSize, iirFilterBank.getCenterFrequencies());
@@ -459,7 +462,7 @@ const std::array<float, DeBleedAudioProcessor::NUM_IIR_BANDS>& DeBleedAudioProce
 
 const std::array<float, DeBleedAudioProcessor::NUM_IIR_BANDS>& DeBleedAudioProcessor::getIIRCenterFrequencies() const
 {
-    return iirFilterBank.getCenterFrequencies();
+    return visualizationCenterFreqs;
 }
 
 // Plugin instantiation

@@ -103,18 +103,19 @@ bool NeuralGateEngine::loadModel(const juce::String& modelPath)
         }
 
         // inputShape should be [batch, input_features, frames] or with dynamic dims
-        // input_features is either 129 (single-stream) or 257 (dual-stream)
+        // input_features is either 129 (single-stream legacy) or 257 (dual-stream)
         int64_t inputFeatures = inputShape[1];
         if (inputFeatures > 0)
         {
-            if (inputFeatures == N_OUTPUT_BINS)
+            if (inputFeatures == N_OUTPUT_BINS_A)  // 129 = legacy single-stream
             {
-                modelInputFeatures = N_OUTPUT_BINS;  // Single-stream (legacy)
-                DBG("Loaded single-stream model (129 input features)");
+                modelInputFeatures = N_OUTPUT_BINS_A;
+                DBG("Loaded LEGACY single-stream model (129 input features)");
+                DBG("WARNING: This model won't work correctly with dual-stream architecture!");
             }
-            else if (inputFeatures == N_MAX_INPUT_FEATURES)
+            else if (inputFeatures == N_MAX_INPUT_FEATURES)  // 257 = dual-stream
             {
-                modelInputFeatures = N_MAX_INPUT_FEATURES;  // Dual-stream
+                modelInputFeatures = N_MAX_INPUT_FEATURES;
                 DBG("Loaded dual-stream model (257 input features)");
             }
             else
@@ -133,15 +134,20 @@ bool NeuralGateEngine::loadModel(const juce::String& modelPath)
             DBG("Model has dynamic input dimension, assuming dual-stream (257)");
         }
 
-        // Verify output shape - should always be 129 bins
+        // Verify output shape
         int64_t outputBins = outputShape.size() >= 2 ? outputShape[1] : -1;
-        if (outputBins > 0 && outputBins != N_OUTPUT_BINS)
+        if (outputBins > 0)
         {
-            lastError = juce::String::formatted(
-                "Output bins mismatch: model has %lld, expected %d",
-                outputBins, N_OUTPUT_BINS);
-            session.reset();
-            return false;
+            // Check if output matches expected (either 129 legacy or 257 dual-stream)
+            if (outputBins != N_OUTPUT_BINS_A && outputBins != N_OUTPUT_BINS)
+            {
+                lastError = juce::String::formatted(
+                    "Output bins mismatch: model has %lld, expected 129 or 257",
+                    outputBins);
+                session.reset();
+                return false;
+            }
+            DBG("Model output bins: " << outputBins);
         }
 
         currentModelPath = modelPath;

@@ -30,10 +30,10 @@ void EnvelopeFollower::setRelease(float newReleaseMs)
 
 float EnvelopeFollower::process(float target)
 {
-    // Choose coefficient based on direction
-    // Attack = gain going DOWN (attenuation increasing)
-    // Release = gain going UP (attenuation decreasing)
-    float coeff = (target < currentValue) ? attackCoeff : releaseCoeff;
+    // Choose coefficient based on direction - GATE logic:
+    // Attack = gate OPENS = gain going UP (toward mask value)
+    // Release = gate CLOSES = gain going DOWN (toward floor)
+    float coeff = (target > currentValue) ? attackCoeff : releaseCoeff;
 
     // First-order IIR smoothing
     currentValue += coeff * (target - currentValue);

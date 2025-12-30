@@ -9,12 +9,12 @@
 /**
  * NeuralGateEngine - ONNX Runtime inference wrapper for the DeBleed mask estimator.
  *
- * Supports dual-stream input:
- * - Single-stream (legacy): 129 input features
- * - Dual-stream (v2): 257 input features [Stream A (129) | Stream B bass (128)]
+ * Supports dual-stream input and output:
+ * - Input: 257 features [Stream A (129) | Stream B bass (128)]
+ * - Output: 257 bins [Stream A mask (129) | Stream B bass mask (128)]
  *
- * The input feature size is determined from the loaded ONNX model.
- * Output mask is always 129 bins (corresponding to Stream A).
+ * Stream A mask: Controls highs (~200Hz+), 187Hz resolution, ~5ms latency
+ * Stream B mask: Controls bass (20-200Hz), 23Hz resolution, ~42ms latency
  *
  * This class handles:
  * - Loading/hot-swapping ONNX models
@@ -30,14 +30,16 @@
 class NeuralGateEngine
 {
 public:
-    // Output mask is always 129 bins (Stream A)
-    static constexpr int N_OUTPUT_BINS = 129;
+    // Dual-output mask: 257 bins total
+    static constexpr int N_OUTPUT_BINS_A = 129;      // Stream A bins (highs)
+    static constexpr int N_OUTPUT_BINS_B = 128;      // Stream B bass bins
+    static constexpr int N_OUTPUT_BINS = 257;        // Total output (129 + 128)
 
     // Maximum input features (dual-stream mode)
     static constexpr int N_MAX_INPUT_FEATURES = 257;  // 129 + 128
 
-    // Legacy alias
-    static constexpr int N_FREQ_BINS = N_OUTPUT_BINS;
+    // Legacy alias (Stream A only, for backward compatibility)
+    static constexpr int N_FREQ_BINS = N_OUTPUT_BINS_A;
 
     NeuralGateEngine();
     ~NeuralGateEngine();

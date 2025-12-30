@@ -45,6 +45,10 @@ void SidechainAnalyzer::analyze(const float* input, int numSamples)
     // Run dual-stream STFT analysis
     int numFrames = stftProcessor.processBlock(input, numSamples);
 
+    // Debug: count frames for periodic logging
+    static int debugFrameCount = 0;
+    debugFrameCount += numFrames;
+
     if (numFrames > 0 && neuralEngine.isModelLoaded())
     {
         // Get dual-stream features (257 bins) or single-stream magnitude (129 bins)
@@ -73,21 +77,27 @@ void SidechainAnalyzer::analyze(const float* input, int numSamples)
         if (lastMask != nullptr)
         {
             // Use the last frame's mask for band gains
-            const float* frameMask = lastMask + (numFrames - 1) * N_FREQ_BINS;
+            // Dual-stream mask: 257 bins [Stream A (129) | Stream B bass (128)]
+            const float* frameMask = lastMask + (numFrames - 1) * N_OUTPUT_BINS;
 
             // Convert floor/range from dB to linear
             // floorDb = -60 → floorLinear ≈ 0.001 (deep cut possible)
             // floorDb = 0   → floorLinear = 1.0 (no cut, everything passes)
             float floorLinear = juce::Decibels::decibelsToGain(floorDb);
 
-            // Apply floor/range scaling to mask
-            std::array<float, N_FREQ_BINS> processedMask;
-            for (int i = 0; i < N_FREQ_BINS; ++i)
+            // Apply floor/range scaling to dual-stream mask (257 bins)
+            std::array<float, N_OUTPUT_BINS> processedMask;
+            for (int i = 0; i < N_OUTPUT_BINS; ++i)
             {
                 float maskVal = frameMask[i];
 
                 // Clamp raw mask to [0, 1]
                 maskVal = juce::jlimit(0.0f, 1.0f, maskVal);
+
+                // Neural network outputs KEEP mask (IRM = clean/mixture):
+                // mask ≈ 1.0 means "target present, keep it"
+                // mask ≈ 0.0 means "bleed present, cut it"
+                // NO INVERSION - model trained with clean_audio_dir = target
 
                 // Scale mask from [0,1] to [floorLinear, 1.0]
                 // mask=0 → floorLinear (maximum cut, limited by floor)
@@ -97,8 +107,82 @@ void SidechainAnalyzer::analyze(const float* input, int numSamples)
                 processedMask[i] = maskVal;
             }
 
-            // Map FFT mask to IIR band gains with strength
-            bandMapper.mapWithStrength(processedMask.data(), rawBandGains, strength);
+            // Map dual-stream mask to IIR band gains with strength
+            // Uses Stream B (23Hz resolution) for bass, Stream A for highs
+            bandMapper.mapDualStreamWithStrength(processedMask.data(), rawBandGains, strength);
+
+            // Debug: Log mask statistics every ~1 second (about 47 frames at 48kHz with 1024 hop)
+            if (debugFrameCount >= 47)
+            {
+                debugFrameCount = 0;
+
+                // Log model info on first debug output
+                static bool modelInfoLogged = false;
+                if (!modelInfoLogged && neuralEngine.isModelLoaded())
+                {
+                    juce::File debugFile("/Users/ksellarsm4lt/Documents/DeBleed/debug.txt");
+                    juce::String modelInfo = juce::String::formatted(
+                        "=== MODEL INFO ===\nInput features: %d\nDual-stream: %s\nPath: %s\n==================\n",
+                        neuralEngine.getModelInputFeatures(),
+                        neuralEngine.isDualStreamModel() ? "YES" : "NO",
+                        neuralEngine.getModelPath().toRawUTF8());
+                    debugFile.appendText(modelInfo);
+                    modelInfoLogged = true;
+                }
+
+                // Get raw mask from neural network (BEFORE floor scaling)
+                const float* rawNNMask = lastMask + (numFrames - 1) * N_OUTPUT_BINS;
+                float nnMin = 1.0f, nnMax = 0.0f, nnAvg = 0.0f;
+                for (int i = 0; i < N_OUTPUT_BINS; ++i) {
+                    nnMin = std::min(nnMin, rawNNMask[i]);
+                    nnMax = std::max(nnMax, rawNNMask[i]);
+                    nnAvg += rawNNMask[i];
+                }
+                nnAvg /= N_OUTPUT_BINS;
+
+                // STFT feature levels (what the NN actually sees)
+                // Stream A magnitude (bins 0-128) and Stream B (bins 129-256)
+                float stftAMin = 1e10f, stftAMax = 0.0f, stftASum = 0.0f;
+                float stftBMin = 1e10f, stftBMax = 0.0f, stftBSum = 0.0f;
+                for (int i = 0; i < 129; ++i) {
+                    float val = inputFeatures[i];
+                    stftAMin = std::min(stftAMin, val);
+                    stftAMax = std::max(stftAMax, val);
+                    stftASum += val;
+                }
+                for (int i = 129; i < 257; ++i) {
+                    float val = inputFeatures[i];
+                    stftBMin = std::min(stftBMin, val);
+                    stftBMax = std::max(stftBMax, val);
+                    stftBSum += val;
+                }
+
+                // RAW band gains by region (before envelope smoothing)
+                float rawBassAvg = 0.0f, rawMidAvg = 0.0f, rawHighAvg = 0.0f;
+                for (int i = 0; i <= 10; ++i) rawBassAvg += rawBandGains[i];
+                for (int i = 25; i <= 35; ++i) rawMidAvg += rawBandGains[i];
+                for (int i = 55; i < NUM_IIR_BANDS; ++i) rawHighAvg += rawBandGains[i];
+                rawBassAvg /= 11.0f;
+                rawMidAvg /= 11.0f;
+                rawHighAvg /= 9.0f;
+
+                // SMOOTHED band gains (what actually gets applied to IIR filters)
+                float smoothBassAvg = 0.0f, smoothMidAvg = 0.0f, smoothHighAvg = 0.0f;
+                for (int i = 0; i <= 10; ++i) smoothBassAvg += smoothedBandGains[i];
+                for (int i = 25; i <= 35; ++i) smoothMidAvg += smoothedBandGains[i];
+                for (int i = 55; i < NUM_IIR_BANDS; ++i) smoothHighAvg += smoothedBandGains[i];
+                smoothBassAvg /= 11.0f;
+                smoothMidAvg /= 11.0f;
+                smoothHighAvg /= 9.0f;
+
+                // Write to debug file
+                juce::File debugFile("/Users/ksellarsm4lt/Documents/DeBleed/debug.txt");
+                juce::String line = juce::String::formatted(
+                    "NN[%.3f/%.3f] | Raw[%.3f/%.3f/%.3f] | Smooth[%.3f/%.3f/%.3f]\n",
+                    nnMin, nnMax, rawBassAvg, rawMidAvg, rawHighAvg,
+                    smoothBassAvg, smoothMidAvg, smoothHighAvg);
+                debugFile.appendText(line);
+            }
         }
     }
     else if (!neuralEngine.isModelLoaded())
