@@ -20,7 +20,8 @@ class RTAVisualization : public juce::Component
 {
 public:
     static constexpr int N_FREQ_BINS = 129;
-    static constexpr int NUM_IIR_BANDS = 64;
+    // Hybrid 32+160 topology
+    static constexpr int NUM_IIR_BANDS = 192;
     static constexpr float MIN_FREQ = 20.0f;
     static constexpr float MAX_FREQ = 20000.0f;
     static constexpr float MIN_DB = -60.0f;

@@ -158,22 +158,23 @@ void SidechainAnalyzer::analyze(const float* input, int numSamples)
                 }
 
                 // RAW band gains by region (before envelope smoothing)
+                // Hybrid 192-band topology: 0-31 = bass (20-500Hz), 32-191 = highs (500Hz-20kHz)
                 float rawBassAvg = 0.0f, rawMidAvg = 0.0f, rawHighAvg = 0.0f;
-                for (int i = 0; i <= 10; ++i) rawBassAvg += rawBandGains[i];
-                for (int i = 25; i <= 35; ++i) rawMidAvg += rawBandGains[i];
-                for (int i = 55; i < NUM_IIR_BANDS; ++i) rawHighAvg += rawBandGains[i];
-                rawBassAvg /= 11.0f;
-                rawMidAvg /= 11.0f;
-                rawHighAvg /= 9.0f;
+                for (int i = 0; i < 32; ++i) rawBassAvg += rawBandGains[i];           // Bands 0-31 (bass)
+                for (int i = 32; i < 96; ++i) rawMidAvg += rawBandGains[i];           // Bands 32-95 (mids ~500Hz-2kHz)
+                for (int i = 160; i < NUM_IIR_BANDS; ++i) rawHighAvg += rawBandGains[i]; // Bands 160-191 (highs ~10kHz+)
+                rawBassAvg /= 32.0f;
+                rawMidAvg /= 64.0f;
+                rawHighAvg /= 32.0f;
 
                 // SMOOTHED band gains (what actually gets applied to IIR filters)
                 float smoothBassAvg = 0.0f, smoothMidAvg = 0.0f, smoothHighAvg = 0.0f;
-                for (int i = 0; i <= 10; ++i) smoothBassAvg += smoothedBandGains[i];
-                for (int i = 25; i <= 35; ++i) smoothMidAvg += smoothedBandGains[i];
-                for (int i = 55; i < NUM_IIR_BANDS; ++i) smoothHighAvg += smoothedBandGains[i];
-                smoothBassAvg /= 11.0f;
-                smoothMidAvg /= 11.0f;
-                smoothHighAvg /= 9.0f;
+                for (int i = 0; i < 32; ++i) smoothBassAvg += smoothedBandGains[i];
+                for (int i = 32; i < 96; ++i) smoothMidAvg += smoothedBandGains[i];
+                for (int i = 160; i < NUM_IIR_BANDS; ++i) smoothHighAvg += smoothedBandGains[i];
+                smoothBassAvg /= 32.0f;
+                smoothMidAvg /= 64.0f;
+                smoothHighAvg /= 32.0f;
 
                 // Write to debug file
                 juce::File debugFile("/Users/ksellarsm4lt/Documents/DeBleed/debug.txt");

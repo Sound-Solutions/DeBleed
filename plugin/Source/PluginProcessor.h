@@ -125,12 +125,12 @@ public:
 
     VisualizationData& getVisualizationData() { return visualizationData; }
 
-    // IIR band data for visualization (64 bands for neural network output)
-    static constexpr int NUM_IIR_BANDS = 64;
+    // IIR band data for visualization (192 bands: hybrid 32+160 topology)
+    static constexpr int NUM_IIR_BANDS = 192;
     const std::array<float, NUM_IIR_BANDS>& getIIRBandGains() const;
     const std::array<float, NUM_IIR_BANDS>& getIIRCenterFrequencies() const;
 
-    // 64-band center frequencies for visualization (calculated from FFT bins)
+    // 192-band center frequencies for visualization (hybrid 32+160 topology)
     std::array<float, NUM_IIR_BANDS> visualizationCenterFreqs;
 
 private:

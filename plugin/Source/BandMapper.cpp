@@ -158,20 +158,24 @@ void BandMapper::mapDualStream(const float* dualMask, std::array<float, NUM_IIR_
     // dualMask[0..128] = Stream A (129 bins, ~187Hz resolution, for highs)
     // dualMask[129..256] = Stream B (128 bins, ~23Hz resolution, for bass)
     //
-    // DIRECT mapping: Each IIR band gets the mask value from the nearest bin.
-    // No weighted averaging - this preserves the mask resolution from the neural network.
+    // Hybrid 32+160 topology mapping:
+    // - Bands 0-31 (20-500Hz): Use Stream B (23.4 Hz resolution)
+    // - Bands 32-191 (500Hz-20kHz): Use Stream A (187.5 Hz resolution)
+    //
+    // This ensures bass bands get high-resolution control from Stream B's 2048-point FFT,
+    // while high bands use the faster Stream A response.
 
     // Bin spacing constants (assuming 48kHz sample rate)
-    const float streamABinHz = 48000.0f / 256.0f;   // ~187.5 Hz per bin
-    const float streamBBinHz = 48000.0f / 2048.0f;  // ~23.4 Hz per bin
+    constexpr float streamABinHz = 48000.0f / 256.0f;   // ~187.5 Hz per bin
+    constexpr float streamBBinHz = 48000.0f / 2048.0f;  // ~23.4 Hz per bin
 
     for (int band = 0; band < NUM_IIR_BANDS; ++band)
     {
         float centerFreq = bandCenterFreqs[band];
 
-        if (centerFreq < BASS_CROSSOVER_HZ)
+        if (band < NUM_LOW_BANDS)  // Bands 0-31: Use Stream B
         {
-            // BASS BANDS: Use Stream B's high-resolution bins (23.4Hz per bin)
+            // LOW BANDS: Use Stream B's high-resolution bins (23.4Hz per bin)
             // Direct linear interpolation between nearest bins
             float binIndexF = centerFreq / streamBBinHz;
             int binLow = static_cast<int>(binIndexF);
@@ -189,10 +193,9 @@ void BandMapper::mapDualStream(const float* dualMask, std::array<float, NUM_IIR_
 
             bandGains[band] = maskLow * (1.0f - frac) + maskHigh * frac;
         }
-        else
+        else  // Bands 32-191: Use Stream A
         {
             // HIGH BANDS: Use Stream A bins - DIRECT mapping with linear interpolation
-            // No weighted averaging across multiple bins
             float binIndexF = centerFreq / streamABinHz;
             int binLow = static_cast<int>(binIndexF);
             int binHigh = binLow + 1;

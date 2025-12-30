@@ -15,17 +15,31 @@ IIRFilterBank::IIRFilterBank()
 
 void IIRFilterBank::calculateFrequencies()
 {
-    // Log-spaced frequencies from 20Hz to 20kHz
-    // f[i] = 20 * (20000/20)^(i/(N-1)) = 20 * 1000^(i/63)
-    for (int i = 0; i < NUM_BANDS; ++i)
+    // Hybrid 32+160 topology:
+    // - Array A: 32 bands from 20 Hz to 500 Hz (logarithmic) - bass
+    // - Array B: 160 bands from 500 Hz to 20 kHz (logarithmic) - highs
+    //
+    // This concentrates resolution where surgical cymbal de-bleeding is needed (highs)
+    // while maintaining adequate bass resolution for kick/snare separation.
+
+    // Array A: 32 low bands (20 Hz to 500 Hz)
+    for (int i = 0; i < NUM_LOW_BANDS; ++i)
     {
-        float t = static_cast<float>(i) / static_cast<float>(NUM_BANDS - 1);
-        centerFreqs[i] = MIN_FREQ * std::pow(MAX_FREQ / MIN_FREQ, t);
+        float t = static_cast<float>(i) / static_cast<float>(NUM_LOW_BANDS - 1);
+        centerFreqs[i] = MIN_FREQ * std::pow(CROSSOVER_FREQ / MIN_FREQ, t);
+    }
+
+    // Array B: 160 high bands (500 Hz to 20 kHz)
+    for (int i = 0; i < NUM_HIGH_BANDS; ++i)
+    {
+        float t = static_cast<float>(i) / static_cast<float>(NUM_HIGH_BANDS - 1);
+        centerFreqs[NUM_LOW_BANDS + i] = CROSSOVER_FREQ * std::pow(MAX_FREQ / CROSSOVER_FREQ, t);
     }
 
     // Calculate Q for each band based on neighbor spacing
     // Q = fc / bandwidth, where bandwidth is the distance to neighbors
     // This ensures each filter only covers its own frequency region
+    // Note: Q values will change at the 500 Hz crossover due to density change
     for (int i = 0; i < NUM_BANDS; ++i)
     {
         float bandwidth;
@@ -49,12 +63,12 @@ void IIRFilterBank::calculateFrequencies()
         }
 
         // Q = fc / bandwidth
-        // Add small multiplier to make filters slightly narrower than spacing
-        // This prevents excessive overlap while maintaining coverage
-        qFactors[i] = centerFreqs[i] / (bandwidth * 1.2f);
+        // With 192 bands, use tighter Q (no multiplier) for sharper selectivity
+        // Per-band normalization will compensate for any overlap differences
+        qFactors[i] = centerFreqs[i] / bandwidth;
 
-        // Clamp Q to reasonable range
-        qFactors[i] = juce::jlimit(4.0f, 30.0f, qFactors[i]);
+        // Clamp Q to reasonable range (expanded for high-res bands)
+        qFactors[i] = juce::jlimit(2.0f, 50.0f, qFactors[i]);
     }
 }
 
@@ -75,21 +89,36 @@ float IIRFilterBank::getBandpassMagnitudeAt(int bandIndex, float freq) const
 
 void IIRFilterBank::calculateNormalization()
 {
-    // Calculate the total bandpass response at 1kHz (a representative mid frequency)
-    // This is used to normalize the sum so that unity gains = flat response
-    const float testFreq = 1000.0f;
-    float totalResponse = 0.0f;
+    // Calculate total response at multiple frequencies across the spectrum
+    // Use MINIMUM response to ensure we never drop below unity gain
+    // (some frequencies may be slightly boosted, but no frequencies will be cut)
+    const float testFreqs[] = {25.0f, 40.0f, 63.0f, 100.0f, 160.0f, 250.0f, 400.0f, 630.0f,
+                                1000.0f, 1600.0f, 2500.0f, 4000.0f, 6300.0f, 10000.0f, 16000.0f};
+    const int numTestFreqs = 15;
 
-    for (int b = 0; b < NUM_BANDS; ++b)
+    float minResponse = 1e10f;
+
+    for (int f = 0; f < numTestFreqs; ++f)
     {
-        totalResponse += getBandpassMagnitudeAt(b, testFreq);
+        float totalResponse = 0.0f;
+        for (int b = 0; b < NUM_BANDS; ++b)
+        {
+            totalResponse += getBandpassMagnitudeAt(b, testFreqs[f]);
+        }
+        if (totalResponse < minResponse)
+            minResponse = totalResponse;
     }
 
-    // Normalization factor: divide by total overlap
-    if (totalResponse > 0.001f)
-        normalizationFactor = 1.0f / totalResponse;
+    // Use minimum response for normalization - ensures no frequency drops below unity
+    if (minResponse > 0.001f)
+        normalizationFactor = 1.0f / minResponse;
     else
         normalizationFactor = 1.0f;
+
+    // Makeup gain to compensate for tight Q not summing to unity
+    // With Q = fc/bandwidth (no 1.2x multiplier), bands don't overlap enough
+    // ~3dB boost needed empirically
+    normalizationFactor *= 1.41f;  // +3dB
 }
 
 void IIRFilterBank::prepare(double newSampleRate, int maxBlockSize)
@@ -159,8 +188,6 @@ void IIRFilterBank::process(juce::AudioBuffer<float>& buffer)
             float output = 0.0f;  // NO DRY PATH - start with zero
 
             // Split & Sum topology: Output = Sum(Bandpass * mask) * normalization
-            // When mask = 0, band contributes nothing (true silence)
-            // When mask = 1, band passes at unity
             for (int b = 0; b < NUM_BANDS; ++b)
             {
                 // Smooth gain toward target
@@ -173,7 +200,7 @@ void IIRFilterBank::process(juce::AudioBuffer<float>& buffer)
                 output += bpOut * bandGains[b];
             }
 
-            // Apply normalization so unity gains = flat response
+            // Apply global normalization
             output *= normalizationFactor;
 
             data[s] = output;

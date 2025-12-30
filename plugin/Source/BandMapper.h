@@ -26,10 +26,15 @@ public:
 
     // Legacy alias
     static constexpr int NUM_FFT_BINS = NUM_STREAM_A_BINS;
-    static constexpr int NUM_IIR_BANDS = 64;
+
+    // Hybrid 32+160 topology: 32 low bands + 160 high bands = 192 total
+    static constexpr int NUM_IIR_BANDS = 192;
+    static constexpr int NUM_LOW_BANDS = 32;
+    static constexpr int NUM_HIGH_BANDS = 160;
 
     // Crossover frequency: below this, use Stream B; above, use Stream A
-    static constexpr float BASS_CROSSOVER_HZ = 200.0f;
+    // Changed to 500Hz to match the hybrid band topology
+    static constexpr float BASS_CROSSOVER_HZ = 500.0f;
 
     BandMapper();
     ~BandMapper() = default;

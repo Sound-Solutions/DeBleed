@@ -19,7 +19,11 @@
 class IIRFilterBank
 {
 public:
-    static constexpr int NUM_BANDS = 64;
+    // Hybrid 32+160 topology: 32 low bands (20-500Hz) + 160 high bands (500Hz-20kHz)
+    static constexpr int NUM_BANDS = 192;
+    static constexpr int NUM_LOW_BANDS = 32;
+    static constexpr int NUM_HIGH_BANDS = 160;
+    static constexpr float CROSSOVER_FREQ = 500.0f;
     static constexpr float MIN_FREQ = 20.0f;
     static constexpr float MAX_FREQ = 20000.0f;
 
@@ -57,8 +61,8 @@ private:
     // Q factors (calculated based on neighbor spacing)
     std::array<float, NUM_BANDS> qFactors;
 
-    // Normalization factor - compensates for bandpass overlap
-    // When all gains = 1.0, output should equal input
+    // Global normalization factor - compensates for bandpass overlap
+    // Calculated as average across multiple test frequencies for hybrid topology
     float normalizationFactor = 1.0f;
 
     // Current band gains (0.0 to 1.0) - what the filters are currently at

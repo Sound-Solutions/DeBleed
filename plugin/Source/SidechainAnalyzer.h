@@ -25,7 +25,8 @@
 class SidechainAnalyzer
 {
 public:
-    static constexpr int NUM_IIR_BANDS = 64;
+    // Hybrid 32+160 topology
+    static constexpr int NUM_IIR_BANDS = 192;
     static constexpr int N_FREQ_BINS = STFTProcessor::N_FREQ_BINS_A;  // 129 (Stream A)
     static constexpr int N_TOTAL_FEATURES = STFTProcessor::N_TOTAL_FEATURES;  // 257 (dual-stream input)
     static constexpr int N_OUTPUT_BINS = N_TOTAL_FEATURES;  // 257 (dual-stream mask output)

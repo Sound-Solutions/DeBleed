@@ -76,12 +76,13 @@ private:
 
 
 /**
- * EnvelopeFollowerBank - Collection of 64 envelope followers for the filter bank.
+ * EnvelopeFollowerBank - Collection of 192 envelope followers for the filter bank.
+ * Hybrid 32+160 topology: 32 low bands (20-500Hz) + 160 high bands (500Hz-20kHz)
  */
 class EnvelopeFollowerBank
 {
 public:
-    static constexpr int NUM_BANDS = 64;
+    static constexpr int NUM_BANDS = 192;
 
     EnvelopeFollowerBank() = default;
     ~EnvelopeFollowerBank() = default;

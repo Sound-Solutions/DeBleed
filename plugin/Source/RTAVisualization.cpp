@@ -301,26 +301,27 @@ float RTAVisualization::getCombinedGainAtFreq(float freq) const
         float mask = bandGains[i];
 
         // Calculate Q based on neighbor spacing (same formula as IIRFilterBank)
+        // No 1.2f multiplier - tighter Q for 192-band hybrid topology
         float Q = BANDPASS_Q;
         if (i == 0 && NUM_IIR_BANDS > 1)
         {
             float bw = centerFreqs[1] - centerFreqs[0];
-            Q = centerFreqs[0] / (bw * 1.2f);
+            Q = centerFreqs[0] / bw;
         }
         else if (i == NUM_IIR_BANDS - 1 && NUM_IIR_BANDS > 1)
         {
             float bw = centerFreqs[NUM_IIR_BANDS - 1] - centerFreqs[NUM_IIR_BANDS - 2];
-            Q = centerFreqs[NUM_IIR_BANDS - 1] / (bw * 1.2f);
+            Q = centerFreqs[NUM_IIR_BANDS - 1] / bw;
         }
         else if (NUM_IIR_BANDS > 2)
         {
             float bwLower = centerFreqs[i] - centerFreqs[i - 1];
             float bwUpper = centerFreqs[i + 1] - centerFreqs[i];
             float bw = (bwLower + bwUpper) * 0.5f;
-            Q = centerFreqs[i] / (bw * 1.2f);
+            Q = centerFreqs[i] / bw;
         }
 
-        Q = juce::jlimit(4.0f, 30.0f, Q);
+        Q = juce::jlimit(2.0f, 50.0f, Q);  // Tighter Q for hybrid 192-band topology
 
         float bpMag = getBandpassMagnitude(freq, centerFreqs[i], Q);
 
