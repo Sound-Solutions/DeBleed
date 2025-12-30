@@ -70,7 +70,7 @@ private:
     std::unique_ptr<RTAVisualization> rtaView;
     std::unique_ptr<GainReductionMeter> gainReductionMeter;
 
-    // Parameter knobs (rotary style)
+    // Parameter knobs (rotary style) - Row 1: Main controls
     juce::Slider strengthSlider;
     juce::Label strengthLabel;
     juce::Slider attackSlider;
@@ -83,6 +83,27 @@ private:
     juce::Label floorLabel;
     juce::Slider mixSlider;    // Hidden but kept for attachment
     juce::Label mixLabel;
+
+    // Row 2: Hunter controls
+    juce::Slider hpfBoundSlider;
+    juce::Label hpfBoundLabel;
+    juce::Slider lpfBoundSlider;
+    juce::Label lpfBoundLabel;
+    juce::Slider tightnessSlider;
+    juce::Label tightnessLabel;
+
+    // Row 2: Gate controls
+    juce::ToggleButton lrEnabledButton;
+    juce::Slider lrSensitivitySlider;
+    juce::Label lrSensitivityLabel;
+    juce::Slider lrAttackMultSlider;
+    juce::Label lrAttackMultLabel;
+    juce::Slider lrReleaseMultSlider;
+    juce::Label lrReleaseMultLabel;
+    juce::Slider lrHoldMultSlider;
+    juce::Label lrHoldMultLabel;
+    juce::Slider lrFloorSlider;
+    juce::Label lrFloorLabel;
 
     // Toggle buttons
     juce::ToggleButton lowLatencyButton;
@@ -98,6 +119,19 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> floorAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> liveModeAttachment;
+
+    // Hunter parameter attachments
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hpfBoundAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lpfBoundAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> tightnessAttachment;
+
+    // Gate parameter attachments
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lrEnabledAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrSensitivityAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrAttackMultAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrReleaseMultAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrHoldMultAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lrFloorAttachment;
 
     // Training log
     juce::TextEditor logTextBox;

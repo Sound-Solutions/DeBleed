@@ -59,12 +59,39 @@ public:
     void setFloorDb(float newFloorDb) { floorDb = juce::jlimit(-80.0f, 0.0f, newFloorDb); }
 
     /**
+     * Set attack time in ms (compressor-style: how fast cuts ENGAGE).
+     */
+    void setAttackMs(float ms) { attackMs = juce::jlimit(0.1f, 500.0f, ms); }
+
+    /**
+     * Set release time in ms (compressor-style: how fast cuts RELEASE back to unity).
+     */
+    void setReleaseMs(float ms) { releaseMs = juce::jlimit(1.0f, 2000.0f, ms); }
+
+    /**
+     * Set tightness in ms (minimum time a hunter stays at its frequency).
+     * Higher values = more stable frequencies, less hopping.
+     */
+    void setTightnessMs(float ms) { tightnessMs = juce::jlimit(0.0f, 500.0f, ms); }
+
+    /**
+     * Set HPF bound - minimum frequency for hunters.
+     */
+    void setHpfBound(float hz) { hpfBound = juce::jlimit(20.0f, 500.0f, hz); }
+
+    /**
+     * Set LPF bound - maximum frequency for hunters.
+     */
+    void setLpfBound(float hz) { lpfBound = juce::jlimit(1000.0f, 20000.0f, hz); }
+
+    /**
      * State of a single hunter filter (for visualization).
      */
     struct FilterState
     {
         float freq = 1000.0f;
         float gain = 1.0f;
+        float q = 4.0f;
         bool active = false;
     };
 
@@ -88,10 +115,13 @@ private:
         juce::dsp::IIR::Coefficients<float>::Ptr coeffs;
         juce::SmoothedValue<float> smoothGain;    // 0.0 = full cut, 1.0 = unity
         juce::SmoothedValue<float> smoothFreq;    // Target frequency in Hz
+        juce::SmoothedValue<float> smoothQ;       // Target Q (width-adaptive)
         float currentFreq = 1000.0f;              // Last applied frequency
         float currentGain = 1.0f;                 // Last applied gain
         float currentQ = 4.0f;                    // Last applied Q
+        float targetGainFromMask = 1.0f;          // What the mask wants (before smoothing)
         bool active = false;                      // Is this hunter assigned?
+        int samplesAtCurrentFreq = 0;             // Tightness counter - samples since last freq change
     };
 
     std::array<HunterFilter, MAX_FILTERS> hunters;
@@ -100,8 +130,14 @@ private:
     double sampleRate = 48000.0;
 
     // User parameters
-    float strength = 1.0f;   // 0.0 = no effect, 1.0 = full effect
-    float floorDb = -60.0f;  // Minimum gain in dB (range knob)
+    float strength = 1.0f;      // 0.0 = no effect, 1.0 = full effect
+    float floorDb = -60.0f;     // Minimum gain in dB (range knob)
+    float attackMs = 5.0f;      // Compressor attack (how fast cuts engage)
+    float releaseMs = 100.0f;   // Compressor release (how fast cuts release)
+    float tightnessMs = 50.0f;  // Minimum time before hunter can change frequency
+    float hpfBound = 20.0f;     // Minimum frequency for hunters
+    float lpfBound = 20000.0f;  // Maximum frequency for hunters
+    int currentBlockSize = 512; // For tightness tracking
 
     /**
      * Scan the mask for valleys and assign hunters to targets.
@@ -115,8 +151,9 @@ private:
     static constexpr float HYSTERESIS_FREQ = 0.2f;       // ~3 semitones freq change required
     static constexpr float FREQ_UPDATE_THRESH = 10.0f;   // Hz change needed to update coeffs
     static constexpr float GAIN_UPDATE_THRESH = 0.02f;   // Gain change needed to update coeffs
-    static constexpr float MIN_Q = 4.0f;                 // Q for light cuts (tighter)
-    static constexpr float MAX_Q = 16.0f;                // Q for deep cuts (sharper)
+    static constexpr float Q_UPDATE_THRESH = 0.5f;       // Q change needed to update coeffs
+    static constexpr float MIN_Q = 2.0f;                 // Q for wide cuts (broad)
+    static constexpr float MAX_Q = 16.0f;                // Q for narrow cuts (surgical)
     static constexpr float MIN_FREQ = 20.0f;             // Minimum filter frequency
     static constexpr float MAX_FREQ = 20000.0f;          // Maximum filter frequency
 

@@ -120,8 +120,10 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
         addAndMakeVisible(label);
     };
 
-    // Cyan knob
-    setupKnob(strengthSlider, strengthLabel, "Strength", DeBleedLookAndFeel::cyanAccent);
+    // Strength slider (hidden - kept for attachment but not shown)
+    strengthSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    strengthSlider.setVisible(false);
+    strengthLabel.setVisible(false);
 
     // Threshold - orange
     setupKnob(thresholdSlider, thresholdLabel, "Threshold", DeBleedLookAndFeel::orangeAccent);
@@ -132,6 +134,22 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
 
     // Purple knob
     setupKnob(floorSlider, floorLabel, "Range", DeBleedLookAndFeel::purpleAccent);
+
+    // === Row 2: Hunter controls (green/teal) ===
+    setupKnob(hpfBoundSlider, hpfBoundLabel, "HPF", DeBleedLookAndFeel::cyanAccent);
+    setupKnob(lpfBoundSlider, lpfBoundLabel, "LPF", DeBleedLookAndFeel::cyanAccent);
+    setupKnob(tightnessSlider, tightnessLabel, "Tight", DeBleedLookAndFeel::cyanAccent);
+
+    // === Row 2: Gate controls (purple for gate section) ===
+    lrEnabledButton.setButtonText("GATE");
+    lrEnabledButton.setColour(juce::ToggleButton::textColourId, juce::Colours::white.withAlpha(0.8f));
+    addAndMakeVisible(lrEnabledButton);
+
+    setupKnob(lrSensitivitySlider, lrSensitivityLabel, "Sens", DeBleedLookAndFeel::purpleAccent);
+    setupKnob(lrAttackMultSlider, lrAttackMultLabel, "G.Atk", DeBleedLookAndFeel::purpleAccent);
+    setupKnob(lrReleaseMultSlider, lrReleaseMultLabel, "G.Rel", DeBleedLookAndFeel::purpleAccent);
+    setupKnob(lrHoldMultSlider, lrHoldMultLabel, "G.Hold", DeBleedLookAndFeel::purpleAccent);
+    setupKnob(lrFloorSlider, lrFloorLabel, "G.Floor", DeBleedLookAndFeel::purpleAccent);
 
     // Mix slider (hidden)
     mixSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -175,6 +193,28 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     liveModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LIVE_MODE, liveModeButton);
 
+    // Hunter parameter attachments
+    hpfBoundAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HPF_BOUND, hpfBoundSlider);
+    lpfBoundAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LPF_BOUND, lpfBoundSlider);
+    tightnessAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_TIGHTNESS, tightnessSlider);
+
+    // Gate parameter attachments
+    lrEnabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_ENABLED, lrEnabledButton);
+    lrSensitivityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_SENSITIVITY, lrSensitivitySlider);
+    lrAttackMultAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_ATTACK_MULT, lrAttackMultSlider);
+    lrReleaseMultAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_RELEASE_MULT, lrReleaseMultSlider);
+    lrHoldMultAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_HOLD_MULT, lrHoldMultSlider);
+    lrFloorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_FLOOR, lrFloorSlider);
+
     // Log text box (hidden by default)
     logTextBox.setMultiLine(true);
     logTextBox.setReadOnly(true);
@@ -208,8 +248,8 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     // Start timer for UI updates
     startTimer(100);
 
-    // Set to new larger size
-    setSize(900, 600);
+    // Set to new larger size (increased height for two rows of knobs)
+    setSize(900, 700);
 
     // Initialize tab visibility
     setActiveTab(Tab::Training);
@@ -243,9 +283,8 @@ void DeBleedAudioProcessorEditor::setActiveTab(Tab tab)
     rtaView->setVisible(tab == Tab::Visualizing);
     gainReductionMeter->setVisible(tab == Tab::Visualizing);
 
-    // Knobs (only on visualizing tab)
-    strengthSlider.setVisible(tab == Tab::Visualizing);
-    strengthLabel.setVisible(tab == Tab::Visualizing);
+    // Knobs (only on visualizing tab) - Row 1
+    // Strength is hidden (kept for parameter attachment only)
     attackSlider.setVisible(tab == Tab::Visualizing);
     attackLabel.setVisible(tab == Tab::Visualizing);
     releaseSlider.setVisible(tab == Tab::Visualizing);
@@ -256,6 +295,27 @@ void DeBleedAudioProcessorEditor::setActiveTab(Tab tab)
     floorLabel.setVisible(tab == Tab::Visualizing);
     lowLatencyButton.setVisible(tab == Tab::Visualizing);
     latencyLabel.setVisible(tab == Tab::Visualizing);
+
+    // Row 2 - Hunter controls
+    hpfBoundSlider.setVisible(tab == Tab::Visualizing);
+    hpfBoundLabel.setVisible(tab == Tab::Visualizing);
+    lpfBoundSlider.setVisible(tab == Tab::Visualizing);
+    lpfBoundLabel.setVisible(tab == Tab::Visualizing);
+    tightnessSlider.setVisible(tab == Tab::Visualizing);
+    tightnessLabel.setVisible(tab == Tab::Visualizing);
+
+    // Row 2 - Gate controls
+    lrEnabledButton.setVisible(tab == Tab::Visualizing);
+    lrSensitivitySlider.setVisible(tab == Tab::Visualizing);
+    lrSensitivityLabel.setVisible(tab == Tab::Visualizing);
+    lrAttackMultSlider.setVisible(tab == Tab::Visualizing);
+    lrAttackMultLabel.setVisible(tab == Tab::Visualizing);
+    lrReleaseMultSlider.setVisible(tab == Tab::Visualizing);
+    lrReleaseMultLabel.setVisible(tab == Tab::Visualizing);
+    lrHoldMultSlider.setVisible(tab == Tab::Visualizing);
+    lrHoldMultLabel.setVisible(tab == Tab::Visualizing);
+    lrFloorSlider.setVisible(tab == Tab::Visualizing);
+    lrFloorLabel.setVisible(tab == Tab::Visualizing);
 
     resized();
     repaint();
@@ -362,8 +422,8 @@ void DeBleedAudioProcessorEditor::layoutTrainingTab(juce::Rectangle<int> bounds)
 
 void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> bounds)
 {
-    // Knob area at bottom - 120px for knobs + labels
-    auto knobArea = bounds.removeFromBottom(120);
+    // Two rows of knobs at bottom - 200px total
+    auto knobArea = bounds.removeFromBottom(200);
 
     // RTA and GR meter
     auto vizArea = bounds;
@@ -373,36 +433,69 @@ void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> boun
     vizArea.removeFromLeft(15);
     gainReductionMeter->setBounds(vizArea);
 
-    // Knob row layout - 5 knobs + toggles
-    int knobSize = 70;
-    int knobSpacing = 15;
-    int totalKnobWidth = 5 * knobSize + 4 * knobSpacing;
-
-    auto knobRow = knobArea.withSizeKeepingCentre(totalKnobWidth + 150, knobArea.getHeight());
+    // Knob sizing
+    int knobSize = 60;
+    int knobSpacing = 10;
 
     // Helper to place knob + label
     auto placeKnob = [knobSize](juce::Rectangle<int>& area, juce::Slider& slider, juce::Label& label) {
         auto knobBounds = area.removeFromLeft(knobSize);
-        label.setBounds(knobBounds.removeFromTop(16));
+        label.setBounds(knobBounds.removeFromTop(14));
         slider.setBounds(knobBounds);
     };
 
-    placeKnob(knobRow, strengthSlider, strengthLabel);
-    knobRow.removeFromLeft(knobSpacing);
-    placeKnob(knobRow, attackSlider, attackLabel);
-    knobRow.removeFromLeft(knobSpacing);
-    placeKnob(knobRow, releaseSlider, releaseLabel);
-    knobRow.removeFromLeft(knobSpacing);
-    placeKnob(knobRow, thresholdSlider, thresholdLabel);
-    knobRow.removeFromLeft(knobSpacing);
-    placeKnob(knobRow, floorSlider, floorLabel);
+    // === Row 1: Hunter timing controls ===
+    auto row1 = knobArea.removeFromTop(95);
+    int row1Width = 4 * knobSize + 3 * knobSpacing + 100;  // 4 knobs + toggle area
+    auto knobRow1 = row1.withSizeKeepingCentre(row1Width, row1.getHeight());
 
-    // Toggles on the right
-    knobRow.removeFromLeft(20);
-    auto toggleArea = knobRow.removeFromLeft(100);
-    lowLatencyButton.setBounds(toggleArea.removeFromTop(25));
-    toggleArea.removeFromTop(5);
-    latencyLabel.setBounds(toggleArea.removeFromTop(16));
+    placeKnob(knobRow1, attackSlider, attackLabel);
+    knobRow1.removeFromLeft(knobSpacing);
+    placeKnob(knobRow1, releaseSlider, releaseLabel);
+    knobRow1.removeFromLeft(knobSpacing);
+    placeKnob(knobRow1, thresholdSlider, thresholdLabel);
+    knobRow1.removeFromLeft(knobSpacing);
+    placeKnob(knobRow1, floorSlider, floorLabel);
+
+    // Low latency toggle on the right of row 1
+    knobRow1.removeFromLeft(15);
+    auto toggleArea = knobRow1.removeFromLeft(85);
+    lowLatencyButton.setBounds(toggleArea.removeFromTop(22));
+    toggleArea.removeFromTop(3);
+    latencyLabel.setBounds(toggleArea.removeFromTop(14));
+
+    // Small gap between rows
+    knobArea.removeFromTop(10);
+
+    // === Row 2: Hunter bounds (HPF/LPF/Tightness) + Gate controls ===
+    auto row2 = knobArea;
+    // 3 hunter knobs + gate toggle + 5 gate knobs = 9 elements
+    int row2Width = 9 * knobSize + 8 * knobSpacing + 10;  // Extra for toggle
+    auto knobRow2 = row2.withSizeKeepingCentre(row2Width, row2.getHeight());
+
+    // Hunter section
+    placeKnob(knobRow2, hpfBoundSlider, hpfBoundLabel);
+    knobRow2.removeFromLeft(knobSpacing);
+    placeKnob(knobRow2, lpfBoundSlider, lpfBoundLabel);
+    knobRow2.removeFromLeft(knobSpacing);
+    placeKnob(knobRow2, tightnessSlider, tightnessLabel);
+
+    // Separator / Gate toggle
+    knobRow2.removeFromLeft(knobSpacing + 5);
+    auto gateToggleArea = knobRow2.removeFromLeft(40);
+    lrEnabledButton.setBounds(gateToggleArea.withSizeKeepingCentre(40, 22).translated(0, 20));
+    knobRow2.removeFromLeft(5);
+
+    // Gate section
+    placeKnob(knobRow2, lrSensitivitySlider, lrSensitivityLabel);
+    knobRow2.removeFromLeft(knobSpacing);
+    placeKnob(knobRow2, lrAttackMultSlider, lrAttackMultLabel);
+    knobRow2.removeFromLeft(knobSpacing);
+    placeKnob(knobRow2, lrReleaseMultSlider, lrReleaseMultLabel);
+    knobRow2.removeFromLeft(knobSpacing);
+    placeKnob(knobRow2, lrHoldMultSlider, lrHoldMultLabel);
+    knobRow2.removeFromLeft(knobSpacing);
+    placeKnob(knobRow2, lrFloorSlider, lrFloorLabel);
 }
 
 void DeBleedAudioProcessorEditor::timerCallback()

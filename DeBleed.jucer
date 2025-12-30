@@ -70,6 +70,10 @@
             file="plugin/Source/ActiveFilterPool.cpp"/>
       <FILE id="ActiveFilterPool_h" name="ActiveFilterPool.h" compile="0" resource="0"
             file="plugin/Source/ActiveFilterPool.h"/>
+      <FILE id="LinkwitzRileyGate_cpp" name="LinkwitzRileyGate.cpp" compile="1" resource="0"
+            file="plugin/Source/LinkwitzRileyGate.cpp"/>
+      <FILE id="LinkwitzRileyGate_h" name="LinkwitzRileyGate.h" compile="0" resource="0"
+            file="plugin/Source/LinkwitzRileyGate.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

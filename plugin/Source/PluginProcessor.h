@@ -6,6 +6,7 @@
 #include "TrainerProcess.h"
 #include "ActiveFilterPool.h"
 #include "SidechainAnalyzer.h"
+#include "LinkwitzRileyGate.h"
 
 /**
  * DeBleedAudioProcessor - Main audio processor for the DeBleed Neural Gate plugin.
@@ -80,6 +81,17 @@ public:
     static const juce::String PARAM_THRESHOLD;
     static const juce::String PARAM_FLOOR;
     static const juce::String PARAM_LIVE_MODE;
+    static const juce::String PARAM_HPF_BOUND;
+    static const juce::String PARAM_LPF_BOUND;
+    static const juce::String PARAM_TIGHTNESS;
+
+    // Linkwitz-Riley Gate parameters
+    static const juce::String PARAM_LR_ENABLED;
+    static const juce::String PARAM_LR_SENSITIVITY;
+    static const juce::String PARAM_LR_ATTACK_MULT;
+    static const juce::String PARAM_LR_RELEASE_MULT;
+    static const juce::String PARAM_LR_HOLD_MULT;
+    static const juce::String PARAM_LR_FLOOR;
 
     // Visualization data for thread-safe audio->GUI transfer
     struct VisualizationData
@@ -152,11 +164,22 @@ private:
     std::atomic<bool> lowLatency{false};
     std::atomic<bool> needsReinit{false};
 
-    // New parameters
-    std::atomic<float> attackMs{0.1f};   // Fast attack = gate opens quickly
-    std::atomic<float> releaseMs{500.0f}; // Slow release = gate closes slowly
+    // Hunter parameters
+    std::atomic<float> attackMs{5.0f};     // Compressor attack (how fast cuts engage)
+    std::atomic<float> releaseMs{100.0f};  // Compressor release (how fast cuts release)
     std::atomic<float> threshold{0.0f};
     std::atomic<float> floorDb{-60.0f};
+    std::atomic<float> hpfBound{20.0f};    // Minimum frequency for hunters
+    std::atomic<float> lpfBound{20000.0f}; // Maximum frequency for hunters
+    std::atomic<float> tightness{50.0f};   // Minimum time (ms) before hunter can change frequency
+
+    // Linkwitz-Riley Gate parameters
+    std::atomic<bool> lrEnabled{true};
+    std::atomic<float> lrSensitivity{0.0f};    // -100% to +100% threshold offset
+    std::atomic<float> lrAttackMult{1.0f};     // 0.25x to 4x
+    std::atomic<float> lrReleaseMult{1.0f};    // 0.25x to 4x
+    std::atomic<float> lrHoldMult{1.0f};       // 0.25x to 4x
+    std::atomic<float> lrFloorDb{-60.0f};      // Maximum attenuation
 
     // Visualization data
     VisualizationData visualizationData;
@@ -171,6 +194,9 @@ private:
     // NEW: Dynamic Hunter Filter Pool (32 surgical filters)
     ActiveFilterPool activeFilterPool;
     SidechainAnalyzer sidechainAnalyzer;
+
+    // NEW: 6-band Linkwitz-Riley Gate (broadband macro gating)
+    LinkwitzRileyGate linkwitzGate;
 
     // Training process
     TrainerProcess trainerProcess;

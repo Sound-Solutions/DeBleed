@@ -58,12 +58,14 @@ void ActiveFilterPool::prepare(double newSampleRate, int samplesPerBlock)
         // Set up smoothers
         h.smoothGain.reset(sampleRate, SMOOTHING_TIME);
         h.smoothFreq.reset(sampleRate, SMOOTHING_TIME);
+        h.smoothQ.reset(sampleRate, SMOOTHING_TIME);
         h.smoothGain.setCurrentAndTargetValue(1.0f);
         h.smoothFreq.setCurrentAndTargetValue(1000.0f);
+        h.smoothQ.setCurrentAndTargetValue(MIN_Q);
 
         // Initialize filter coefficients to unity peak at 1kHz
         *h.coeffs = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-            sampleRate, 1000.0f, 4.0f, 1.0f);
+            sampleRate, 1000.0f, MIN_Q, 1.0f);
 
         // Prepare stereo filters
         for (int ch = 0; ch < 2; ++ch)
@@ -74,7 +76,7 @@ void ActiveFilterPool::prepare(double newSampleRate, int samplesPerBlock)
 
         h.currentFreq = 1000.0f;
         h.currentGain = 1.0f;
-        h.currentQ = 4.0f;
+        h.currentQ = MIN_Q;
         h.active = false;
     }
 }
@@ -87,9 +89,13 @@ void ActiveFilterPool::reset()
         h.filter[1].reset();
         h.smoothGain.setCurrentAndTargetValue(1.0f);
         h.smoothFreq.setCurrentAndTargetValue(1000.0f);
+        h.smoothQ.setCurrentAndTargetValue(MIN_Q);
         h.currentGain = 1.0f;
         h.currentFreq = 1000.0f;
+        h.currentQ = MIN_Q;
+        h.targetGainFromMask = 1.0f;
         h.active = false;
+        h.samplesAtCurrentFreq = 0;
     }
 }
 
@@ -101,183 +107,264 @@ void ActiveFilterPool::updateTargets(const float* mask)
         for (auto& h : hunters)
         {
             h.smoothGain.setTargetValue(1.0f);
+            h.smoothQ.setTargetValue(MIN_Q);
+            h.targetGainFromMask = 1.0f;
             h.active = false;
         }
         return;
     }
 
-    // Find local minima (valleys) in the mask
-    struct Candidate
+    // Calculate tightness in samples
+    int tightnessSamples = static_cast<int>(tightnessMs * sampleRate / 1000.0f);
+
+    // === COLLECT TARGETS FROM MASK ===
+    struct FilterTarget
     {
-        int bin;
-        float gain;
         float freq;
+        float gain;  // Raw mask gain (0.0-1.0)
     };
-    std::vector<Candidate> valleys;
-    valleys.reserve(64);
+    std::vector<FilterTarget> targets;
+    targets.reserve(128);
 
     // === STREAM B: HIGH-RESOLUTION LOW FREQUENCIES ===
-    // Stream B bins are at mask indices 129-256 (offset by STREAM_A_BINS)
-    // These have 8x better resolution (23.4 Hz/bin vs 187.5 Hz/bin)
-    // Stream B covers 0 to ~1.5kHz
-    const float* streamB = mask + STREAM_A_BINS;  // Point to Stream B portion
+    const float* streamB = mask + STREAM_A_BINS;
 
-    // For low frequencies, use Stream B with relaxed valley detection
-    // Stream B bin 1 = 23.4 Hz, bin 64 = 1500 Hz
-    for (int i = 1; i < STREAM_B_BINS; ++i)
+    for (int i = 1; i < STREAM_B_BINS - 1; ++i)
     {
         float val = streamB[i];
         float freq = binToFreqB[i];
 
-        // Only process bins in the low frequency range (up to ~1.5kHz)
+        // Skip frequencies outside HPF/LPF bounds
+        if (freq < hpfBound || freq > lpfBound)
+            continue;
+
         if (freq > 1500.0f)
             break;
 
         if (val < VALLEY_THRESHOLD)
         {
-            // For lows, just take any bin below threshold (broad cuts are common)
-            valleys.push_back({i + STREAM_A_BINS, val, freq});  // Store original mask index
+            targets.push_back({freq, val});
         }
     }
 
     // === STREAM A: MID AND HIGH FREQUENCIES ===
-    // Stream A bins 0-128, skip low frequencies (covered by Stream B)
-    // Start from bin ~8 (~1.5kHz) to avoid overlap with Stream B
-    for (int i = 8; i < STREAM_A_BINS - 2; ++i)
+    for (int i = 8; i < STREAM_A_BINS - 1; ++i)
     {
         float val = mask[i];
         float freq = binToFreqA[i];
 
-        // Only care about actual cuts (gain < threshold)
+        // Skip frequencies outside HPF/LPF bounds
+        if (freq < hpfBound || freq > lpfBound)
+            continue;
+
         if (val < VALLEY_THRESHOLD)
         {
-            // Is this a local minimum? (lower than both neighbors)
-            if (val <= mask[i - 1] && val <= mask[i + 1])
-            {
-                // Also check it's lower than or equal to 2-away neighbors
-                if (val <= mask[i - 2] && val <= mask[i + 2])
-                {
-                    valleys.push_back({i, val, freq});
-                }
-            }
+            targets.push_back({freq, val});
         }
     }
 
-    // Sort by depth (deepest cuts first)
-    std::sort(valleys.begin(), valleys.end(),
-              [](const Candidate& a, const Candidate& b)
+    // Sort by depth (deepest cuts first - these get priority)
+    std::sort(targets.begin(), targets.end(),
+              [](const FilterTarget& a, const FilterTarget& b)
               {
                   return a.gain < b.gain;
               });
 
     // === FREQUENCY BUCKET SYSTEM ===
-    // Split hunters into guaranteed allocations per band
-    // Low: 20-500Hz (8 filters), Mid: 500-4kHz (12 filters), High: 4k-20kHz (12 filters)
+    // Lows: can stack (no spacing), Mids/Highs: minimum spacing for coverage
 
     struct BandConfig
     {
         float minFreq;
         float maxFreq;
         int maxFilters;
+        float minOctaveSpacing;  // 0 = no spacing (stacking allowed)
     };
 
     const std::array<BandConfig, 3> bands = {{
-        {20.0f, 500.0f, 8},      // Low Squad
-        {500.0f, 4000.0f, 12},   // Mid Squad
-        {4000.0f, 20000.0f, 12}  // High Squad
+        {20.0f, 500.0f, 8, 0.0f},           // Low Squad - stacking allowed
+        {500.0f, 4000.0f, 12, 1.0f/12.0f},  // Mid Squad - 1/12 octave spacing
+        {4000.0f, 20000.0f, 12, 1.0f/6.0f}  // High Squad - 1/6 octave spacing
     }};
 
-    const float minOctaveSpacing = 0.15f;  // ~1/6 octave minimum between hunters
+    std::vector<FilterTarget> selectedTargets;
+    selectedTargets.reserve(MAX_FILTERS);
 
-    std::vector<Candidate> selectedValleys;
-    selectedValleys.reserve(MAX_FILTERS);
-
-    // Process each frequency band separately
+    // Process each frequency band with band-specific spacing rules
     for (const auto& band : bands)
     {
-        std::vector<Candidate> bandSelection;
+        // Clamp band to HPF/LPF bounds
+        float bandMin = std::max(band.minFreq, hpfBound);
+        float bandMax = std::min(band.maxFreq, lpfBound);
+        if (bandMin >= bandMax)
+            continue;
 
-        for (const auto& valley : valleys)
+        std::vector<FilterTarget> bandSelection;
+
+        for (const auto& target : targets)
         {
-            // Check if valley is in this band
-            if (valley.freq < band.minFreq || valley.freq >= band.maxFreq)
+            if (target.freq < bandMin || target.freq >= bandMax)
                 continue;
 
             if (static_cast<int>(bandSelection.size()) >= band.maxFilters)
                 break;
 
+            // Check spacing (if required for this band)
             bool tooClose = false;
-
-            // Check distance to already-selected valleys IN THIS BAND
-            for (const auto& selected : bandSelection)
+            if (band.minOctaveSpacing > 0.0f)
             {
-                float octaveDistance = std::abs(std::log2(valley.freq / selected.freq));
-                if (octaveDistance < minOctaveSpacing)
+                for (const auto& selected : bandSelection)
                 {
-                    tooClose = true;
-                    break;
+                    float octaveDistance = std::abs(std::log2(target.freq / selected.freq));
+                    if (octaveDistance < band.minOctaveSpacing)
+                    {
+                        tooClose = true;
+                        break;
+                    }
                 }
             }
 
             if (!tooClose)
             {
-                bandSelection.push_back(valley);
+                bandSelection.push_back(target);
             }
         }
 
-        // Add this band's selections to the master list
-        for (const auto& v : bandSelection)
+        // Add this band's selections to master list
+        for (const auto& t : bandSelection)
         {
-            selectedValleys.push_back(v);
+            selectedTargets.push_back(t);
         }
     }
 
-    // Assign selected valleys to hunters
-    int activeCount = static_cast<int>(selectedValleys.size());
+    // === ASSIGN TARGETS TO AVAILABLE HUNTERS ===
+    // A hunter is available if: !active OR samplesAtCurrentFreq >= tightnessSamples
 
-    // Convert floor dB to linear gain (e.g., -60dB -> 0.001)
     float floorGain = juce::Decibels::decibelsToGain(floorDb);
 
-    for (int i = 0; i < activeCount; ++i)
+    // Collect indices of available hunters (tightness period elapsed)
+    std::vector<int> availableHunters;
+    availableHunters.reserve(MAX_FILTERS);
+    for (int i = 0; i < MAX_FILTERS; ++i)
+    {
+        if (!hunters[i].active || hunters[i].samplesAtCurrentFreq >= tightnessSamples)
+        {
+            availableHunters.push_back(i);
+        }
+    }
+
+    // For hunters still in tightness period, update their gain from current mask position
+    for (int i = 0; i < MAX_FILTERS; ++i)
     {
         auto& h = hunters[i];
-        float targetFreq = selectedValleys[i].freq;
-        float rawGain = selectedValleys[i].gain;
+        if (h.active && h.samplesAtCurrentFreq < tightnessSamples)
+        {
+            // Sample mask at this hunter's current frequency
+            float freq = h.currentFreq;
+            float maskGain = 1.0f;
 
-        // Apply strength: interpolate between 1.0 (no effect) and raw gain
-        float targetGain = 1.0f - strength * (1.0f - rawGain);
+            if (freq < 1500.0f)
+            {
+                int bin = static_cast<int>(freq * 2048.0f / 48000.0f);
+                bin = juce::jlimit(0, STREAM_B_BINS - 1, bin);
+                maskGain = mask[STREAM_A_BINS + bin];
+            }
+            else
+            {
+                int bin = static_cast<int>(freq * 256.0f / 48000.0f);
+                bin = juce::jlimit(0, STREAM_A_BINS - 1, bin);
+                maskGain = mask[bin];
+            }
 
-        // Apply floor: don't cut deeper than floorDb
-        targetGain = std::max(targetGain, floorGain);
+            // Apply strength to determine cut depth, then scale by floor (Range)
+            float cutAmount = (1.0f - maskGain) * strength;  // How much to cut (0-1)
+            float scaledCut = cutAmount * (1.0f - floorGain);  // Scale by Range
+            float targetGain = 1.0f - scaledCut;
+            targetGain = juce::jlimit(floorGain, 1.0f, targetGain);
+            h.smoothGain.setTargetValue(targetGain);
+            h.targetGainFromMask = maskGain;
+        }
+    }
 
-        // Clamp frequency to valid range
-        targetFreq = juce::jlimit(MIN_FREQ, MAX_FREQ, targetFreq);
+    // Assign targets to available hunters
+    int targetsToAssign = std::min(static_cast<int>(selectedTargets.size()),
+                                   static_cast<int>(availableHunters.size()));
 
-        // Get current hunter targets for hysteresis check
+    for (int t = 0; t < targetsToAssign; ++t)
+    {
+        int hunterIdx = availableHunters[t];
+        auto& h = hunters[hunterIdx];
+        const auto& target = selectedTargets[t];
+
+        float targetFreq = juce::jlimit(hpfBound, lpfBound, target.freq);
+        float rawGain = target.gain;
+
+        // === NEW Q CALCULATION ===
+        // Lows (<500Hz): Q matches bin width with slight flex
+        // Mids/Highs (500Hz+): Fixed surgical Q scaled by depth
+        float targetQ;
+        if (targetFreq < 500.0f)
+        {
+            // LOWS: Q = freq / binWidth (Stream B = 23.4 Hz/bin)
+            static constexpr float BIN_WIDTH_HZ = 23.4375f;  // 48000 / 2048
+            float baseQ = targetFreq / BIN_WIDTH_HZ;
+
+            // Allow +/-20% flex based on mask value (deeper = tighter Q)
+            float depthFactor = 1.0f - rawGain;  // 0 = no cut, 1 = full cut
+            float flexFactor = 1.0f + depthFactor * 0.2f;  // Up to +20% Q for deep cuts
+            targetQ = juce::jlimit(2.0f, 16.0f, baseQ * flexFactor);
+        }
+        else
+        {
+            // MIDS/HIGHS: Fixed surgical Q scaled by attenuation depth
+            float depthFactor = 1.0f - rawGain;  // 0 = no cut, 1 = full cut
+            float baseQ = 8.0f;
+            float maxQ = 24.0f;
+            targetQ = baseQ + depthFactor * (maxQ - baseQ);
+        }
+
+        // Apply strength to determine cut depth, then scale by floor (Range)
+        float cutAmount = (1.0f - rawGain) * strength;  // How much to cut (0-1)
+        float scaledCut = cutAmount * (1.0f - floorGain);  // Scale by Range
+        float targetGain = 1.0f - scaledCut;
+        targetGain = juce::jlimit(floorGain, 1.0f, targetGain);
+
+        // Hysteresis check
         float currentTargetGain = h.smoothGain.getTargetValue();
         float currentTargetFreq = h.smoothFreq.getTargetValue();
 
-        // Hysteresis: only update if change exceeds threshold
         float gainDelta = std::abs(targetGain - currentTargetGain);
         float freqRatio = (currentTargetFreq > 0.0f)
             ? std::abs(std::log2(targetFreq / currentTargetFreq))
-            : 1.0f;  // Force update if current freq is invalid
+            : 1.0f;
 
         bool shouldUpdate = (gainDelta > HYSTERESIS_GAIN) || (freqRatio > HYSTERESIS_FREQ);
 
         if (shouldUpdate || !h.active)
         {
+            // Check if frequency is actually changing
+            bool freqChanged = std::abs(targetFreq - h.currentFreq) > FREQ_UPDATE_THRESH;
+            if (freqChanged)
+            {
+                h.samplesAtCurrentFreq = 0;  // Reset tightness counter on freq change
+            }
+
             h.smoothFreq.setTargetValue(targetFreq);
             h.smoothGain.setTargetValue(targetGain);
+            h.smoothQ.setTargetValue(targetQ);
+            h.targetGainFromMask = rawGain;
         }
         h.active = true;
     }
 
-    // Set unused hunters to unity (bypass)
-    for (int i = activeCount; i < MAX_FILTERS; ++i)
+    // Set remaining available hunters to unity (bypass)
+    for (int t = targetsToAssign; t < static_cast<int>(availableHunters.size()); ++t)
     {
-        hunters[i].smoothGain.setTargetValue(1.0f);
-        hunters[i].active = false;
+        int hunterIdx = availableHunters[t];
+        hunters[hunterIdx].smoothGain.setTargetValue(1.0f);
+        hunters[hunterIdx].smoothQ.setTargetValue(MIN_Q);
+        hunters[hunterIdx].active = false;
+        hunters[hunterIdx].samplesAtCurrentFreq = 0;
     }
 }
 
@@ -286,10 +373,28 @@ void ActiveFilterPool::process(juce::AudioBuffer<float>& buffer, const float* ne
     const int numSamples = buffer.getNumSamples();
     const int numChannels = juce::jmin(buffer.getNumChannels(), 2);
 
+    // Store block size for tightness tracking
+    currentBlockSize = numSamples;
+
     // Update hunter targets from the neural mask (once per block)
     updateTargets(neuralMask);
 
+    // Increment tightness counters for all active hunters
+    for (auto& h : hunters)
+    {
+        if (h.active)
+        {
+            h.samplesAtCurrentFreq += numSamples;
+        }
+    }
+
     float nyquist = static_cast<float>(sampleRate) * 0.5f;
+
+    // Calculate attack/release coefficients (COMPRESSOR-style)
+    // Attack = gain DECREASING (cut engaging, signal getting cut)
+    // Release = gain INCREASING (cut releasing, signal coming back)
+    float attackCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * attackMs / 1000.0f));
+    float releaseCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * releaseMs / 1000.0f));
 
     // Process each sample
     for (int s = 0; s < numSamples; ++s)
@@ -297,38 +402,39 @@ void ActiveFilterPool::process(juce::AudioBuffer<float>& buffer, const float* ne
         // Update each hunter
         for (auto& h : hunters)
         {
-            // Get smoothed values
-            float targetGain = h.smoothGain.getNextValue();
+            // Get target values (smoothGain holds target, we'll manually smooth)
+            float targetGain = h.smoothGain.getTargetValue();
             float targetFreq = h.smoothFreq.getNextValue();
+            float targetQ = h.smoothQ.getNextValue();
 
-            // Clamp frequency
-            targetFreq = juce::jlimit(MIN_FREQ, nyquist * 0.95f, targetFreq);
+            // Compressor-style asymmetric smoothing for gain:
+            // - Gain DECREASING (cut engaging) = use attack time
+            // - Gain INCREASING (cut releasing) = use release time
+            float coeff = (targetGain < h.currentGain) ? attackCoeff : releaseCoeff;
+            float smoothedGain = h.currentGain * coeff + targetGain * (1.0f - coeff);
 
-            // Check if coefficients need updating
+            // Clamp frequency and Q
+            targetFreq = juce::jlimit(hpfBound, std::min(lpfBound, nyquist * 0.95f), targetFreq);
+            targetQ = juce::jlimit(MIN_Q, MAX_Q, targetQ);
+
+            // Check if coefficients need updating (use smoothedGain for comparison)
             bool freqChanged = std::abs(targetFreq - h.currentFreq) > FREQ_UPDATE_THRESH;
-            bool gainChanged = std::abs(targetGain - h.currentGain) > GAIN_UPDATE_THRESH;
+            bool gainChanged = std::abs(smoothedGain - h.currentGain) > GAIN_UPDATE_THRESH;
+            bool qChanged = std::abs(targetQ - h.currentQ) > Q_UPDATE_THRESH;
 
-            if (freqChanged || gainChanged)
+            if (freqChanged || gainChanged || qChanged)
             {
                 h.currentFreq = targetFreq;
-                h.currentGain = targetGain;
-
-                // Dynamic Q: deeper cuts get sharper Q
-                // gain 1.0 (no cut) -> Q = MIN_Q
-                // gain 0.0 (full cut) -> Q = MAX_Q
-                float dynamicQ = MIN_Q + (1.0f - targetGain) * (MAX_Q - MIN_Q);
-                h.currentQ = dynamicQ;
+                h.currentGain = smoothedGain;  // Use smoothed gain with attack/release
+                h.currentQ = targetQ;
 
                 // Convert linear gain to the gain parameter for peak filter
                 // For cuts: gain < 1.0 means attenuation at center frequency
-                float peakGain = targetGain;
+                float peakGain = juce::jlimit(0.01f, 1.0f, smoothedGain);
 
-                // Clamp to prevent extreme values
-                peakGain = juce::jlimit(0.01f, 1.0f, peakGain);
-
-                // Update coefficients
+                // Update coefficients with width-adaptive Q
                 *h.coeffs = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-                    sampleRate, h.currentFreq, dynamicQ, peakGain);
+                    sampleRate, h.currentFreq, h.currentQ, peakGain);
 
                 // Apply new coefficients to both channels
                 h.filter[0].coefficients = h.coeffs;
@@ -354,6 +460,7 @@ ActiveFilterPool::getFilterStates() const
     {
         states[i].freq = hunters[i].currentFreq;
         states[i].gain = hunters[i].currentGain;
+        states[i].q = hunters[i].currentQ;
         states[i].active = hunters[i].active;
     }
 

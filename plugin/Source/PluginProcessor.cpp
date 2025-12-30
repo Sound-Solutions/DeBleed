@@ -13,6 +13,17 @@ const juce::String DeBleedAudioProcessor::PARAM_RELEASE = "release";
 const juce::String DeBleedAudioProcessor::PARAM_THRESHOLD = "threshold";
 const juce::String DeBleedAudioProcessor::PARAM_FLOOR = "floor";
 const juce::String DeBleedAudioProcessor::PARAM_LIVE_MODE = "liveMode";
+const juce::String DeBleedAudioProcessor::PARAM_HPF_BOUND = "hpfBound";
+const juce::String DeBleedAudioProcessor::PARAM_LPF_BOUND = "lpfBound";
+const juce::String DeBleedAudioProcessor::PARAM_TIGHTNESS = "tightness";
+
+// Linkwitz-Riley Gate parameters
+const juce::String DeBleedAudioProcessor::PARAM_LR_ENABLED = "lrEnabled";
+const juce::String DeBleedAudioProcessor::PARAM_LR_SENSITIVITY = "lrSensitivity";
+const juce::String DeBleedAudioProcessor::PARAM_LR_ATTACK_MULT = "lrAttackMult";
+const juce::String DeBleedAudioProcessor::PARAM_LR_RELEASE_MULT = "lrReleaseMult";
+const juce::String DeBleedAudioProcessor::PARAM_LR_HOLD_MULT = "lrHoldMult";
+const juce::String DeBleedAudioProcessor::PARAM_LR_FLOOR = "lrFloor";
 
 DeBleedAudioProcessor::DeBleedAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -29,6 +40,15 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     parameters.addParameterListener(PARAM_RELEASE, this);
     parameters.addParameterListener(PARAM_THRESHOLD, this);
     parameters.addParameterListener(PARAM_FLOOR, this);
+    parameters.addParameterListener(PARAM_HPF_BOUND, this);
+    parameters.addParameterListener(PARAM_LPF_BOUND, this);
+    parameters.addParameterListener(PARAM_TIGHTNESS, this);
+    parameters.addParameterListener(PARAM_LR_ENABLED, this);
+    parameters.addParameterListener(PARAM_LR_SENSITIVITY, this);
+    parameters.addParameterListener(PARAM_LR_ATTACK_MULT, this);
+    parameters.addParameterListener(PARAM_LR_RELEASE_MULT, this);
+    parameters.addParameterListener(PARAM_LR_HOLD_MULT, this);
+    parameters.addParameterListener(PARAM_LR_FLOOR, this);
 
     // Initialize atomic values
     strength.store(*parameters.getRawParameterValue(PARAM_STRENGTH));
@@ -39,6 +59,15 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     releaseMs.store(*parameters.getRawParameterValue(PARAM_RELEASE));
     threshold.store(*parameters.getRawParameterValue(PARAM_THRESHOLD));
     floorDb.store(*parameters.getRawParameterValue(PARAM_FLOOR));
+    hpfBound.store(*parameters.getRawParameterValue(PARAM_HPF_BOUND));
+    lpfBound.store(*parameters.getRawParameterValue(PARAM_LPF_BOUND));
+    tightness.store(*parameters.getRawParameterValue(PARAM_TIGHTNESS));
+    lrEnabled.store(*parameters.getRawParameterValue(PARAM_LR_ENABLED) > 0.5f);
+    lrSensitivity.store(*parameters.getRawParameterValue(PARAM_LR_SENSITIVITY));
+    lrAttackMult.store(*parameters.getRawParameterValue(PARAM_LR_ATTACK_MULT));
+    lrReleaseMult.store(*parameters.getRawParameterValue(PARAM_LR_RELEASE_MULT));
+    lrHoldMult.store(*parameters.getRawParameterValue(PARAM_LR_HOLD_MULT));
+    lrFloorDb.store(*parameters.getRawParameterValue(PARAM_LR_FLOOR));
 }
 
 DeBleedAudioProcessor::~DeBleedAudioProcessor()
@@ -51,6 +80,15 @@ DeBleedAudioProcessor::~DeBleedAudioProcessor()
     parameters.removeParameterListener(PARAM_RELEASE, this);
     parameters.removeParameterListener(PARAM_THRESHOLD, this);
     parameters.removeParameterListener(PARAM_FLOOR, this);
+    parameters.removeParameterListener(PARAM_HPF_BOUND, this);
+    parameters.removeParameterListener(PARAM_LPF_BOUND, this);
+    parameters.removeParameterListener(PARAM_TIGHTNESS, this);
+    parameters.removeParameterListener(PARAM_LR_ENABLED, this);
+    parameters.removeParameterListener(PARAM_LR_SENSITIVITY, this);
+    parameters.removeParameterListener(PARAM_LR_ATTACK_MULT, this);
+    parameters.removeParameterListener(PARAM_LR_RELEASE_MULT, this);
+    parameters.removeParameterListener(PARAM_LR_HOLD_MULT, this);
+    parameters.removeParameterListener(PARAM_LR_FLOOR, this);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::createParameterLayout()
@@ -150,6 +188,111 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         false  // Default: off (training enabled)
     ));
 
+    // HPF Bound - minimum frequency for hunter filters
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_HPF_BOUND, 1},
+        "HPF Bound",
+        juce::NormalisableRange<float>(20.0f, 500.0f, 1.0f, 0.5f),
+        20.0f,  // Default: 20Hz (full range)
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 0) + " Hz"; },
+        nullptr
+    ));
+
+    // LPF Bound - maximum frequency for hunter filters
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_LPF_BOUND, 1},
+        "LPF Bound",
+        juce::NormalisableRange<float>(1000.0f, 20000.0f, 10.0f, 0.5f),
+        20000.0f,  // Default: 20kHz (full range)
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value / 1000.0f, 1) + " kHz"; },
+        nullptr
+    ));
+
+    // Tightness - minimum time before hunter can change frequency
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_TIGHTNESS, 1},
+        "Tightness",
+        juce::NormalisableRange<float>(0.0f, 500.0f, 1.0f, 0.5f),
+        50.0f,  // Default: 50ms
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 0) + " ms"; },
+        nullptr
+    ));
+
+    // === Linkwitz-Riley 6-Band Gate Parameters ===
+
+    // LR Gate Enable
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID{PARAM_LR_ENABLED, 1},
+        "LR Gate",
+        true  // Default: enabled
+    ));
+
+    // LR Sensitivity - offsets threshold from neural mask (-100% = less gating, +100% = more gating)
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_LR_SENSITIVITY, 1},
+        "LR Sensitivity",
+        juce::NormalisableRange<float>(-100.0f, 100.0f, 1.0f),
+        0.0f,  // Default: no offset
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 0) + "%"; },
+        nullptr
+    ));
+
+    // LR Attack Multiplier - scales auto-determined attack times
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_LR_ATTACK_MULT, 1},
+        "LR Attack",
+        juce::NormalisableRange<float>(0.25f, 4.0f, 0.01f, 0.5f),
+        1.0f,  // Default: 1x (use auto timing)
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 2) + "x"; },
+        nullptr
+    ));
+
+    // LR Release Multiplier - scales auto-determined release times
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_LR_RELEASE_MULT, 1},
+        "LR Release",
+        juce::NormalisableRange<float>(0.25f, 4.0f, 0.01f, 0.5f),
+        1.0f,  // Default: 1x (use auto timing)
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 2) + "x"; },
+        nullptr
+    ));
+
+    // LR Hold Multiplier - scales auto-determined hold times
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_LR_HOLD_MULT, 1},
+        "LR Hold",
+        juce::NormalisableRange<float>(0.25f, 4.0f, 0.01f, 0.5f),
+        1.0f,  // Default: 1x (use auto timing)
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 2) + "x"; },
+        nullptr
+    ));
+
+    // LR Floor - maximum attenuation when gated
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_LR_FLOOR, 1},
+        "LR Floor",
+        juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f),
+        -60.0f,  // Default: -60dB
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + " dB"; },
+        nullptr
+    ));
+
     return {params.begin(), params.end()};
 }
 
@@ -179,6 +322,24 @@ void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, fl
         threshold.store(newValue);
     else if (parameterID == PARAM_FLOOR)
         floorDb.store(newValue);
+    else if (parameterID == PARAM_HPF_BOUND)
+        hpfBound.store(newValue);
+    else if (parameterID == PARAM_LPF_BOUND)
+        lpfBound.store(newValue);
+    else if (parameterID == PARAM_TIGHTNESS)
+        tightness.store(newValue);
+    else if (parameterID == PARAM_LR_ENABLED)
+        lrEnabled.store(newValue > 0.5f);
+    else if (parameterID == PARAM_LR_SENSITIVITY)
+        lrSensitivity.store(newValue);
+    else if (parameterID == PARAM_LR_ATTACK_MULT)
+        lrAttackMult.store(newValue);
+    else if (parameterID == PARAM_LR_RELEASE_MULT)
+        lrReleaseMult.store(newValue);
+    else if (parameterID == PARAM_LR_HOLD_MULT)
+        lrHoldMult.store(newValue);
+    else if (parameterID == PARAM_LR_FLOOR)
+        lrFloorDb.store(newValue);
 }
 
 int DeBleedAudioProcessor::freqToBin(float freqHz) const
@@ -204,6 +365,9 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
 
     // === NEW: Dynamic Hunter Filter Pool (Zero-Latency Audio Path) ===
     activeFilterPool.prepare(sampleRate, samplesPerBlock);
+
+    // === NEW: 6-band Linkwitz-Riley Gate (Broadband Macro Gating) ===
+    linkwitzGate.prepare(sampleRate, samplesPerBlock);
 
     // === Sidechain Analyzer (Control Path) ===
     // Note: We still use 192-band analysis internally, but filter pool uses raw 129-bin mask
@@ -256,6 +420,7 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
 void DeBleedAudioProcessor::releaseResources()
 {
     activeFilterPool.reset();
+    linkwitzGate.reset();
     sidechainAnalyzer.reset();
     stftProcessor.reset();
 }
@@ -347,10 +512,60 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Get raw neural mask (129 bins) for the hunter filter pool
     const float* rawMask = sidechainAnalyzer.getRawMask();
 
-    // === AUDIO PATH: Dynamic Hunter Filters ===
+    // === AUDIO PATH: 6-Band Linkwitz-Riley Gate (Broadband Macro Gating) ===
+    // Calculate band mask averages from neural mask
+    // Mask is 129 bins at ~187.5 Hz/bin (48kHz/256 FFT)
+    // Bands: Sub(20-80), Low(80-250), Mid-Low(250-800), Mid(800-2.5k), High-Mid(2.5k-8k), High(8k-20k)
+    std::array<float, LinkwitzRileyGate::NUM_BANDS> bandMaskAverages;
+    if (rawMask != nullptr)
+    {
+        // Crossover frequencies: 80, 250, 800, 2500, 8000 Hz
+        // At 187.5 Hz/bin: bins ~0-1, 1-2, 2-4, 4-13, 13-43, 43-128
+        static constexpr float BIN_HZ = 187.5f;  // 48000/256
+        static constexpr std::array<float, 7> BAND_EDGES = {{20.0f, 80.0f, 250.0f, 800.0f, 2500.0f, 8000.0f, 20000.0f}};
+
+        for (int b = 0; b < LinkwitzRileyGate::NUM_BANDS; ++b)
+        {
+            int startBin = static_cast<int>(BAND_EDGES[b] / BIN_HZ);
+            int endBin = static_cast<int>(BAND_EDGES[b + 1] / BIN_HZ);
+            startBin = std::clamp(startBin, 0, 128);
+            endBin = std::clamp(endBin, 1, 129);
+
+            float sum = 0.0f;
+            int count = 0;
+            for (int bin = startBin; bin < endBin; ++bin)
+            {
+                sum += rawMask[bin];
+                ++count;
+            }
+            bandMaskAverages[b] = (count > 0) ? (sum / static_cast<float>(count)) : 1.0f;
+        }
+    }
+    else
+    {
+        bandMaskAverages.fill(1.0f);  // Unity (pass through)
+    }
+
+    // Update gate parameters
+    linkwitzGate.setEnabled(lrEnabled.load());
+    linkwitzGate.setSensitivity(lrSensitivity.load());
+    linkwitzGate.setAttackMult(lrAttackMult.load());
+    linkwitzGate.setReleaseMult(lrReleaseMult.load());
+    linkwitzGate.setHoldMult(lrHoldMult.load());
+    linkwitzGate.setFloorDb(lrFloorDb.load());
+
+    // Process gate (broadband macro gating)
+    linkwitzGate.process(buffer, bandMaskAverages);
+
+    // === AUDIO PATH: Dynamic Hunter Filters (Surgical Micro Cuts) ===
     // The ActiveFilterPool finds valleys in the mask and assigns 32 filters to chase them
     activeFilterPool.setStrength(currentStrength);
     activeFilterPool.setFloorDb(floorDb.load());
+    activeFilterPool.setAttackMs(attackMs.load());
+    activeFilterPool.setReleaseMs(releaseMs.load());
+    activeFilterPool.setHpfBound(hpfBound.load());
+    activeFilterPool.setLpfBound(lpfBound.load());
+    activeFilterPool.setTightnessMs(tightness.load());
     activeFilterPool.process(buffer, rawMask);
 
     // === VISUALIZATION ===
