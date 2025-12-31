@@ -1,49 +1,19 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include <array>
 
 /**
- * LinkwitzRileyGate - 6-band multiband gate with Linkwitz-Riley crossovers.
+ * SimpleSidechainGate - Single-band gate with HPF/LPF sidechain filtering.
  *
- * Fully user-controlled traditional signal-level gate with per-band parameters.
- * Uses LR-4 (24dB/octave) crossovers for phase-coherent band splitting.
- *
- * Bands:
- *   0: Sub       (20-80 Hz)
- *   1: Low       (80-250 Hz)
- *   2: Low-Mid   (250-800 Hz)
- *   3: Mid       (800-2.5k Hz)
- *   4: High-Mid  (2.5k-8k Hz)
- *   5: High      (8k-20k Hz)
- *
- * Key features:
- * - Signal-level detection: Gate triggers based on RMS level per band
- * - Per-band parameters: Threshold, attack, release, hold, range, enable
- * - Adjustable crossover frequencies
+ * Like a Shure PSE or dbx noise gate:
+ * - Full-band gating (no crossovers)
+ * - Sidechain HPF/LPF filters the DETECTION signal (not audio)
+ * - Gate only opens when signal within HPF-LPF range exceeds threshold
+ * - User-controlled parameters (not neural-driven)
  */
 class LinkwitzRileyGate
 {
 public:
-    static constexpr int NUM_BANDS = 6;
-    static constexpr int NUM_CROSSOVERS = 5;
-
-    // Default crossover frequencies
-    static constexpr std::array<float, NUM_CROSSOVERS> DEFAULT_CROSSOVERS = {{
-        80.0f, 250.0f, 800.0f, 2500.0f, 8000.0f
-    }};
-
-    // Per-band parameters
-    struct BandParams
-    {
-        float thresholdDb = -40.0f;  // -80 to 0 dB
-        float attackMs = 5.0f;       // 0.1 to 100 ms
-        float releaseMs = 100.0f;    // 10 to 1000 ms
-        float holdMs = 50.0f;        // 0 to 500 ms
-        float rangeDb = -60.0f;      // -80 to 0 dB (max attenuation)
-        bool enabled = true;
-    };
-
     LinkwitzRileyGate();
     ~LinkwitzRileyGate() = default;
 
@@ -51,91 +21,92 @@ public:
     void reset();
 
     /**
-     * Process audio through the multiband gate.
-     * Gate triggers based on signal level in each band.
+     * Process audio through the gate.
      * @param buffer Audio to process in-place
      */
     void process(juce::AudioBuffer<float>& buffer);
 
     // Master enable/disable
-    void setEnabled(bool enabled) { this->masterEnabled = enabled; }
+    void setEnabled(bool enabled) { masterEnabled = enabled; }
     bool isEnabled() const { return masterEnabled; }
 
-    // Per-band parameter setters
-    void setBandThreshold(int band, float db);
-    void setBandAttack(int band, float ms);
-    void setBandRelease(int band, float ms);
-    void setBandHold(int band, float ms);
-    void setBandRange(int band, float db);
-    void setBandEnabled(int band, bool enabled);
+    // Gate parameters
+    void setThreshold(float db) { thresholdDb = juce::jlimit(-80.0f, 0.0f, db); }
+    void setAttack(float ms) { attackMs = juce::jlimit(0.1f, 100.0f, ms); }
+    void setRelease(float ms) { releaseMs = juce::jlimit(10.0f, 2000.0f, ms); }
+    void setHold(float ms) { holdMs = juce::jlimit(0.0f, 500.0f, ms); }
+    void setRange(float db) { rangeDb = juce::jlimit(-80.0f, 0.0f, db); }
 
-    // Set all parameters for a band at once
-    void setBandParams(int band, const BandParams& params);
+    // Sidechain filter bounds (uses existing HPF/LPF parameters)
+    void setSidechainHPF(float hz) { sidechainHPF = juce::jlimit(20.0f, 2000.0f, hz); updateFilters(); }
+    void setSidechainLPF(float hz) { sidechainLPF = juce::jlimit(500.0f, 20000.0f, hz); updateFilters(); }
 
-    // Crossover frequency setters
-    void setCrossover(int index, float hz);
-    std::array<float, NUM_CROSSOVERS> getCrossoverFrequencies() const { return crossoverFreqs; }
+    // Set neural mask confidence (0.0 = bleed, 1.0 = singer)
+    void setNeuralConfidence(float confidence) { neuralConfidence = juce::jlimit(0.0f, 1.0f, confidence); }
 
-    // Get current band states for visualization
-    struct BandState
-    {
-        float currentGain;      // 0.0-1.0 (1.0 = unity, lower = gating)
-        bool gateOpen;          // true = passing signal (above threshold)
-        float signalLevelDb;    // Current detected signal level in dB
-        float thresholdDb;      // Current threshold setting
-    };
-    std::array<BandState, NUM_BANDS> getBandStates() const;
+    // Get current state for visualization
+    float getCurrentGain() const { return currentGain; }
+    float getGainReductionDb() const { return juce::Decibels::gainToDecibels(currentGain); }
+    float getDetectedLevelDb() const { return detectedLevelDb; }
+    float getNeuralConfidence() const { return neuralConfidence; }
+    float getThresholdDb() const { return thresholdDb; }
+    bool isGateOpen() const { return !isGating; }
+
+    // Legacy compatibility - these do nothing now but prevent compile errors
+    static constexpr int NUM_BANDS = 6;
+    static constexpr int NUM_CROSSOVERS = 5;
+    struct BandParams { float thresholdDb, attackMs, releaseMs, holdMs, rangeDb; bool enabled; };
+    struct BandState { float currentGain, signalLevelDb, thresholdDb; bool gateOpen; };
+    void setBandThreshold(int, float) {}
+    void setBandAttack(int, float) {}
+    void setBandRelease(int, float) {}
+    void setBandHold(int, float) {}
+    void setBandRange(int, float) {}
+    void setBandEnabled(int, bool) {}
+    void setBandParams(int, const BandParams&) {}
+    void setCrossover(int, float) {}
+    std::array<float, NUM_CROSSOVERS> getCrossoverFrequencies() const { return {{80,250,800,2500,8000}}; }
+    std::array<BandState, NUM_BANDS> getBandStates() const { return {}; }
 
 private:
     double sampleRate = 48000.0;
     bool masterEnabled = true;
 
-    // Per-band parameters
-    std::array<BandParams, NUM_BANDS> bandParams;
+    // Gate parameters
+    float thresholdDb = -40.0f;
+    float attackMs = 5.0f;
+    float releaseMs = 100.0f;
+    float holdMs = 50.0f;
+    float rangeDb = -60.0f;
 
-    // Crossover frequencies
-    std::array<float, NUM_CROSSOVERS> crossoverFreqs = DEFAULT_CROSSOVERS;
+    // Sidechain filter frequencies
+    float sidechainHPF = 80.0f;
+    float sidechainLPF = 12000.0f;
 
-    // LR-4 crossover filters
-    // Each crossover uses two cascaded 2nd-order Butterworth = LR-4
-    struct LR4Crossover
-    {
-        // For stereo: [0] = left, [1] = right
-        juce::dsp::StateVariableTPTFilter<float> lp1[2], lp2[2];  // Lowpass cascade
-        juce::dsp::StateVariableTPTFilter<float> hp1[2], hp2[2];  // Highpass cascade
-    };
-    std::array<LR4Crossover, NUM_CROSSOVERS> crossovers;
+    // Sidechain filters (2-pole each for smooth response)
+    juce::dsp::StateVariableTPTFilter<float> hpFilter1, hpFilter2;
+    juce::dsp::StateVariableTPTFilter<float> lpFilter1, lpFilter2;
 
-    // Band processing buffers
-    std::array<juce::AudioBuffer<float>, NUM_BANDS> bandBuffers;
+    // Level detection (for visualization)
+    float detectedLevelDb = -100.0f;
+    float detectorCoeff = 0.0f;
 
-    // Signal level detector per band (RMS envelope)
-    struct LevelDetector
-    {
-        float rmsEnvelopeDb = -100.0f;   // Smoothed RMS level in dB
-        float detectorCoeff = 0.0f;      // Smoothing coefficient
-    };
-    std::array<LevelDetector, NUM_BANDS> levelDetectors;
+    // Neural confidence (0.0 = bleed, 1.0 = singer)
+    float neuralConfidence = 1.0f;
+    float smoothedConfidence = 1.0f;
 
-    // Gate envelope per band
-    struct GateEnvelope
-    {
-        float currentGain = 1.0f;        // Current applied gain (0 to 1)
-        float targetGain = 1.0f;         // Target gain
-        int holdCounter = 0;             // Samples remaining in hold phase
-        bool isGating = false;           // True when gate is closed/closing
-    };
-    std::array<GateEnvelope, NUM_BANDS> gateEnvelopes;
+    // Gate state
+    float currentGain = 1.0f;
+    float targetGain = 1.0f;
+    int holdCounter = 0;
+    bool isGating = false;
 
-    void splitBands(const juce::AudioBuffer<float>& input);
-    void recombineBands(juce::AudioBuffer<float>& output);
-    void updateCrossoverCoefficients();
+    // Sidechain buffer
+    std::vector<float> sidechainBuffer;
 
-    // Detect signal level in a band (returns dB)
-    float detectBandLevel(int band, int numSamples);
-
-    // Process gate envelope for a band using signal level detection
-    void processGateEnvelope(int band, float signalLevelDb, int numSamples);
+    void updateFilters();
+    float detectLevel(const float* input, int numSamples);
+    void processEnvelope(float levelDb, int numSamples);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LinkwitzRileyGate)
 };

@@ -4,18 +4,26 @@
 #include <algorithm>
 
 // Parameter IDs
-const juce::String DeBleedAudioProcessor::PARAM_STRENGTH = "strength";
 const juce::String DeBleedAudioProcessor::PARAM_MIX = "mix";
 const juce::String DeBleedAudioProcessor::PARAM_BYPASS = "bypass";
 const juce::String DeBleedAudioProcessor::PARAM_LOW_LATENCY = "lowLatency";
-const juce::String DeBleedAudioProcessor::PARAM_ATTACK = "attack";
-const juce::String DeBleedAudioProcessor::PARAM_RELEASE = "release";
-const juce::String DeBleedAudioProcessor::PARAM_THRESHOLD = "threshold";
-const juce::String DeBleedAudioProcessor::PARAM_FLOOR = "floor";
 const juce::String DeBleedAudioProcessor::PARAM_LIVE_MODE = "liveMode";
 const juce::String DeBleedAudioProcessor::PARAM_HPF_BOUND = "hpfBound";
 const juce::String DeBleedAudioProcessor::PARAM_LPF_BOUND = "lpfBound";
 const juce::String DeBleedAudioProcessor::PARAM_TIGHTNESS = "tightness";
+
+// Hunter parameters (compressor-style)
+const juce::String DeBleedAudioProcessor::PARAM_HUNTER_ATTACK = "hunterAttack";
+const juce::String DeBleedAudioProcessor::PARAM_HUNTER_RELEASE = "hunterRelease";
+const juce::String DeBleedAudioProcessor::PARAM_HUNTER_HOLD = "hunterHold";
+const juce::String DeBleedAudioProcessor::PARAM_HUNTER_RANGE = "hunterRange";
+
+// Expander parameters (gate-style)
+const juce::String DeBleedAudioProcessor::PARAM_EXPANDER_ATTACK = "expanderAttack";
+const juce::String DeBleedAudioProcessor::PARAM_EXPANDER_RELEASE = "expanderRelease";
+const juce::String DeBleedAudioProcessor::PARAM_EXPANDER_HOLD = "expanderHold";
+const juce::String DeBleedAudioProcessor::PARAM_EXPANDER_RANGE = "expanderRange";
+const juce::String DeBleedAudioProcessor::PARAM_EXPANDER_THRESHOLD = "expanderThreshold";
 
 // Linkwitz-Riley Gate parameters
 const juce::String DeBleedAudioProcessor::PARAM_LR_ENABLED = "lrEnabled";
@@ -58,18 +66,26 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
       parameters(*this, nullptr, juce::Identifier("DeBleedParams"), createParameterLayout())
 {
     // Add parameter listeners
-    parameters.addParameterListener(PARAM_STRENGTH, this);
     parameters.addParameterListener(PARAM_MIX, this);
     parameters.addParameterListener(PARAM_BYPASS, this);
     parameters.addParameterListener(PARAM_LOW_LATENCY, this);
-    parameters.addParameterListener(PARAM_ATTACK, this);
-    parameters.addParameterListener(PARAM_RELEASE, this);
-    parameters.addParameterListener(PARAM_THRESHOLD, this);
-    parameters.addParameterListener(PARAM_FLOOR, this);
     parameters.addParameterListener(PARAM_HPF_BOUND, this);
     parameters.addParameterListener(PARAM_LPF_BOUND, this);
     parameters.addParameterListener(PARAM_TIGHTNESS, this);
     parameters.addParameterListener(PARAM_LR_ENABLED, this);
+
+    // Hunter parameter listeners
+    parameters.addParameterListener(PARAM_HUNTER_ATTACK, this);
+    parameters.addParameterListener(PARAM_HUNTER_RELEASE, this);
+    parameters.addParameterListener(PARAM_HUNTER_HOLD, this);
+    parameters.addParameterListener(PARAM_HUNTER_RANGE, this);
+
+    // Expander parameter listeners
+    parameters.addParameterListener(PARAM_EXPANDER_ATTACK, this);
+    parameters.addParameterListener(PARAM_EXPANDER_RELEASE, this);
+    parameters.addParameterListener(PARAM_EXPANDER_HOLD, this);
+    parameters.addParameterListener(PARAM_EXPANDER_RANGE, this);
+    parameters.addParameterListener(PARAM_EXPANDER_THRESHOLD, this);
 
     // Per-band gate parameters
     for (int b = 0; b < 6; ++b)
@@ -89,18 +105,26 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     }
 
     // Initialize atomic values
-    strength.store(*parameters.getRawParameterValue(PARAM_STRENGTH));
     mix.store(*parameters.getRawParameterValue(PARAM_MIX));
     bypassed.store(*parameters.getRawParameterValue(PARAM_BYPASS) > 0.5f);
     lowLatency.store(*parameters.getRawParameterValue(PARAM_LOW_LATENCY) > 0.5f);
-    attackMs.store(*parameters.getRawParameterValue(PARAM_ATTACK));
-    releaseMs.store(*parameters.getRawParameterValue(PARAM_RELEASE));
-    threshold.store(*parameters.getRawParameterValue(PARAM_THRESHOLD));
-    floorDb.store(*parameters.getRawParameterValue(PARAM_FLOOR));
     hpfBound.store(*parameters.getRawParameterValue(PARAM_HPF_BOUND));
     lpfBound.store(*parameters.getRawParameterValue(PARAM_LPF_BOUND));
     tightness.store(*parameters.getRawParameterValue(PARAM_TIGHTNESS));
     lrEnabled.store(*parameters.getRawParameterValue(PARAM_LR_ENABLED) > 0.5f);
+
+    // Initialize hunter atomics
+    hunterAttack.store(*parameters.getRawParameterValue(PARAM_HUNTER_ATTACK));
+    hunterRelease.store(*parameters.getRawParameterValue(PARAM_HUNTER_RELEASE));
+    hunterHold.store(*parameters.getRawParameterValue(PARAM_HUNTER_HOLD));
+    hunterRange.store(*parameters.getRawParameterValue(PARAM_HUNTER_RANGE));
+
+    // Initialize expander atomics
+    expanderAttack.store(*parameters.getRawParameterValue(PARAM_EXPANDER_ATTACK));
+    expanderRelease.store(*parameters.getRawParameterValue(PARAM_EXPANDER_RELEASE));
+    expanderHold.store(*parameters.getRawParameterValue(PARAM_EXPANDER_HOLD));
+    expanderRange.store(*parameters.getRawParameterValue(PARAM_EXPANDER_RANGE));
+    expanderThreshold.store(*parameters.getRawParameterValue(PARAM_EXPANDER_THRESHOLD));
 
     // Initialize per-band gate parameters
     for (int b = 0; b < 6; ++b)
@@ -122,18 +146,26 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
 
 DeBleedAudioProcessor::~DeBleedAudioProcessor()
 {
-    parameters.removeParameterListener(PARAM_STRENGTH, this);
     parameters.removeParameterListener(PARAM_MIX, this);
     parameters.removeParameterListener(PARAM_BYPASS, this);
     parameters.removeParameterListener(PARAM_LOW_LATENCY, this);
-    parameters.removeParameterListener(PARAM_ATTACK, this);
-    parameters.removeParameterListener(PARAM_RELEASE, this);
-    parameters.removeParameterListener(PARAM_THRESHOLD, this);
-    parameters.removeParameterListener(PARAM_FLOOR, this);
     parameters.removeParameterListener(PARAM_HPF_BOUND, this);
     parameters.removeParameterListener(PARAM_LPF_BOUND, this);
     parameters.removeParameterListener(PARAM_TIGHTNESS, this);
     parameters.removeParameterListener(PARAM_LR_ENABLED, this);
+
+    // Hunter parameter listeners
+    parameters.removeParameterListener(PARAM_HUNTER_ATTACK, this);
+    parameters.removeParameterListener(PARAM_HUNTER_RELEASE, this);
+    parameters.removeParameterListener(PARAM_HUNTER_HOLD, this);
+    parameters.removeParameterListener(PARAM_HUNTER_RANGE, this);
+
+    // Expander parameter listeners
+    parameters.removeParameterListener(PARAM_EXPANDER_ATTACK, this);
+    parameters.removeParameterListener(PARAM_EXPANDER_RELEASE, this);
+    parameters.removeParameterListener(PARAM_EXPANDER_HOLD, this);
+    parameters.removeParameterListener(PARAM_EXPANDER_RANGE, this);
+    parameters.removeParameterListener(PARAM_EXPANDER_THRESHOLD, this);
 
     // Per-band gate parameters
     for (int b = 0; b < 6; ++b)
@@ -156,18 +188,6 @@ DeBleedAudioProcessor::~DeBleedAudioProcessor()
 juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::createParameterLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
-
-    // Strength: How aggressively to apply the mask (0.0 = pass-through, 1.0 = full)
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_STRENGTH, 1},
-        "Strength",
-        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
-        1.0f,
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value * 100.0f, 0) + "%"; },
-        nullptr
-    ));
 
     // Mix: Dry/Wet blend
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -195,59 +215,123 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         false
     ));
 
-    // Attack time (ms) - how fast cuts engage
+    // Live Mode - prevents accidental training during live shows (UI-only, no audio effect)
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID{PARAM_LIVE_MODE, 1},
+        "Live Mode",
+        false  // Default: off (training enabled)
+    ));
+
+    // === Hunter Parameters (compressor-style, surgical resonance suppression) ===
+
+    // Hunter Attack (ms) - how fast cuts engage
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_ATTACK, 1},
-        "Attack",
-        juce::NormalisableRange<float>(0.1f, 500.0f, 0.1f, 0.4f),  // Extended to 500ms
-        10.0f,
+        juce::ParameterID{PARAM_HUNTER_ATTACK, 1},
+        "H. Attack",
+        juce::NormalisableRange<float>(0.1f, 1000.0f, 0.1f, 0.3f),
+        5.0f,
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 1) + " ms"; },
         nullptr
     ));
 
-    // Release time (ms) - how fast cuts release back to unity
+    // Hunter Release (ms) - how fast cuts release back to unity
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_RELEASE, 1},
-        "Release",
-        juce::NormalisableRange<float>(0.1f, 2000.0f, 0.1f, 0.4f),  // Extended down to 0.1ms
-        500.0f,  // Slow release for smooth behavior
+        juce::ParameterID{PARAM_HUNTER_RELEASE, 1},
+        "H. Release",
+        juce::NormalisableRange<float>(0.1f, 1000.0f, 0.1f, 0.3f),
+        100.0f,
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 0) + " ms"; },
         nullptr
     ));
 
-    // Threshold - input magnitude (dB) below this keeps gate closed
+    // Hunter Hold (ms) - minimum time at current depth before release
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_THRESHOLD, 1},
-        "Threshold",
+        juce::ParameterID{PARAM_HUNTER_HOLD, 1},
+        "H. Hold",
+        juce::NormalisableRange<float>(0.1f, 1000.0f, 0.1f, 0.3f),
+        50.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 0) + " ms"; },
+        nullptr
+    ));
+
+    // Hunter Range (dB) - max cut depth
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_HUNTER_RANGE, 1},
+        "H. Range",
         juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f),
-        -80.0f,  // Default: effectively disabled (very low)
+        -24.0f,
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 1) + " dB"; },
         nullptr
     ));
 
-    // Range - depth of attenuation when gated (mask=0 gives this level)
+    // === Expander Parameters (gate-style, broadband gating) ===
+
+    // Expander Attack (ms) - how fast gate closes
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_FLOOR, 1},
-        "Range",
+        juce::ParameterID{PARAM_EXPANDER_ATTACK, 1},
+        "E. Attack",
+        juce::NormalisableRange<float>(0.1f, 1000.0f, 0.1f, 0.3f),
+        50.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + " ms"; },
+        nullptr
+    ));
+
+    // Expander Release (ms) - how fast gate opens
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_EXPANDER_RELEASE, 1},
+        "E. Release",
+        juce::NormalisableRange<float>(0.1f, 1000.0f, 0.1f, 0.3f),
+        300.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 0) + " ms"; },
+        nullptr
+    ));
+
+    // Expander Hold (ms) - minimum time before release
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_EXPANDER_HOLD, 1},
+        "E. Hold",
+        juce::NormalisableRange<float>(0.1f, 1000.0f, 0.1f, 0.3f),
+        100.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 0) + " ms"; },
+        nullptr
+    ));
+
+    // Expander Range (dB) - max attenuation when gated
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_EXPANDER_RANGE, 1},
+        "E. Range",
         juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f),
-        -80.0f,  // Default: full attenuation when gated
+        -40.0f,
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 1) + " dB"; },
         nullptr
     ));
 
-    // Live Mode - prevents accidental training during live shows (UI-only, no audio effect)
-    params.push_back(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID{PARAM_LIVE_MODE, 1},
-        "Live Mode",
-        false  // Default: off (training enabled)
+    // Expander Threshold - neural confidence threshold (0-1)
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_EXPANDER_THRESHOLD, 1},
+        "E. Threshold",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
+        0.5f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value * 100.0f, 0) + "%"; },
+        nullptr
     ));
 
     // HPF Bound - minimum frequency for hunter filters
@@ -410,9 +494,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
 
 void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
 {
-    if (parameterID == PARAM_STRENGTH)
-        strength.store(newValue);
-    else if (parameterID == PARAM_MIX)
+    if (parameterID == PARAM_MIX)
         mix.store(newValue);
     else if (parameterID == PARAM_BYPASS)
         bypassed.store(newValue > 0.5f);
@@ -426,14 +508,27 @@ void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, fl
             needsReinit.store(true);
         }
     }
-    else if (parameterID == PARAM_ATTACK)
-        attackMs.store(newValue);
-    else if (parameterID == PARAM_RELEASE)
-        releaseMs.store(newValue);
-    else if (parameterID == PARAM_THRESHOLD)
-        threshold.store(newValue);
-    else if (parameterID == PARAM_FLOOR)
-        floorDb.store(newValue);
+    // Hunter parameters
+    else if (parameterID == PARAM_HUNTER_ATTACK)
+        hunterAttack.store(newValue);
+    else if (parameterID == PARAM_HUNTER_RELEASE)
+        hunterRelease.store(newValue);
+    else if (parameterID == PARAM_HUNTER_HOLD)
+        hunterHold.store(newValue);
+    else if (parameterID == PARAM_HUNTER_RANGE)
+        hunterRange.store(newValue);
+    // Expander parameters
+    else if (parameterID == PARAM_EXPANDER_ATTACK)
+        expanderAttack.store(newValue);
+    else if (parameterID == PARAM_EXPANDER_RELEASE)
+        expanderRelease.store(newValue);
+    else if (parameterID == PARAM_EXPANDER_HOLD)
+        expanderHold.store(newValue);
+    else if (parameterID == PARAM_EXPANDER_RANGE)
+        expanderRange.store(newValue);
+    else if (parameterID == PARAM_EXPANDER_THRESHOLD)
+        expanderThreshold.store(newValue);
+    // Hunter frequency bounds
     else if (parameterID == PARAM_HPF_BOUND)
         hpfBound.store(newValue);
     else if (parameterID == PARAM_LPF_BOUND)
@@ -609,107 +704,84 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     if (bypassed.load())
         return;
 
-    // Check if model is loaded in sidechain analyzer
-    if (!sidechainAnalyzer.isModelLoaded())
-        return;  // Pass through (no processing)
-
     // Get parameter values
-    float currentStrength = strength.load();
     float currentMix = mix.load();
 
     // Early bypass if mix is 0%
     if (currentMix < 0.001f)
         return;
 
+    // Check if neural model is loaded (hunters need this, but gate doesn't)
+    bool neuralModelLoaded = sidechainAnalyzer.isModelLoaded();
+
     const float* inputData = buffer.getReadPointer(0);
 
     // Keep a copy of the dry signal for mix
     std::vector<float> drySignal(inputData, inputData + numSamples);
 
-    // === SIDECHAIN ANALYSIS (Control Path) ===
-    // Prepare data for sidechain (resample to 48kHz if needed)
+    // === SIDECHAIN ANALYSIS (Control Path) - Only when model is loaded ===
     const float* analysisInput = inputData;
     int analysisNumSamples = numSamples;
+    const float* rawMask = nullptr;
 
-    if (needsResampling)
+    if (neuralModelLoaded)
     {
-        analysisNumSamples = static_cast<int>(numSamples * resampleRatio);
-        sidechainBuffer.resize(analysisNumSamples + 16);
-
-        std::vector<float> inputWithHistory(RESAMPLER_HISTORY_SIZE + numSamples);
-        std::memcpy(inputWithHistory.data(), inputHistory.data(), RESAMPLER_HISTORY_SIZE * sizeof(float));
-        std::memcpy(inputWithHistory.data() + RESAMPLER_HISTORY_SIZE, inputData, numSamples * sizeof(float));
-
-        inputResampler.process(1.0 / resampleRatio,
-                               inputWithHistory.data() + RESAMPLER_HISTORY_SIZE,
-                               sidechainBuffer.data(),
-                               analysisNumSamples);
-
-        int historyStart = numSamples - RESAMPLER_HISTORY_SIZE;
-        if (historyStart >= 0)
-            std::memcpy(inputHistory.data(), inputData + historyStart, RESAMPLER_HISTORY_SIZE * sizeof(float));
-
-        analysisInput = sidechainBuffer.data();
-    }
-
-    // Update sidechain analyzer parameters
-    sidechainAnalyzer.setStrength(currentStrength);
-    sidechainAnalyzer.setAttack(attackMs.load());
-    sidechainAnalyzer.setRelease(releaseMs.load());
-    sidechainAnalyzer.setThreshold(threshold.load());
-    sidechainAnalyzer.setFloor(floorDb.load());
-
-    // Run sidechain analysis (STFT → Neural Net → Band Mapping → Envelopes)
-    sidechainAnalyzer.analyze(analysisInput, analysisNumSamples);
-
-    // Get raw neural mask (129 bins) for the hunter filter pool
-    const float* rawMask = sidechainAnalyzer.getRawMask();
-
-    // === AUDIO PATH: 6-Band Linkwitz-Riley Gate (Broadband Macro Gating) ===
-    // Signal-level gate with per-band user-controlled parameters
-    linkwitzGate.setEnabled(lrEnabled.load());
-
-    // Update per-band gate parameters from atomic storage
-    for (int b = 0; b < 6; ++b)
-    {
-        linkwitzGate.setBandThreshold(b, gateBandParams[b].threshold.load());
-        linkwitzGate.setBandAttack(b, gateBandParams[b].attack.load());
-        linkwitzGate.setBandRelease(b, gateBandParams[b].release.load());
-        linkwitzGate.setBandHold(b, gateBandParams[b].hold.load());
-        linkwitzGate.setBandRange(b, gateBandParams[b].range.load());
-        linkwitzGate.setBandEnabled(b, gateBandParams[b].enabled.load());
-    }
-
-    // Update crossover frequencies
-    for (int x = 0; x < 5; ++x)
-    {
-        linkwitzGate.setCrossover(x, gateCrossovers[x].load());
-    }
-
-    // Process gate (signal-level detection per band)
-    linkwitzGate.process(buffer);
-
-    // === AUDIO PATH: Dynamic Hunter Filters (Surgical Micro Cuts) ===
-    // The ActiveFilterPool finds valleys in the mask and assigns 32 filters to chase them
-    activeFilterPool.setStrength(currentStrength);
-    activeFilterPool.setFloorDb(floorDb.load());
-    activeFilterPool.setAttackMs(attackMs.load());
-    activeFilterPool.setReleaseMs(releaseMs.load());
-    activeFilterPool.setHpfBound(hpfBound.load());
-    activeFilterPool.setLpfBound(lpfBound.load());
-    activeFilterPool.setTightnessMs(tightness.load());
-    activeFilterPool.process(buffer, rawMask);
-
-    // === VISUALIZATION ===
-    // Also run through legacy STFT for visualization data
-    int numFrames = stftProcessor.processBlock(analysisInput, analysisNumSamples);
-    if (numFrames > 0)
-    {
-        const float* magnitude = stftProcessor.getMagnitudeData();
-        const float* rawMask = sidechainAnalyzer.getRawMask();
-
-        if (rawMask != nullptr)
+        // Prepare data for sidechain (resample to 48kHz if needed)
+        if (needsResampling)
         {
+            analysisNumSamples = static_cast<int>(numSamples * resampleRatio);
+            sidechainBuffer.resize(analysisNumSamples + 16);
+
+            std::vector<float> inputWithHistory(RESAMPLER_HISTORY_SIZE + numSamples);
+            std::memcpy(inputWithHistory.data(), inputHistory.data(), RESAMPLER_HISTORY_SIZE * sizeof(float));
+            std::memcpy(inputWithHistory.data() + RESAMPLER_HISTORY_SIZE, inputData, numSamples * sizeof(float));
+
+            inputResampler.process(1.0 / resampleRatio,
+                                   inputWithHistory.data() + RESAMPLER_HISTORY_SIZE,
+                                   sidechainBuffer.data(),
+                                   analysisNumSamples);
+
+            int historyStart = numSamples - RESAMPLER_HISTORY_SIZE;
+            if (historyStart >= 0)
+                std::memcpy(inputHistory.data(), inputData + historyStart, RESAMPLER_HISTORY_SIZE * sizeof(float));
+
+            analysisInput = sidechainBuffer.data();
+        }
+
+        // Update sidechain analyzer parameters (uses hunter range for floor)
+        sidechainAnalyzer.setStrength(1.0f);  // Always full strength, controlled by hunter range
+        sidechainAnalyzer.setAttack(hunterAttack.load());
+        sidechainAnalyzer.setRelease(hunterRelease.load());
+        sidechainAnalyzer.setFloor(hunterRange.load());
+
+        // Run sidechain analysis (STFT → Neural Net → Band Mapping → Envelopes)
+        sidechainAnalyzer.analyze(analysisInput, analysisNumSamples);
+
+        // Get raw neural mask (129 bins) for the hunter filter pool
+        rawMask = sidechainAnalyzer.getRawMask();
+    }
+
+    // === AUDIO PATH: HUNTERS FIRST (Surgical Micro Cuts) ===
+    // Process hunters before expander - they clean up resonances surgically
+    if (neuralModelLoaded && rawMask != nullptr)
+    {
+        // The ActiveFilterPool finds valleys in the mask and assigns 32 filters to chase them
+        activeFilterPool.setFloorDb(hunterRange.load());
+        activeFilterPool.setAttackMs(hunterAttack.load());
+        activeFilterPool.setReleaseMs(hunterRelease.load());
+        activeFilterPool.setHoldMs(hunterHold.load());
+        activeFilterPool.setHpfBound(hpfBound.load());
+        activeFilterPool.setLpfBound(lpfBound.load());
+        activeFilterPool.setTightnessMs(tightness.load());
+        activeFilterPool.process(buffer, rawMask);
+
+        // === VISUALIZATION ===
+        // Also run through legacy STFT for visualization data
+        int numFrames = stftProcessor.processBlock(analysisInput, analysisNumSamples);
+        if (numFrames > 0)
+        {
+            const float* magnitude = stftProcessor.getMagnitudeData();
+
             // rawMask is 257 bins: [0..128] = Stream A, [129..256] = Stream B
             const float* streamB = rawMask + VisualizationData::N_FREQ_BINS;  // Point to Stream B
 
@@ -722,11 +794,72 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 );
             }
         }
+
+        // Update gain reduction meter
+        float avgReductionDb = sidechainAnalyzer.getAverageGainReduction();
+        visualizationData.averageGainReductionDb.store(avgReductionDb);
     }
 
-    // Update gain reduction meter
-    float avgReductionDb = sidechainAnalyzer.getAverageGainReduction();
-    visualizationData.averageGainReductionDb.store(avgReductionDb);
+    // === AUDIO PATH: EXPANDER SECOND (Overall Gating) ===
+    // Expander comes after hunters - applies overall gating based on neural confidence
+    linkwitzGate.setEnabled(lrEnabled.load());
+
+    // Use new expander parameters
+    linkwitzGate.setAttack(expanderAttack.load());
+    linkwitzGate.setRelease(expanderRelease.load());
+    linkwitzGate.setHold(expanderHold.load());
+    linkwitzGate.setRange(expanderRange.load());
+
+    // Sidechain filters
+    linkwitzGate.setSidechainHPF(hpfBound.load());
+    linkwitzGate.setSidechainLPF(lpfBound.load());
+
+    // Calculate neural confidence from mask
+    // Use 50th percentile - if half the bins say "singer", it's probably the singer
+    if (neuralModelLoaded && rawMask != nullptr)
+    {
+        float hpf = hpfBound.load();
+        float lpf = lpfBound.load();
+        float threshold = expanderThreshold.load();
+
+        // Collect mask values in the HPF/LPF range from Stream A (129 bins)
+        std::vector<float> maskValues;
+        maskValues.reserve(129);
+
+        for (int i = 1; i < 129; ++i)
+        {
+            float freq = i * 48000.0f / 256.0f;
+            if (freq >= hpf && freq <= lpf)
+            {
+                maskValues.push_back(rawMask[i]);
+            }
+        }
+
+        float confidence = 1.0f;
+        if (!maskValues.empty())
+        {
+            // Sort and take 50th percentile (median) - more balanced
+            std::sort(maskValues.begin(), maskValues.end());
+            size_t idx = static_cast<size_t>(maskValues.size() * 0.50f);
+            idx = std::min(idx, maskValues.size() - 1);
+            confidence = maskValues[idx];
+        }
+
+        // Map confidence through threshold
+        // confidence > threshold = open (1.0), confidence < threshold = closed (0.0)
+        float gatedConfidence = (confidence - threshold) / (1.0f - threshold + 0.001f);
+        gatedConfidence = juce::jlimit(0.0f, 1.0f, gatedConfidence);
+
+        linkwitzGate.setNeuralConfidence(gatedConfidence);
+    }
+    else
+    {
+        // No model - pass through
+        linkwitzGate.setNeuralConfidence(1.0f);
+    }
+
+    // Process expander
+    linkwitzGate.process(buffer);
 
     // === MIX: Dry/Wet blend ===
     float* outputData = buffer.getWritePointer(0);

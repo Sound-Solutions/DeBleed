@@ -13,10 +13,10 @@
  *
  * Handles:
  * - Real-time audio processing with neural mask estimation
- * - STFT/iSTFT for spectral domain processing
+ * - Hunters (32 dynamic IIR notch filters) for surgical resonance removal
+ * - Expander (broadband gate) driven by neural confidence
  * - Model loading and hot-swapping
  * - Training process management
- * - Plugin parameters (Strength, Mix, Bypass)
  */
 class DeBleedAudioProcessor : public juce::AudioProcessor,
                                public juce::AudioProcessorValueTreeState::Listener
@@ -72,18 +72,26 @@ public:
     juce::AudioProcessorValueTreeState& getParameters() { return parameters; }
 
     // Parameter IDs
-    static const juce::String PARAM_STRENGTH;
     static const juce::String PARAM_MIX;
     static const juce::String PARAM_BYPASS;
     static const juce::String PARAM_LOW_LATENCY;
-    static const juce::String PARAM_ATTACK;
-    static const juce::String PARAM_RELEASE;
-    static const juce::String PARAM_THRESHOLD;
-    static const juce::String PARAM_FLOOR;
     static const juce::String PARAM_LIVE_MODE;
     static const juce::String PARAM_HPF_BOUND;
     static const juce::String PARAM_LPF_BOUND;
     static const juce::String PARAM_TIGHTNESS;
+
+    // Hunter parameters (compressor-style)
+    static const juce::String PARAM_HUNTER_ATTACK;
+    static const juce::String PARAM_HUNTER_RELEASE;
+    static const juce::String PARAM_HUNTER_HOLD;
+    static const juce::String PARAM_HUNTER_RANGE;
+
+    // Expander parameters (gate-style)
+    static const juce::String PARAM_EXPANDER_ATTACK;
+    static const juce::String PARAM_EXPANDER_RELEASE;
+    static const juce::String PARAM_EXPANDER_HOLD;
+    static const juce::String PARAM_EXPANDER_RANGE;
+    static const juce::String PARAM_EXPANDER_THRESHOLD;
 
     // Linkwitz-Riley Gate parameters
     static const juce::String PARAM_LR_ENABLED;
@@ -177,20 +185,26 @@ private:
     juce::AudioProcessorValueTreeState parameters;
 
     // Atomic parameter values for real-time access
-    std::atomic<float> strength{1.0f};
     std::atomic<float> mix{1.0f};
     std::atomic<bool> bypassed{false};
     std::atomic<bool> lowLatency{false};
     std::atomic<bool> needsReinit{false};
 
-    // Hunter parameters
-    std::atomic<float> attackMs{5.0f};     // Compressor attack (how fast cuts engage)
-    std::atomic<float> releaseMs{100.0f};  // Compressor release (how fast cuts release)
-    std::atomic<float> threshold{0.0f};
-    std::atomic<float> floorDb{-60.0f};
-    std::atomic<float> hpfBound{20.0f};    // Minimum frequency for hunters
-    std::atomic<float> lpfBound{20000.0f}; // Maximum frequency for hunters
-    std::atomic<float> tightness{50.0f};   // Minimum time (ms) before hunter can change frequency
+    // Hunter parameters (compressor-style)
+    std::atomic<float> hunterAttack{5.0f};      // How fast cuts engage (ms)
+    std::atomic<float> hunterRelease{100.0f};   // How fast cuts release (ms)
+    std::atomic<float> hunterHold{50.0f};       // Minimum time at current depth (ms)
+    std::atomic<float> hunterRange{-24.0f};     // Max cut depth (dB)
+    std::atomic<float> hpfBound{20.0f};         // Minimum frequency for hunters
+    std::atomic<float> lpfBound{20000.0f};      // Maximum frequency for hunters
+    std::atomic<float> tightness{50.0f};        // Minimum time (ms) before hunter can change frequency
+
+    // Expander parameters (gate-style)
+    std::atomic<float> expanderAttack{50.0f};   // How fast gate closes (ms)
+    std::atomic<float> expanderRelease{300.0f}; // How fast gate opens (ms)
+    std::atomic<float> expanderHold{100.0f};    // Minimum time before release (ms)
+    std::atomic<float> expanderRange{-40.0f};   // Max attenuation when gated (dB)
+    std::atomic<float> expanderThreshold{0.5f}; // Confidence threshold (0-1)
 
     // Linkwitz-Riley Gate parameters
     std::atomic<bool> lrEnabled{true};

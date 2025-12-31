@@ -37,6 +37,7 @@ void SidechainAnalyzer::reset()
     smoothedBandGains.fill(1.0f);
 
     lastMask = nullptr;
+    latestFrameMask = nullptr;
     lastMagnitude = nullptr;
 }
 
@@ -73,19 +74,19 @@ void SidechainAnalyzer::analyze(const float* input, int numSamples)
 
     if (numFrames > 0 && neuralEngine.isModelLoaded())
     {
-        // Get dual-stream features (257 bins) or single-stream magnitude (129 bins)
+        // Get features matching what the MODEL expects, not what STFT produces
         const float* inputFeatures;
         int inputFeatureSize;
 
-        if (stftProcessor.isDualStreamEnabled())
+        if (neuralEngine.isDualStreamModel())
         {
-            // Use concatenated dual-stream features [Stream A (129) | Stream B bass (128)]
+            // Model expects 257 dual-stream features [Stream A (129) | Stream B bass (128)]
             inputFeatures = stftProcessor.getDualStreamFeatures();
             inputFeatureSize = N_TOTAL_FEATURES;  // 257
         }
         else
         {
-            // Legacy single-stream mode
+            // Legacy model expects 129 single-stream features (Stream A only)
             inputFeatures = stftProcessor.getMagnitudeData();
             inputFeatureSize = N_FREQ_BINS;  // 129
         }
@@ -93,45 +94,48 @@ void SidechainAnalyzer::analyze(const float* input, int numSamples)
         // Store Stream A magnitude for visualization
         lastMagnitude = stftProcessor.getMagnitudeData();
 
-        // Run neural network inference with dual-stream features
+        // Run neural network inference
         lastMask = neuralEngine.process(inputFeatures, numFrames);
 
         if (lastMask != nullptr)
         {
+            // Determine mask size based on model type
+            const bool isDualStream = neuralEngine.isDualStreamModel();
+            const int maskBins = isDualStream ? N_OUTPUT_BINS : N_FREQ_BINS;
+
             // Use the last frame's mask for band gains
-            // Dual-stream mask: 257 bins [Stream A (129) | Stream B bass (128)]
-            const float* frameMask = lastMask + (numFrames - 1) * N_OUTPUT_BINS;
+            const float* frameMask = lastMask + (numFrames - 1) * maskBins;
+            latestFrameMask = frameMask;  // Store for getRawMask()
 
             // Convert floor/range from dB to linear
-            // floorDb = -60 → floorLinear ≈ 0.001 (deep cut possible)
-            // floorDb = 0   → floorLinear = 1.0 (no cut, everything passes)
             float floorLinear = juce::Decibels::decibelsToGain(floorDb);
 
-            // Apply floor/range scaling to dual-stream mask (257 bins)
-            std::array<float, N_OUTPUT_BINS> processedMask;
-            for (int i = 0; i < N_OUTPUT_BINS; ++i)
+            // Apply floor/range scaling to mask
+            std::array<float, N_OUTPUT_BINS> processedMask;  // Max size
+            for (int i = 0; i < maskBins; ++i)
             {
                 float maskVal = frameMask[i];
 
                 // Clamp raw mask to [0, 1]
                 maskVal = juce::jlimit(0.0f, 1.0f, maskVal);
 
-                // Neural network outputs KEEP mask (IRM = clean/mixture):
-                // mask ≈ 1.0 means "target present, keep it"
-                // mask ≈ 0.0 means "bleed present, cut it"
-                // NO INVERSION - model trained with clean_audio_dir = target
-
                 // Scale mask from [0,1] to [floorLinear, 1.0]
-                // mask=0 → floorLinear (maximum cut, limited by floor)
-                // mask=1 → 1.0 (full signal, no cut)
                 maskVal = floorLinear + maskVal * (1.0f - floorLinear);
 
                 processedMask[i] = maskVal;
             }
 
-            // Map dual-stream mask to IIR band gains with strength
-            // Uses Stream B (23Hz resolution) for bass, Stream A for highs
-            bandMapper.mapDualStreamWithStrength(processedMask.data(), rawBandGains, strength);
+            // Map mask to IIR band gains - use appropriate mapper
+            if (isDualStream)
+            {
+                // 257-bin dual-stream: Stream B for bass, Stream A for highs
+                bandMapper.mapDualStreamWithStrength(processedMask.data(), rawBandGains, strength);
+            }
+            else
+            {
+                // 129-bin legacy: Single-stream mapping
+                bandMapper.mapWithStrength(processedMask.data(), rawBandGains, strength);
+            }
 
             // Debug: Log mask statistics every ~1 second (about 47 frames at 48kHz with 1024 hop)
             if (debugFrameCount >= 47)
@@ -153,14 +157,14 @@ void SidechainAnalyzer::analyze(const float* input, int numSamples)
                 }
 
                 // Get raw mask from neural network (BEFORE floor scaling)
-                const float* rawNNMask = lastMask + (numFrames - 1) * N_OUTPUT_BINS;
+                const float* rawNNMask = lastMask + (numFrames - 1) * maskBins;
                 float nnMin = 1.0f, nnMax = 0.0f, nnAvg = 0.0f;
-                for (int i = 0; i < N_OUTPUT_BINS; ++i) {
+                for (int i = 0; i < maskBins; ++i) {
                     nnMin = std::min(nnMin, rawNNMask[i]);
                     nnMax = std::max(nnMax, rawNNMask[i]);
                     nnAvg += rawNNMask[i];
                 }
-                nnAvg /= N_OUTPUT_BINS;
+                nnAvg /= static_cast<float>(maskBins);
 
                 // STFT feature levels (what the NN actually sees)
                 // Stream A magnitude (bins 0-128) and Stream B (bins 129-256)

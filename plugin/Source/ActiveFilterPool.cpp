@@ -96,6 +96,7 @@ void ActiveFilterPool::reset()
         h.targetGainFromMask = 1.0f;
         h.active = false;
         h.samplesAtCurrentFreq = 0;
+        h.holdSamplesRemaining = 0;
     }
 }
 
@@ -306,15 +307,27 @@ void ActiveFilterPool::updateTargets(const float* mask)
 
                 if (inTightness)
                 {
-                    // TIGHTNESS: Hunter stays at current frequency, but updates gain
+                    // TIGHTNESS: Hunter stays at current frequency, but gain still follows mask
                     // Sample mask at hunter's current (locked) frequency
                     float maskAtCurrentFreq = sampleMaskAtFreq(hunter.currentFreq);
-                    float lockedGain = calculateTargetGain(maskAtCurrentFreq);
-                    float lockedQ = calculateQ(hunter.currentFreq, maskAtCurrentFreq);
 
-                    hunter.smoothGain.setTargetValue(lockedGain);
-                    hunter.smoothQ.setTargetValue(lockedQ);
-                    hunter.targetGainFromMask = maskAtCurrentFreq;
+                    // If mask at this frequency is above valley threshold, release to unity
+                    // (no real valley here anymore - let the hunter release)
+                    if (maskAtCurrentFreq >= VALLEY_THRESHOLD)
+                    {
+                        hunter.smoothGain.setTargetValue(1.0f);
+                        hunter.smoothQ.setTargetValue(MIN_Q);
+                        hunter.targetGainFromMask = 1.0f;
+                    }
+                    else
+                    {
+                        // Still a valley at this frequency - update gain based on mask
+                        float lockedGain = calculateTargetGain(maskAtCurrentFreq);
+                        float lockedQ = calculateQ(hunter.currentFreq, maskAtCurrentFreq);
+                        hunter.smoothGain.setTargetValue(lockedGain);
+                        hunter.smoothQ.setTargetValue(lockedQ);
+                        hunter.targetGainFromMask = maskAtCurrentFreq;
+                    }
                     // Don't reset samplesAtCurrentFreq - keep counting
                 }
                 else
@@ -375,6 +388,9 @@ void ActiveFilterPool::process(juce::AudioBuffer<float>& buffer, const float* ne
     float attackCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * attackMs / 1000.0f));
     float releaseCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * releaseMs / 1000.0f));
 
+    // Calculate hold time in samples
+    int holdSamples = static_cast<int>(holdMs * sampleRate / 1000.0f);
+
     // Process each sample
     for (int s = 0; s < numSamples; ++s)
     {
@@ -386,11 +402,32 @@ void ActiveFilterPool::process(juce::AudioBuffer<float>& buffer, const float* ne
             float targetFreq = h.smoothFreq.getNextValue();
             float targetQ = h.smoothQ.getNextValue();
 
-            // Compressor-style asymmetric smoothing for gain:
-            // - Gain DECREASING (cut engaging) = use attack time
-            // - Gain INCREASING (cut releasing) = use release time
-            float coeff = (targetGain < h.currentGain) ? attackCoeff : releaseCoeff;
-            float smoothedGain = h.currentGain * coeff + targetGain * (1.0f - coeff);
+            // Compressor-style asymmetric smoothing for gain with HOLD:
+            // - Gain DECREASING (cut engaging) = use attack time, reset hold counter
+            // - In hold period = stay at current depth
+            // - Gain INCREASING (cut releasing) = use release time (only after hold expires)
+            float coeff;
+            float smoothedGain;
+
+            if (targetGain < h.currentGain)
+            {
+                // Cut is engaging - use attack, reset hold
+                coeff = attackCoeff;
+                smoothedGain = h.currentGain * coeff + targetGain * (1.0f - coeff);
+                h.holdSamplesRemaining = holdSamples;
+            }
+            else if (h.holdSamplesRemaining > 0)
+            {
+                // In hold period - stay at current depth
+                h.holdSamplesRemaining--;
+                smoothedGain = h.currentGain;
+            }
+            else
+            {
+                // Hold expired - release can happen
+                coeff = releaseCoeff;
+                smoothedGain = h.currentGain * coeff + targetGain * (1.0f - coeff);
+            }
 
             // Clamp frequency and Q
             targetFreq = juce::jlimit(hpfBound, std::min(lpfBound, nyquist * 0.95f), targetFreq);

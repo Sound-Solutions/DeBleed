@@ -6,7 +6,6 @@
 #include "RTAVisualization.h"
 #include "GainReductionMeter.h"
 #include "DeBleedLookAndFeel.h"
-#include "GateBandSelector.h"
 
 /**
  * DeBleedAudioProcessorEditor - GUI for the DeBleed Neural Gate plugin.
@@ -71,21 +70,18 @@ private:
     std::unique_ptr<RTAVisualization> rtaView;
     std::unique_ptr<GainReductionMeter> gainReductionMeter;
 
-    // Parameter knobs (rotary style) - Row 1: Main controls
-    juce::Slider strengthSlider;
-    juce::Label strengthLabel;
-    juce::Slider attackSlider;
-    juce::Label attackLabel;
-    juce::Slider releaseSlider;
-    juce::Label releaseLabel;
-    juce::Slider thresholdSlider;
-    juce::Label thresholdLabel;
-    juce::Slider floorSlider;  // Range parameter
-    juce::Label floorLabel;
-    juce::Slider mixSlider;    // Hidden but kept for attachment
-    juce::Label mixLabel;
+    // Parameter knobs (rotary style)
+    // Row 1: Hunter controls (compressor-style, surgical)
+    juce::Slider hunterAttackSlider;
+    juce::Label hunterAttackLabel;
+    juce::Slider hunterReleaseSlider;
+    juce::Label hunterReleaseLabel;
+    juce::Slider hunterHoldSlider;
+    juce::Label hunterHoldLabel;
+    juce::Slider hunterRangeSlider;
+    juce::Label hunterRangeLabel;
 
-    // Row 2: Hunter controls
+    // Row 1 continued: Hunter frequency bounds
     juce::Slider hpfBoundSlider;
     juce::Label hpfBoundLabel;
     juce::Slider lpfBoundSlider;
@@ -93,33 +89,49 @@ private:
     juce::Slider tightnessSlider;
     juce::Label tightnessLabel;
 
-    // Row 2: Gate controls
+    // Row 2: Expander controls (gate-style)
+    juce::Slider expanderAttackSlider;
+    juce::Label expanderAttackLabel;
+    juce::Slider expanderReleaseSlider;
+    juce::Label expanderReleaseLabel;
+    juce::Slider expanderHoldSlider;
+    juce::Label expanderHoldLabel;
+    juce::Slider expanderRangeSlider;
+    juce::Label expanderRangeLabel;
+    juce::Slider expanderThresholdSlider;
+    juce::Label expanderThresholdLabel;
     juce::ToggleButton lrEnabledButton;
-    std::unique_ptr<GateBandSelector> gateBandSelector;
+
+    // Hidden but kept for attachment
+    juce::Slider mixSlider;
+    juce::Label mixLabel;
 
     // Toggle buttons
     juce::ToggleButton lowLatencyButton;
     juce::Label latencyLabel;
 
-    // Parameter attachments
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> strengthAttachment;
+    // Parameter attachments - General
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lowLatencyAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> floorAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> liveModeAttachment;
 
     // Hunter parameter attachments
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hunterAttackAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hunterReleaseAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hunterHoldAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hunterRangeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hpfBoundAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lpfBoundAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> tightnessAttachment;
 
-    // Gate parameter attachments
+    // Expander parameter attachments
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderAttackAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderReleaseAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderHoldAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderRangeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderThresholdAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lrEnabledAttachment;
-    // Note: Per-band gate attachments will be added in Phase 4
 
     // Training log
     juce::TextEditor logTextBox;

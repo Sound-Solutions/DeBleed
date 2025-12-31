@@ -65,8 +65,9 @@ public:
 
     /**
      * Get raw mask values from neural network (for visualization).
+     * Returns pointer to the LATEST frame's mask (257 bins).
      */
-    const float* getRawMask() const { return lastMask; }
+    const float* getRawMask() const { return latestFrameMask; }
 
     /**
      * Get raw magnitude spectrum (for visualization).
@@ -125,6 +126,7 @@ private:
 
     // Cache for visualization
     const float* lastMask = nullptr;
+    const float* latestFrameMask = nullptr;  // Points to the LAST frame in the buffer
     const float* lastMagnitude = nullptr;
 
     // Parameters

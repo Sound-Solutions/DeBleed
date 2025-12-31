@@ -120,34 +120,28 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
         addAndMakeVisible(label);
     };
 
-    // Strength slider (hidden - kept for attachment but not shown)
-    strengthSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    strengthSlider.setVisible(false);
-    strengthLabel.setVisible(false);
+    // === Row 1: Hunter controls (orange = compressor-style timing) ===
+    setupKnob(hunterAttackSlider, hunterAttackLabel, "H.Atk", DeBleedLookAndFeel::orangeAccent);
+    setupKnob(hunterReleaseSlider, hunterReleaseLabel, "H.Rel", DeBleedLookAndFeel::orangeAccent);
+    setupKnob(hunterHoldSlider, hunterHoldLabel, "H.Hold", DeBleedLookAndFeel::orangeAccent);
+    setupKnob(hunterRangeSlider, hunterRangeLabel, "H.Range", DeBleedLookAndFeel::orangeAccent);
 
-    // Threshold - orange
-    setupKnob(thresholdSlider, thresholdLabel, "Threshold", DeBleedLookAndFeel::orangeAccent);
-
-    // Orange knobs
-    setupKnob(attackSlider, attackLabel, "Attack", DeBleedLookAndFeel::orangeAccent);
-    setupKnob(releaseSlider, releaseLabel, "Release", DeBleedLookAndFeel::orangeAccent);
-
-    // Purple knob
-    setupKnob(floorSlider, floorLabel, "Range", DeBleedLookAndFeel::purpleAccent);
-
-    // === Row 2: Hunter controls (green/teal) ===
+    // Hunter frequency controls (cyan)
     setupKnob(hpfBoundSlider, hpfBoundLabel, "HPF", DeBleedLookAndFeel::cyanAccent);
     setupKnob(lpfBoundSlider, lpfBoundLabel, "LPF", DeBleedLookAndFeel::cyanAccent);
     setupKnob(tightnessSlider, tightnessLabel, "Tight", DeBleedLookAndFeel::cyanAccent);
 
-    // === Row 2: Gate controls (purple for gate section) ===
+    // === Row 2: Expander controls (purple = gate-style) ===
+    setupKnob(expanderAttackSlider, expanderAttackLabel, "E.Atk", DeBleedLookAndFeel::purpleAccent);
+    setupKnob(expanderReleaseSlider, expanderReleaseLabel, "E.Rel", DeBleedLookAndFeel::purpleAccent);
+    setupKnob(expanderHoldSlider, expanderHoldLabel, "E.Hold", DeBleedLookAndFeel::purpleAccent);
+    setupKnob(expanderRangeSlider, expanderRangeLabel, "E.Range", DeBleedLookAndFeel::purpleAccent);
+    setupKnob(expanderThresholdSlider, expanderThresholdLabel, "E.Thresh", DeBleedLookAndFeel::purpleAccent);
+
+    // Gate enable toggle
     lrEnabledButton.setButtonText("GATE");
     lrEnabledButton.setColour(juce::ToggleButton::textColourId, juce::Colours::white.withAlpha(0.8f));
     addAndMakeVisible(lrEnabledButton);
-
-    // Gate band selector with per-band knobs
-    gateBandSelector = std::make_unique<GateBandSelector>(audioProcessor);
-    addAndMakeVisible(gateBandSelector.get());
 
     // Mix slider (hidden)
     mixSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -171,27 +165,25 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     gainReductionMeter = std::make_unique<GainReductionMeter>();
     addAndMakeVisible(gainReductionMeter.get());
 
-    // Parameter attachments
-    strengthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_STRENGTH, strengthSlider);
+    // Parameter attachments - General
     mixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_MIX, mixSlider);
     bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_BYPASS, bypassButton);
     lowLatencyAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LOW_LATENCY, lowLatencyButton);
-    attackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_ATTACK, attackSlider);
-    releaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_RELEASE, releaseSlider);
-    thresholdAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_THRESHOLD, thresholdSlider);
-    floorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_FLOOR, floorSlider);
     liveModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LIVE_MODE, liveModeButton);
 
     // Hunter parameter attachments
+    hunterAttackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HUNTER_ATTACK, hunterAttackSlider);
+    hunterReleaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HUNTER_RELEASE, hunterReleaseSlider);
+    hunterHoldAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HUNTER_HOLD, hunterHoldSlider);
+    hunterRangeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HUNTER_RANGE, hunterRangeSlider);
     hpfBoundAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HPF_BOUND, hpfBoundSlider);
     lpfBoundAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -199,10 +191,19 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     tightnessAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_TIGHTNESS, tightnessSlider);
 
-    // Gate parameter attachments
+    // Expander parameter attachments
+    expanderAttackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_ATTACK, expanderAttackSlider);
+    expanderReleaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_RELEASE, expanderReleaseSlider);
+    expanderHoldAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_HOLD, expanderHoldSlider);
+    expanderRangeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_RANGE, expanderRangeSlider);
+    expanderThresholdAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_THRESHOLD, expanderThresholdSlider);
     lrEnabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_ENABLED, lrEnabledButton);
-    // Note: Per-band gate attachments will be added in Phase 4
 
     // Log text box (hidden by default)
     logTextBox.setMultiLine(true);
@@ -272,31 +273,36 @@ void DeBleedAudioProcessorEditor::setActiveTab(Tab tab)
     rtaView->setVisible(tab == Tab::Visualizing);
     gainReductionMeter->setVisible(tab == Tab::Visualizing);
 
-    // Knobs (only on visualizing tab) - Row 1
-    // Strength is hidden (kept for parameter attachment only)
-    attackSlider.setVisible(tab == Tab::Visualizing);
-    attackLabel.setVisible(tab == Tab::Visualizing);
-    releaseSlider.setVisible(tab == Tab::Visualizing);
-    releaseLabel.setVisible(tab == Tab::Visualizing);
-    thresholdSlider.setVisible(tab == Tab::Visualizing);
-    thresholdLabel.setVisible(tab == Tab::Visualizing);
-    floorSlider.setVisible(tab == Tab::Visualizing);
-    floorLabel.setVisible(tab == Tab::Visualizing);
-    lowLatencyButton.setVisible(tab == Tab::Visualizing);
-    latencyLabel.setVisible(tab == Tab::Visualizing);
-
-    // Row 2 - Hunter controls
+    // Row 1 - Hunter controls (visible on visualizing tab)
+    hunterAttackSlider.setVisible(tab == Tab::Visualizing);
+    hunterAttackLabel.setVisible(tab == Tab::Visualizing);
+    hunterReleaseSlider.setVisible(tab == Tab::Visualizing);
+    hunterReleaseLabel.setVisible(tab == Tab::Visualizing);
+    hunterHoldSlider.setVisible(tab == Tab::Visualizing);
+    hunterHoldLabel.setVisible(tab == Tab::Visualizing);
+    hunterRangeSlider.setVisible(tab == Tab::Visualizing);
+    hunterRangeLabel.setVisible(tab == Tab::Visualizing);
     hpfBoundSlider.setVisible(tab == Tab::Visualizing);
     hpfBoundLabel.setVisible(tab == Tab::Visualizing);
     lpfBoundSlider.setVisible(tab == Tab::Visualizing);
     lpfBoundLabel.setVisible(tab == Tab::Visualizing);
     tightnessSlider.setVisible(tab == Tab::Visualizing);
     tightnessLabel.setVisible(tab == Tab::Visualizing);
+    lowLatencyButton.setVisible(tab == Tab::Visualizing);
+    latencyLabel.setVisible(tab == Tab::Visualizing);
 
-    // Row 2 - Gate controls
+    // Row 2 - Expander controls
+    expanderAttackSlider.setVisible(tab == Tab::Visualizing);
+    expanderAttackLabel.setVisible(tab == Tab::Visualizing);
+    expanderReleaseSlider.setVisible(tab == Tab::Visualizing);
+    expanderReleaseLabel.setVisible(tab == Tab::Visualizing);
+    expanderHoldSlider.setVisible(tab == Tab::Visualizing);
+    expanderHoldLabel.setVisible(tab == Tab::Visualizing);
+    expanderRangeSlider.setVisible(tab == Tab::Visualizing);
+    expanderRangeLabel.setVisible(tab == Tab::Visualizing);
+    expanderThresholdSlider.setVisible(tab == Tab::Visualizing);
+    expanderThresholdLabel.setVisible(tab == Tab::Visualizing);
     lrEnabledButton.setVisible(tab == Tab::Visualizing);
-    if (gateBandSelector)
-        gateBandSelector->setVisible(tab == Tab::Visualizing);
 
     resized();
     repaint();
@@ -415,8 +421,8 @@ void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> boun
     gainReductionMeter->setBounds(vizArea);
 
     // Knob sizing
-    int knobSize = 60;
-    int knobSpacing = 10;
+    int knobSize = 55;
+    int knobSpacing = 8;
 
     // Helper to place knob + label
     auto placeKnob = [knobSize](juce::Rectangle<int>& area, juce::Slider& slider, juce::Label& label) {
@@ -425,22 +431,28 @@ void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> boun
         slider.setBounds(knobBounds);
     };
 
-    // === Row 1: Hunter timing controls ===
+    // === Row 1: Hunter controls (H.Atk, H.Rel, H.Hold, H.Range, HPF, LPF, Tight) ===
     auto row1 = knobArea.removeFromTop(95);
-    int row1Width = 4 * knobSize + 3 * knobSpacing + 100;  // 4 knobs + toggle area
+    int row1Width = 7 * knobSize + 6 * knobSpacing + 90;  // 7 knobs + toggle area
     auto knobRow1 = row1.withSizeKeepingCentre(row1Width, row1.getHeight());
 
-    placeKnob(knobRow1, attackSlider, attackLabel);
+    placeKnob(knobRow1, hunterAttackSlider, hunterAttackLabel);
     knobRow1.removeFromLeft(knobSpacing);
-    placeKnob(knobRow1, releaseSlider, releaseLabel);
+    placeKnob(knobRow1, hunterReleaseSlider, hunterReleaseLabel);
     knobRow1.removeFromLeft(knobSpacing);
-    placeKnob(knobRow1, thresholdSlider, thresholdLabel);
+    placeKnob(knobRow1, hunterHoldSlider, hunterHoldLabel);
     knobRow1.removeFromLeft(knobSpacing);
-    placeKnob(knobRow1, floorSlider, floorLabel);
+    placeKnob(knobRow1, hunterRangeSlider, hunterRangeLabel);
+    knobRow1.removeFromLeft(knobSpacing + 10);  // Small gap before frequency controls
+    placeKnob(knobRow1, hpfBoundSlider, hpfBoundLabel);
+    knobRow1.removeFromLeft(knobSpacing);
+    placeKnob(knobRow1, lpfBoundSlider, lpfBoundLabel);
+    knobRow1.removeFromLeft(knobSpacing);
+    placeKnob(knobRow1, tightnessSlider, tightnessLabel);
 
     // Low latency toggle on the right of row 1
-    knobRow1.removeFromLeft(15);
-    auto toggleArea = knobRow1.removeFromLeft(85);
+    knobRow1.removeFromLeft(10);
+    auto toggleArea = knobRow1.removeFromLeft(80);
     lowLatencyButton.setBounds(toggleArea.removeFromTop(22));
     toggleArea.removeFromTop(3);
     latencyLabel.setBounds(toggleArea.removeFromTop(14));
@@ -448,30 +460,25 @@ void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> boun
     // Small gap between rows
     knobArea.removeFromTop(10);
 
-    // === Row 2: Hunter bounds (HPF/LPF/Tightness) + Gate controls ===
+    // === Row 2: Expander controls (E.Atk, E.Rel, E.Hold, E.Range, E.Thresh) + Gate toggle ===
     auto row2 = knobArea;
-    // 3 hunter knobs + gate toggle + 5 gate knobs = 9 elements
-    int row2Width = 9 * knobSize + 8 * knobSpacing + 10;  // Extra for toggle
+    int row2Width = 5 * knobSize + 4 * knobSpacing + 60;  // 5 knobs + gate toggle
     auto knobRow2 = row2.withSizeKeepingCentre(row2Width, row2.getHeight());
 
-    // Hunter section
-    placeKnob(knobRow2, hpfBoundSlider, hpfBoundLabel);
+    placeKnob(knobRow2, expanderAttackSlider, expanderAttackLabel);
     knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, lpfBoundSlider, lpfBoundLabel);
+    placeKnob(knobRow2, expanderReleaseSlider, expanderReleaseLabel);
     knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, tightnessSlider, tightnessLabel);
+    placeKnob(knobRow2, expanderHoldSlider, expanderHoldLabel);
+    knobRow2.removeFromLeft(knobSpacing);
+    placeKnob(knobRow2, expanderRangeSlider, expanderRangeLabel);
+    knobRow2.removeFromLeft(knobSpacing);
+    placeKnob(knobRow2, expanderThresholdSlider, expanderThresholdLabel);
 
-    // Separator / Gate toggle
-    knobRow2.removeFromLeft(knobSpacing + 5);
-    auto gateToggleArea = knobRow2.removeFromLeft(40);
-    lrEnabledButton.setBounds(gateToggleArea.withSizeKeepingCentre(40, 22).translated(0, 20));
-
-    // Gate band selector (remaining space in row 2)
-    knobRow2.removeFromLeft(5);
-    if (gateBandSelector)
-    {
-        gateBandSelector->setBounds(knobRow2.withHeight(row2.getHeight()));
-    }
+    // Gate enable toggle
+    knobRow2.removeFromLeft(knobSpacing + 10);
+    auto gateToggleArea = knobRow2.removeFromLeft(50);
+    lrEnabledButton.setBounds(gateToggleArea.withSizeKeepingCentre(50, 22).translated(0, 20));
 }
 
 void DeBleedAudioProcessorEditor::timerCallback()
@@ -493,8 +500,28 @@ void DeBleedAudioProcessorEditor::timerCallback()
 
         if (gainReductionMeter)
         {
-            float reductionDb = audioProcessor.getVisualizationData().averageGainReductionDb.load();
+            // Get expander visualization data
+            const auto& gate = audioProcessor.getLinkwitzGate();
+            float reductionDb = gate.getGainReductionDb();
+            float confidence = gate.getNeuralConfidence();
+            float thresholdDb = gate.getThresholdDb();
+            bool gateOpen = gate.isGateOpen();
+
+            // Convert confidence to dB-like scale for meter display
+            // confidence 1.0 → 0dB, confidence 0.0 → -60dB
+            float confidenceDb = (confidence > 0.001f) ?
+                juce::Decibels::gainToDecibels(confidence) : -60.0f;
+
+            // Convert threshold to same scale as confidence
+            // thresholdDb maps to confidence: 1.0 + (thresholdDb / 60)
+            // Then convert that confidence to dB
+            float confidenceThreshold = 1.0f + (thresholdDb / 60.0f);
+            confidenceThreshold = juce::jlimit(0.0f, 1.0f, confidenceThreshold);
+            float thresholdDisplayDb = (confidenceThreshold > 0.001f) ?
+                juce::Decibels::gainToDecibels(confidenceThreshold) : -60.0f;
+
             gainReductionMeter->setReductionLevel(reductionDb);
+            gainReductionMeter->setGateInfo(confidenceDb, thresholdDisplayDb, gateOpen);
             gainReductionMeter->repaint();
         }
 

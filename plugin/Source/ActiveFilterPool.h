@@ -66,7 +66,12 @@ public:
     /**
      * Set release time in ms (compressor-style: how fast cuts RELEASE back to unity).
      */
-    void setReleaseMs(float ms) { releaseMs = juce::jlimit(0.1f, 2000.0f, ms); }
+    void setReleaseMs(float ms) { releaseMs = juce::jlimit(0.1f, 1000.0f, ms); }
+
+    /**
+     * Set hold time in ms (minimum time at current depth before release begins).
+     */
+    void setHoldMs(float ms) { holdMs = juce::jlimit(0.1f, 1000.0f, ms); }
 
     /**
      * Set tightness in ms (minimum time a hunter stays at its frequency).
@@ -122,6 +127,7 @@ private:
         float targetGainFromMask = 1.0f;          // What the mask wants (before smoothing)
         bool active = false;                      // Is this hunter assigned?
         int samplesAtCurrentFreq = 0;             // Tightness counter - samples since last freq change
+        int holdSamplesRemaining = 0;             // Hold counter - samples remaining at current depth
     };
 
     std::array<HunterFilter, MAX_FILTERS> hunters;
@@ -131,9 +137,10 @@ private:
 
     // User parameters
     float strength = 1.0f;      // 0.0 = no effect, 1.0 = full effect
-    float floorDb = -60.0f;     // Minimum gain in dB (range knob)
+    float floorDb = -24.0f;     // Minimum gain in dB (range knob)
     float attackMs = 5.0f;      // Compressor attack (how fast cuts engage)
     float releaseMs = 100.0f;   // Compressor release (how fast cuts release)
+    float holdMs = 50.0f;       // Hold time before release begins
     float tightnessMs = 50.0f;  // Minimum time before hunter can change frequency
     float hpfBound = 20.0f;     // Minimum frequency for hunters
     float lpfBound = 20000.0f;  // Maximum frequency for hunters
@@ -146,14 +153,14 @@ private:
 
     // Parameters
     static constexpr float SMOOTHING_TIME = 0.020f;      // 20ms for freq/gain smoothing
-    static constexpr float VALLEY_THRESHOLD = 0.95f;     // Only hunt if gain < this
+    static constexpr float VALLEY_THRESHOLD = 0.65f;     // Only hunt DEEP valleys (was 0.95 - too aggressive)
     static constexpr float HYSTERESIS_GAIN = 0.1f;       // 10% gain change required to reassign
     static constexpr float HYSTERESIS_FREQ = 0.2f;       // ~3 semitones freq change required
     static constexpr float FREQ_UPDATE_THRESH = 10.0f;   // Hz change needed to update coeffs
     static constexpr float GAIN_UPDATE_THRESH = 0.02f;   // Gain change needed to update coeffs
     static constexpr float Q_UPDATE_THRESH = 0.5f;       // Q change needed to update coeffs
-    static constexpr float MIN_Q = 2.0f;                 // Q for wide cuts (broad)
-    static constexpr float MAX_Q = 16.0f;                // Q for narrow cuts (surgical)
+    static constexpr float MIN_Q = 1.5f;                 // Q for wide cuts (gentler)
+    static constexpr float MAX_Q = 8.0f;                 // Q for narrow cuts (less surgical)
     static constexpr float MIN_FREQ = 20.0f;             // Minimum filter frequency
     static constexpr float MAX_FREQ = 20000.0f;          // Maximum filter frequency
 
