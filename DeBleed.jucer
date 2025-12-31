@@ -26,10 +26,6 @@
             resource="0" file="plugin/Source/NeuralGateEngine.cpp"/>
       <FILE id="NeuralGateEngine_h" name="NeuralGateEngine.h" compile="0"
             resource="0" file="plugin/Source/NeuralGateEngine.h"/>
-      <FILE id="STFTProcessor_cpp" name="STFTProcessor.cpp" compile="1" resource="0"
-            file="plugin/Source/STFTProcessor.cpp"/>
-      <FILE id="STFTProcessor_h" name="STFTProcessor.h" compile="0" resource="0"
-            file="plugin/Source/STFTProcessor.h"/>
       <FILE id="TrainerProcess_cpp" name="TrainerProcess.cpp" compile="1"
             resource="0" file="plugin/Source/TrainerProcess.cpp"/>
       <FILE id="TrainerProcess_h" name="TrainerProcess.h" compile="0" resource="0"
@@ -38,50 +34,26 @@
             file="plugin/Source/AudioDropZone.cpp"/>
       <FILE id="AudioDropZone_h" name="AudioDropZone.h" compile="0" resource="0"
             file="plugin/Source/AudioDropZone.h"/>
-      <FILE id="RTAVisualization_cpp" name="RTAVisualization.cpp" compile="1" resource="0"
-            file="plugin/Source/RTAVisualization.cpp"/>
-      <FILE id="RTAVisualization_h" name="RTAVisualization.h" compile="0" resource="0"
-            file="plugin/Source/RTAVisualization.h"/>
-      <FILE id="GainReductionMeter_cpp" name="GainReductionMeter.cpp" compile="1" resource="0"
-            file="plugin/Source/GainReductionMeter.cpp"/>
-      <FILE id="GainReductionMeter_h" name="GainReductionMeter.h" compile="0" resource="0"
-            file="plugin/Source/GainReductionMeter.h"/>
-      <FILE id="ConfidenceMeter_cpp" name="ConfidenceMeter.cpp" compile="1" resource="0"
-            file="plugin/Source/ConfidenceMeter.cpp"/>
-      <FILE id="ConfidenceMeter_h" name="ConfidenceMeter.h" compile="0" resource="0"
-            file="plugin/Source/ConfidenceMeter.h"/>
       <FILE id="DeBleedLookAndFeel_cpp" name="DeBleedLookAndFeel.cpp" compile="1" resource="0"
             file="plugin/Source/DeBleedLookAndFeel.cpp"/>
       <FILE id="DeBleedLookAndFeel_h" name="DeBleedLookAndFeel.h" compile="0" resource="0"
             file="plugin/Source/DeBleedLookAndFeel.h"/>
-      <FILE id="IIRFilterBank_cpp" name="IIRFilterBank.cpp" compile="1" resource="0"
-            file="plugin/Source/IIRFilterBank.cpp"/>
-      <FILE id="IIRFilterBank_h" name="IIRFilterBank.h" compile="0" resource="0"
-            file="plugin/Source/IIRFilterBank.h"/>
       <FILE id="EnvelopeFollower_cpp" name="EnvelopeFollower.cpp" compile="1" resource="0"
             file="plugin/Source/EnvelopeFollower.cpp"/>
       <FILE id="EnvelopeFollower_h" name="EnvelopeFollower.h" compile="0" resource="0"
             file="plugin/Source/EnvelopeFollower.h"/>
-      <FILE id="BandMapper_cpp" name="BandMapper.cpp" compile="1" resource="0"
-            file="plugin/Source/BandMapper.cpp"/>
-      <FILE id="BandMapper_h" name="BandMapper.h" compile="0" resource="0"
-            file="plugin/Source/BandMapper.h"/>
-      <FILE id="SidechainAnalyzer_cpp" name="SidechainAnalyzer.cpp" compile="1" resource="0"
-            file="plugin/Source/SidechainAnalyzer.cpp"/>
-      <FILE id="SidechainAnalyzer_h" name="SidechainAnalyzer.h" compile="0" resource="0"
-            file="plugin/Source/SidechainAnalyzer.h"/>
-      <FILE id="ActiveFilterPool_cpp" name="ActiveFilterPool.cpp" compile="1" resource="0"
-            file="plugin/Source/ActiveFilterPool.cpp"/>
-      <FILE id="ActiveFilterPool_h" name="ActiveFilterPool.h" compile="0" resource="0"
-            file="plugin/Source/ActiveFilterPool.h"/>
-      <FILE id="LinkwitzRileyGate_cpp" name="LinkwitzRileyGate.cpp" compile="1" resource="0"
-            file="plugin/Source/LinkwitzRileyGate.cpp"/>
-      <FILE id="LinkwitzRileyGate_h" name="LinkwitzRileyGate.h" compile="0" resource="0"
-            file="plugin/Source/LinkwitzRileyGate.h"/>
-      <FILE id="GateBandSelector_cpp" name="GateBandSelector.cpp" compile="1" resource="0"
-            file="plugin/Source/GateBandSelector.cpp"/>
-      <FILE id="GateBandSelector_h" name="GateBandSelector.h" compile="0" resource="0"
-            file="plugin/Source/GateBandSelector.h"/>
+      <FILE id="DifferentiableBiquadChain_cpp" name="DifferentiableBiquadChain.cpp" compile="1" resource="0"
+            file="plugin/Source/DifferentiableBiquadChain.cpp"/>
+      <FILE id="DifferentiableBiquadChain_h" name="DifferentiableBiquadChain.h" compile="0" resource="0"
+            file="plugin/Source/DifferentiableBiquadChain.h"/>
+      <FILE id="Neural5045Engine_cpp" name="Neural5045Engine.cpp" compile="1" resource="0"
+            file="plugin/Source/Neural5045Engine.cpp"/>
+      <FILE id="Neural5045Engine_h" name="Neural5045Engine.h" compile="0" resource="0"
+            file="plugin/Source/Neural5045Engine.h"/>
+      <FILE id="EQCurveDisplay_cpp" name="EQCurveDisplay.cpp" compile="1" resource="0"
+            file="plugin/Source/EQCurveDisplay.cpp"/>
+      <FILE id="EQCurveDisplay_h" name="EQCurveDisplay.h" compile="0" resource="0"
+            file="plugin/Source/EQCurveDisplay.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

@@ -114,29 +114,27 @@ juce::String TrainerProcess::findTrainerExecutable()
     juce::File vst3Bundle = pluginDir.getParentDirectory().getParentDirectory();
     juce::File vst3Resources = vst3Bundle.getChildFile("Contents/Resources");
 
-    // Check various locations
+    // Check various locations - prefer neural5045_trainer.py, fall back to trainer.py
     juce::StringArray searchPaths = {
-        // User Application Support - primary location for installed trainer
+        // Neural 5045 trainer (new DDSP architecture)
+        "/Users/ksellarsm4lt/Documents/DeBleed/python/neural5045_trainer.py",
+        projectRoot.getChildFile("python/neural5045_trainer.py").getFullPathName(),
+        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+            .getChildFile("DeBleed/python/neural5045_trainer.py").getFullPathName(),
+        vst3Resources.getChildFile("python/neural5045_trainer.py").getFullPathName(),
+        appBundle.getChildFile("Contents/Resources/python/neural5045_trainer.py").getFullPathName(),
+
+        // Legacy trainer (STFT masking)
         juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
             .getChildFile("DeBleed/trainer.py").getFullPathName(),
         juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
             .getChildFile("DeBleed/python/trainer.py").getFullPathName(),
-
-        // VST3 bundle Resources folder
         vst3Resources.getChildFile("trainer.py").getFullPathName(),
         vst3Resources.getChildFile("python/trainer.py").getFullPathName(),
-
-        // Development paths (relative to project root)
         projectRoot.getChildFile("python/trainer.py").getFullPathName(),
-
-        // App bundle Resources folder
         appBundle.getChildFile("Contents/Resources/trainer.py").getFullPathName(),
         appBundle.getChildFile("Contents/Resources/python/trainer.py").getFullPathName(),
-
-        // Hardcoded development path (for debugging)
         "/Users/ksellarsm4lt/Documents/DeBleed/python/trainer.py",
-
-        // Legacy paths
         pluginDir.getChildFile("trainer").getFullPathName(),
         pluginDir.getChildFile("trainer.py").getFullPathName(),
         pluginDir.getChildFile("Resources/trainer.py").getFullPathName(),

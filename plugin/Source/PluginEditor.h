@@ -3,17 +3,15 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "AudioDropZone.h"
-#include "RTAVisualization.h"
-#include "GainReductionMeter.h"
-#include "ConfidenceMeter.h"
 #include "DeBleedLookAndFeel.h"
+#include "EQCurveDisplay.h"
 
 /**
- * DeBleedAudioProcessorEditor - GUI for the DeBleed Neural Gate plugin.
+ * DeBleedAudioProcessorEditor - GUI for the DeBleed Neural 5045 plugin.
  *
- * Two-tab layout with Kinetics-style knobs:
+ * Two-tab layout:
  * - Training tab: Drop zones, progress, train buttons
- * - Visualizing tab: Large RTA, knobs
+ * - Visualizing tab: Real-time EQ curve from neural network
  */
 class DeBleedAudioProcessorEditor : public juce::AudioProcessorEditor,
                                      public juce::Timer
@@ -40,7 +38,6 @@ private:
     void onTrainingProgress(int progress, const juce::String& status);
     void onTrainingComplete(bool success, const juce::String& modelPath, const juce::String& error);
     void updateModelStatus();
-    void updateLatencyLabel();
     void updateContinueButtonState();
 
     DeBleedAudioProcessor& audioProcessor;
@@ -54,7 +51,7 @@ private:
     juce::TextButton trainingTabButton;
     juce::TextButton visualizingTabButton;
     juce::ToggleButton bypassButton;
-    juce::ToggleButton liveModeButton;  // Live/Train toggle
+    juce::ToggleButton liveModeButton;
 
     // Training tab components
     AudioDropZone cleanDropZone;
@@ -67,73 +64,13 @@ private:
     juce::Label modelStatusLabel;
     double progressValue = 0.0;
 
-    // Visualization components
-    std::unique_ptr<RTAVisualization> rtaView;
-    std::unique_ptr<GainReductionMeter> gainReductionMeter;
-    std::unique_ptr<ConfidenceMeter> confidenceMeter;
-
-    // Parameter knobs (rotary style)
-    // Row 1: Hunter controls (compressor-style, surgical)
-    juce::Slider hunterAttackSlider;
-    juce::Label hunterAttackLabel;
-    juce::Slider hunterReleaseSlider;
-    juce::Label hunterReleaseLabel;
-    juce::Slider hunterHoldSlider;
-    juce::Label hunterHoldLabel;
-    juce::Slider hunterRangeSlider;
-    juce::Label hunterRangeLabel;
-
-    // Row 1 continued: Hunter frequency bounds
-    juce::Slider hpfBoundSlider;
-    juce::Label hpfBoundLabel;
-    juce::Slider lpfBoundSlider;
-    juce::Label lpfBoundLabel;
-    juce::Slider tightnessSlider;
-    juce::Label tightnessLabel;
-
-    // Row 2: Expander controls (gate-style)
-    juce::Slider expanderAttackSlider;
-    juce::Label expanderAttackLabel;
-    juce::Slider expanderReleaseSlider;
-    juce::Label expanderReleaseLabel;
-    juce::Slider expanderHoldSlider;
-    juce::Label expanderHoldLabel;
-    juce::Slider expanderRangeSlider;
-    juce::Label expanderRangeLabel;
-    juce::Slider expanderThresholdSlider;
-    juce::Label expanderThresholdLabel;
-    juce::ToggleButton lrEnabledButton;
-
-    // Hidden but kept for attachment
-    juce::Slider mixSlider;
-    juce::Label mixLabel;
-
-    // Toggle buttons
-    juce::ToggleButton lowLatencyButton;
-    juce::Label latencyLabel;
-
-    // Parameter attachments - General
+    // Parameter attachments
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lowLatencyAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> liveModeAttachment;
 
-    // Hunter parameter attachments
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hunterAttackAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hunterReleaseAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hunterHoldAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hunterRangeAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> hpfBoundAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lpfBoundAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> tightnessAttachment;
-
-    // Expander parameter attachments
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderAttackAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderReleaseAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderHoldAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderRangeAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> expanderThresholdAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lrEnabledAttachment;
+    // Hidden mix slider (for attachment)
+    juce::Slider mixSlider;
 
     // Training log
     juce::TextEditor logTextBox;
@@ -145,6 +82,9 @@ private:
 
     // Track last trained model for continue training
     juce::String lastTrainedModelDir;
+
+    // Visualizing tab components
+    EQCurveDisplay eqCurveDisplay_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessorEditor)
 };

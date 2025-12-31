@@ -35,15 +35,13 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     addAndMakeVisible(visualizingTabButton);
 
     // Bypass button (power button in header)
-    // invertColors: orange when OFF (active), grey when ON (bypassed)
     bypassButton.setButtonText("");
     bypassButton.getProperties().set("invertColors", true);
     addAndMakeVisible(bypassButton);
 
-    // Live Mode toggle (disables training when in live mode)
+    // Live Mode toggle
     liveModeButton.setButtonText("LIVE");
     liveModeButton.setColour(juce::ToggleButton::textColourId, juce::Colours::white.withAlpha(0.8f));
-    // Handle both user clicks and parameter restore
     auto applyLiveModeState = [this]() {
         bool isLive = liveModeButton.getToggleState();
         trainingTabButton.setEnabled(!isLive);
@@ -83,10 +81,7 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     // Continue Training button
     continueTrainingButton.setButtonText("Continue Training");
     continueTrainingButton.setEnabled(false);
-    continueTrainingButton.onClick = [this]() {
-        DBG("Continue Training button clicked!");
-        continueTraining();
-    };
+    continueTrainingButton.onClick = [this]() { continueTraining(); };
     addAndMakeVisible(continueTrainingButton);
 
     // Load Model button
@@ -105,114 +100,25 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     modelStatusLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.7f));
     addAndMakeVisible(modelStatusLabel);
 
-    // Setup knobs with rotary style
-    auto setupKnob = [this](juce::Slider& slider, juce::Label& label, const juce::String& name,
-                            juce::uint32 color) {
-        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 16);
-        slider.getProperties().set("knobColor", static_cast<juce::int64>(color));
-        addAndMakeVisible(slider);
-
-        label.setText(name, juce::dontSendNotification);
-        label.setFont(juce::Font(11.0f));
-        label.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.8f));
-        label.setJustificationType(juce::Justification::centred);
-        addAndMakeVisible(label);
-    };
-
-    // === Row 1: Hunter controls (orange = compressor-style timing) ===
-    setupKnob(hunterAttackSlider, hunterAttackLabel, "H.Atk", DeBleedLookAndFeel::orangeAccent);
-    setupKnob(hunterReleaseSlider, hunterReleaseLabel, "H.Rel", DeBleedLookAndFeel::orangeAccent);
-    setupKnob(hunterHoldSlider, hunterHoldLabel, "H.Hold", DeBleedLookAndFeel::orangeAccent);
-    setupKnob(hunterRangeSlider, hunterRangeLabel, "H.Range", DeBleedLookAndFeel::orangeAccent);
-
-    // Hunter frequency controls (cyan)
-    setupKnob(hpfBoundSlider, hpfBoundLabel, "HPF", DeBleedLookAndFeel::cyanAccent);
-    setupKnob(lpfBoundSlider, lpfBoundLabel, "LPF", DeBleedLookAndFeel::cyanAccent);
-    setupKnob(tightnessSlider, tightnessLabel, "Tight", DeBleedLookAndFeel::cyanAccent);
-
-    // === Row 2: Expander controls (purple = gate-style) ===
-    setupKnob(expanderAttackSlider, expanderAttackLabel, "E.Atk", DeBleedLookAndFeel::purpleAccent);
-    setupKnob(expanderReleaseSlider, expanderReleaseLabel, "E.Rel", DeBleedLookAndFeel::purpleAccent);
-    setupKnob(expanderHoldSlider, expanderHoldLabel, "E.Hold", DeBleedLookAndFeel::purpleAccent);
-    setupKnob(expanderRangeSlider, expanderRangeLabel, "E.Range", DeBleedLookAndFeel::purpleAccent);
-    setupKnob(expanderThresholdSlider, expanderThresholdLabel, "E.Thresh", DeBleedLookAndFeel::purpleAccent);
-
-    // Gate enable toggle
-    lrEnabledButton.setButtonText("GATE");
-    lrEnabledButton.setColour(juce::ToggleButton::textColourId, juce::Colours::white.withAlpha(0.8f));
-    addAndMakeVisible(lrEnabledButton);
-
-    // Mix slider (hidden)
-    mixSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    // Hidden mix slider (for parameter attachment)
     mixSlider.setVisible(false);
-    mixLabel.setVisible(false);
 
-    // Low Latency button
-    lowLatencyButton.setButtonText("Low Latency");
-    lowLatencyButton.setColour(juce::ToggleButton::textColourId, juce::Colours::white.withAlpha(0.8f));
-    addAndMakeVisible(lowLatencyButton);
-
-    // Latency label
-    latencyLabel.setFont(juce::Font(10.0f));
-    latencyLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.6f));
-    addAndMakeVisible(latencyLabel);
-
-    // Visualization components
-    rtaView = std::make_unique<RTAVisualization>(audioProcessor);
-    addAndMakeVisible(rtaView.get());
-
-    gainReductionMeter = std::make_unique<GainReductionMeter>();
-    addAndMakeVisible(gainReductionMeter.get());
-
-    confidenceMeter = std::make_unique<ConfidenceMeter>();
-    addAndMakeVisible(confidenceMeter.get());
-
-    // Parameter attachments - General
+    // Parameter attachments
     mixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_MIX, mixSlider);
     bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_BYPASS, bypassButton);
-    lowLatencyAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LOW_LATENCY, lowLatencyButton);
     liveModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LIVE_MODE, liveModeButton);
-
-    // Hunter parameter attachments
-    hunterAttackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HUNTER_ATTACK, hunterAttackSlider);
-    hunterReleaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HUNTER_RELEASE, hunterReleaseSlider);
-    hunterHoldAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HUNTER_HOLD, hunterHoldSlider);
-    hunterRangeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HUNTER_RANGE, hunterRangeSlider);
-    hpfBoundAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_HPF_BOUND, hpfBoundSlider);
-    lpfBoundAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LPF_BOUND, lpfBoundSlider);
-    tightnessAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_TIGHTNESS, tightnessSlider);
-
-    // Expander parameter attachments
-    expanderAttackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_ATTACK, expanderAttackSlider);
-    expanderReleaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_RELEASE, expanderReleaseSlider);
-    expanderHoldAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_HOLD, expanderHoldSlider);
-    expanderRangeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_RANGE, expanderRangeSlider);
-    expanderThresholdAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_EXPANDER_THRESHOLD, expanderThresholdSlider);
-    lrEnabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_LR_ENABLED, lrEnabledButton);
 
     // Log text box (hidden by default)
     logTextBox.setMultiLine(true);
     logTextBox.setReadOnly(true);
     logTextBox.setScrollbarsShown(true);
     logTextBox.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 10.0f, juce::Font::plain));
+
+    // EQ Curve display for visualizing tab
+    addAndMakeVisible(eqCurveDisplay_);
 
     // Set up trainer callbacks
     audioProcessor.getTrainerProcess().setProgressCallback(
@@ -233,16 +139,15 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
             });
         });
 
-    // Update model status and latency
+    // Update model status
     updateModelStatus();
-    updateLatencyLabel();
     updateContinueButtonState();
 
     // Start timer for UI updates
     startTimer(100);
 
-    // Set to new larger size (increased height for two rows of knobs)
-    setSize(900, 700);
+    // Set window size
+    setSize(900, 600);
 
     // Initialize tab visibility
     setActiveTab(Tab::Training);
@@ -273,39 +178,7 @@ void DeBleedAudioProcessorEditor::setActiveTab(Tab tab)
     logTextBox.setVisible(tab == Tab::Training && showLog);
 
     // Visualizing tab components
-    rtaView->setVisible(tab == Tab::Visualizing);
-    gainReductionMeter->setVisible(tab == Tab::Visualizing);
-
-    // Row 1 - Hunter controls (visible on visualizing tab)
-    hunterAttackSlider.setVisible(tab == Tab::Visualizing);
-    hunterAttackLabel.setVisible(tab == Tab::Visualizing);
-    hunterReleaseSlider.setVisible(tab == Tab::Visualizing);
-    hunterReleaseLabel.setVisible(tab == Tab::Visualizing);
-    hunterHoldSlider.setVisible(tab == Tab::Visualizing);
-    hunterHoldLabel.setVisible(tab == Tab::Visualizing);
-    hunterRangeSlider.setVisible(tab == Tab::Visualizing);
-    hunterRangeLabel.setVisible(tab == Tab::Visualizing);
-    hpfBoundSlider.setVisible(tab == Tab::Visualizing);
-    hpfBoundLabel.setVisible(tab == Tab::Visualizing);
-    lpfBoundSlider.setVisible(tab == Tab::Visualizing);
-    lpfBoundLabel.setVisible(tab == Tab::Visualizing);
-    tightnessSlider.setVisible(tab == Tab::Visualizing);
-    tightnessLabel.setVisible(tab == Tab::Visualizing);
-    lowLatencyButton.setVisible(tab == Tab::Visualizing);
-    latencyLabel.setVisible(tab == Tab::Visualizing);
-
-    // Row 2 - Expander controls
-    expanderAttackSlider.setVisible(tab == Tab::Visualizing);
-    expanderAttackLabel.setVisible(tab == Tab::Visualizing);
-    expanderReleaseSlider.setVisible(tab == Tab::Visualizing);
-    expanderReleaseLabel.setVisible(tab == Tab::Visualizing);
-    expanderHoldSlider.setVisible(tab == Tab::Visualizing);
-    expanderHoldLabel.setVisible(tab == Tab::Visualizing);
-    expanderRangeSlider.setVisible(tab == Tab::Visualizing);
-    expanderRangeLabel.setVisible(tab == Tab::Visualizing);
-    expanderThresholdSlider.setVisible(tab == Tab::Visualizing);
-    expanderThresholdLabel.setVisible(tab == Tab::Visualizing);
-    lrEnabledButton.setVisible(tab == Tab::Visualizing);
+    eqCurveDisplay_.setVisible(tab == Tab::Visualizing);
 
     resized();
     repaint();
@@ -324,6 +197,9 @@ void DeBleedAudioProcessorEditor::paint(juce::Graphics& g)
     // Header bottom line
     g.setColour(juce::Colours::white.withAlpha(0.1f));
     g.drawHorizontalLine(49, 0, static_cast<float>(getWidth()));
+
+    // Visualizing tab - EQ curve display has its own paint
+    // (no placeholder needed - EQCurveDisplay handles rendering)
 
 #if DEBUG || JUCE_DEBUG
     g.setColour(juce::Colours::grey.withAlpha(0.5f));
@@ -345,7 +221,7 @@ void DeBleedAudioProcessorEditor::resized()
     // Title on left
     titleLabel.setBounds(header.removeFromLeft(100));
 
-    // Bypass button on right (power icon - 30x30)
+    // Bypass button on right
     bypassButton.setBounds(header.removeFromRight(30).withSizeKeepingCentre(30, 30));
     header.removeFromRight(8);
 
@@ -370,7 +246,7 @@ void DeBleedAudioProcessorEditor::resized()
 
 void DeBleedAudioProcessorEditor::layoutTrainingTab(juce::Rectangle<int> bounds)
 {
-    // Drop zones - side by side, larger
+    // Drop zones - side by side
     auto dropZoneArea = bounds.removeFromTop(180);
     int dropZoneWidth = (dropZoneArea.getWidth() - 20) / 2;
 
@@ -412,83 +288,8 @@ void DeBleedAudioProcessorEditor::layoutTrainingTab(juce::Rectangle<int> bounds)
 
 void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> bounds)
 {
-    // Two rows of knobs at bottom - 200px total
-    auto knobArea = bounds.removeFromBottom(200);
-
-    // RTA and meters (Confidence + GR side by side)
-    auto vizArea = bounds;
-    int meterWidth = 55;  // Each meter width
-    int totalMeterWidth = meterWidth * 2 + 5;  // Two meters with gap
-
-    rtaView->setBounds(vizArea.removeFromLeft(vizArea.getWidth() - totalMeterWidth - 15));
-    vizArea.removeFromLeft(15);
-
-    // Confidence meter (left) - shows neural confidence & threshold
-    confidenceMeter->setBounds(vizArea.removeFromLeft(meterWidth));
-    vizArea.removeFromLeft(5);
-
-    // GR meter (right) - shows gain reduction
-    gainReductionMeter->setBounds(vizArea);
-
-    // Knob sizing
-    int knobSize = 55;
-    int knobSpacing = 8;
-
-    // Helper to place knob + label
-    auto placeKnob = [knobSize](juce::Rectangle<int>& area, juce::Slider& slider, juce::Label& label) {
-        auto knobBounds = area.removeFromLeft(knobSize);
-        label.setBounds(knobBounds.removeFromTop(14));
-        slider.setBounds(knobBounds);
-    };
-
-    // === Row 1: Hunter controls (H.Atk, H.Rel, H.Hold, H.Range, HPF, LPF, Tight) ===
-    auto row1 = knobArea.removeFromTop(95);
-    int row1Width = 7 * knobSize + 6 * knobSpacing + 90;  // 7 knobs + toggle area
-    auto knobRow1 = row1.withSizeKeepingCentre(row1Width, row1.getHeight());
-
-    placeKnob(knobRow1, hunterAttackSlider, hunterAttackLabel);
-    knobRow1.removeFromLeft(knobSpacing);
-    placeKnob(knobRow1, hunterReleaseSlider, hunterReleaseLabel);
-    knobRow1.removeFromLeft(knobSpacing);
-    placeKnob(knobRow1, hunterHoldSlider, hunterHoldLabel);
-    knobRow1.removeFromLeft(knobSpacing);
-    placeKnob(knobRow1, hunterRangeSlider, hunterRangeLabel);
-    knobRow1.removeFromLeft(knobSpacing + 10);  // Small gap before frequency controls
-    placeKnob(knobRow1, hpfBoundSlider, hpfBoundLabel);
-    knobRow1.removeFromLeft(knobSpacing);
-    placeKnob(knobRow1, lpfBoundSlider, lpfBoundLabel);
-    knobRow1.removeFromLeft(knobSpacing);
-    placeKnob(knobRow1, tightnessSlider, tightnessLabel);
-
-    // Low latency toggle on the right of row 1
-    knobRow1.removeFromLeft(10);
-    auto toggleArea = knobRow1.removeFromLeft(80);
-    lowLatencyButton.setBounds(toggleArea.removeFromTop(22));
-    toggleArea.removeFromTop(3);
-    latencyLabel.setBounds(toggleArea.removeFromTop(14));
-
-    // Small gap between rows
-    knobArea.removeFromTop(10);
-
-    // === Row 2: Expander controls (E.Atk, E.Rel, E.Hold, E.Range, E.Thresh) + Gate toggle ===
-    auto row2 = knobArea;
-    int row2Width = 5 * knobSize + 4 * knobSpacing + 60;  // 5 knobs + gate toggle
-    auto knobRow2 = row2.withSizeKeepingCentre(row2Width, row2.getHeight());
-
-    placeKnob(knobRow2, expanderAttackSlider, expanderAttackLabel);
-    knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, expanderReleaseSlider, expanderReleaseLabel);
-    knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, expanderHoldSlider, expanderHoldLabel);
-    knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, expanderRangeSlider, expanderRangeLabel);
-    knobRow2.removeFromLeft(knobSpacing);
-    placeKnob(knobRow2, expanderThresholdSlider, expanderThresholdLabel);
-
-    // Gate enable toggle
-    knobRow2.removeFromLeft(knobSpacing + 10);
-    auto gateToggleArea = knobRow2.removeFromLeft(50);
-    lrEnabledButton.setBounds(gateToggleArea.withSizeKeepingCentre(50, 22).translated(0, 20));
+    // EQ curve display takes the full content area
+    eqCurveDisplay_.setBounds(bounds);
 }
 
 void DeBleedAudioProcessorEditor::timerCallback()
@@ -502,39 +303,10 @@ void DeBleedAudioProcessorEditor::timerCallback()
         progressBar.repaint();
     }
 
-    // Update visualization (only when visible)
+    // Update EQ curve visualization from the biquad chain
     if (currentTab == Tab::Visualizing)
     {
-        if (rtaView)
-            rtaView->updateFromQueue();
-
-        // Get expander visualization data
-        const auto& gate = audioProcessor.getLinkwitzGate();
-        float reductionDb = gate.getGainReductionDb();
-        float confidence = gate.getNeuralConfidence();
-        bool gateOpen = gate.isGateOpen();
-
-        // Get threshold directly from parameter (0-1 scale)
-        float thresholdParam = *audioProcessor.getParameters().getRawParameterValue(
-            DeBleedAudioProcessor::PARAM_EXPANDER_THRESHOLD);
-
-        // Update Confidence Meter (shows confidence 0-100% and threshold line)
-        if (confidenceMeter)
-        {
-            confidenceMeter->setConfidence(confidence);
-            confidenceMeter->setThreshold(thresholdParam);
-            confidenceMeter->setGateOpen(gateOpen);
-            confidenceMeter->repaint();
-        }
-
-        // Update GR Meter (shows gain reduction in dB)
-        if (gainReductionMeter)
-        {
-            gainReductionMeter->setReductionLevel(reductionDb);
-            gainReductionMeter->repaint();
-        }
-
-        updateLatencyLabel();
+        eqCurveDisplay_.updateFromChain(audioProcessor.getBiquadChain());
     }
 
     updateModelStatus();
@@ -571,11 +343,8 @@ void DeBleedAudioProcessorEditor::startNewTraining()
 
 void DeBleedAudioProcessorEditor::continueTraining()
 {
-    DBG("continueTraining() called");
-
     if (!audioProcessor.isModelLoaded())
     {
-        DBG("No model loaded - showing alert");
         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
             "No Model Loaded",
             "Please load a model first before continuing training.",
@@ -583,18 +352,15 @@ void DeBleedAudioProcessorEditor::continueTraining()
         return;
     }
 
-    // Use existing model directory for continuation
     juce::File modelFile(audioProcessor.getModelPath());
     juce::String modelDir = modelFile.getParentDirectory().getFullPathName();
 
-    // Check if checkpoint exists
     juce::File checkpointFile = modelFile.getParentDirectory().getChildFile("checkpoint.pt");
     if (!checkpointFile.exists())
     {
         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
             "No Checkpoint Found",
-            "This model doesn't have a checkpoint file for continuation.\n\n"
-            "You can only continue training on models that were trained with checkpoint support.",
+            "This model doesn't have a checkpoint file for continuation.",
             "OK");
         return;
     }
@@ -644,9 +410,9 @@ void DeBleedAudioProcessorEditor::startTrainingWithName(const juce::String& mode
         cleanAudioPath,
         noiseAudioPath,
         outputDir.getFullPathName(),
-        modelName,  // Model file name (matches folder name)
-        isContinuation ? 25 : 50,  // fewer epochs for continuation
-        isContinuation  // pass continuation flag
+        modelName,
+        isContinuation ? 25 : 50,
+        isContinuation
     );
 
     if (!started)
@@ -694,7 +460,7 @@ void DeBleedAudioProcessorEditor::loadModel()
                     juce::AlertWindow::showMessageBoxAsync(
                         juce::AlertWindow::WarningIcon,
                         "Load Failed",
-                        "Failed to load the selected model file.\n\nMake sure it's a valid DeBleed ONNX model.",
+                        "Failed to load the selected model file.",
                         "OK"
                     );
                 }
@@ -723,10 +489,8 @@ void DeBleedAudioProcessorEditor::onTrainingComplete(bool success, const juce::S
             statusLabel.setText("Training complete! Model loaded.", juce::dontSendNotification);
             progressValue = 1.0;
 
-            // Load the new model
             audioProcessor.loadModel(modelPath);
 
-            // Store the model directory for continue training
             juce::File modelFile(modelPath);
             lastTrainedModelDir = modelFile.getParentDirectory().getFullPathName();
 
@@ -736,7 +500,7 @@ void DeBleedAudioProcessorEditor::onTrainingComplete(bool success, const juce::S
             juce::AlertWindow::showMessageBoxAsync(
                 juce::AlertWindow::InfoIcon,
                 "Training Complete",
-                "Model trained successfully and loaded!\n\nModel saved to:\n" + modelPath,
+                "Model trained successfully!\n\nSaved to:\n" + modelPath,
                 "OK"
             );
         }
@@ -773,28 +537,16 @@ void DeBleedAudioProcessorEditor::updateModelStatus()
     }
 }
 
-void DeBleedAudioProcessorEditor::updateLatencyLabel()
-{
-    float latencyMs = audioProcessor.getLatencyMs();
-    juce::String latencyText = juce::String(latencyMs, 1) + " ms";
-    latencyLabel.setText(latencyText, juce::dontSendNotification);
-}
-
 void DeBleedAudioProcessorEditor::updateContinueButtonState()
 {
     bool canContinue = audioProcessor.isModelLoaded();
-    DBG("updateContinueButtonState: modelLoaded=" << (canContinue ? "true" : "false"));
 
     if (canContinue)
     {
-        // Check if checkpoint exists
         juce::File modelFile(audioProcessor.getModelPath());
         juce::File checkpointFile = modelFile.getParentDirectory().getChildFile("checkpoint.pt");
-        DBG("Looking for checkpoint at: " << checkpointFile.getFullPathName());
         canContinue = checkpointFile.exists();
-        DBG("Checkpoint exists: " << (canContinue ? "true" : "false"));
     }
 
-    DBG("Setting continueTrainingButton enabled: " << (canContinue ? "true" : "false"));
     continueTrainingButton.setEnabled(canContinue);
 }
