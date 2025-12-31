@@ -810,26 +810,32 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     linkwitzGate.setHold(expanderHold.load());
     linkwitzGate.setRange(expanderRange.load());
 
+    // Convert 0-1 threshold to dB for gate:
+    // 0.0 → -80 dB (most permissive, any confidence opens)
+    // 1.0 → 0 dB (most restrictive, needs full confidence)
+    float thresholdDb = (expanderThreshold.load() - 1.0f) * 80.0f;
+    linkwitzGate.setThreshold(thresholdDb);
+
     // Sidechain filters
     linkwitzGate.setSidechainHPF(hpfBound.load());
     linkwitzGate.setSidechainLPF(lpfBound.load());
 
     // Calculate neural confidence from mask
-    // Use 50th percentile - if half the bins say "singer", it's probably the singer
+    // Use VOCAL RANGE (200-5000 Hz) - where singer presence is strongest
     if (neuralModelLoaded && rawMask != nullptr)
     {
-        float hpf = hpfBound.load();
-        float lpf = lpfBound.load();
-        float threshold = expanderThreshold.load();
+        // Fixed vocal detection range
+        static constexpr float VOCAL_LOW = 200.0f;
+        static constexpr float VOCAL_HIGH = 5000.0f;
 
-        // Collect mask values in the HPF/LPF range from Stream A (129 bins)
+        // Collect mask values in vocal range from Stream A (129 bins, 187.5 Hz/bin)
         std::vector<float> maskValues;
-        maskValues.reserve(129);
+        maskValues.reserve(64);
 
         for (int i = 1; i < 129; ++i)
         {
-            float freq = i * 48000.0f / 256.0f;
-            if (freq >= hpf && freq <= lpf)
+            float freq = i * 48000.0f / 256.0f;  // 187.5 Hz per bin
+            if (freq >= VOCAL_LOW && freq <= VOCAL_HIGH)
             {
                 maskValues.push_back(rawMask[i]);
             }
@@ -838,19 +844,12 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         float confidence = 1.0f;
         if (!maskValues.empty())
         {
-            // Sort and take 50th percentile (median) - more balanced
-            std::sort(maskValues.begin(), maskValues.end());
-            size_t idx = static_cast<size_t>(maskValues.size() * 0.50f);
-            idx = std::min(idx, maskValues.size() - 1);
-            confidence = maskValues[idx];
+            // Use MAXIMUM in vocal range - if ANY vocal freq says "singer", open the gate
+            confidence = *std::max_element(maskValues.begin(), maskValues.end());
         }
 
-        // Map confidence through threshold
-        // confidence > threshold = open (1.0), confidence < threshold = closed (0.0)
-        float gatedConfidence = (confidence - threshold) / (1.0f - threshold + 0.001f);
-        gatedConfidence = juce::jlimit(0.0f, 1.0f, gatedConfidence);
-
-        linkwitzGate.setNeuralConfidence(gatedConfidence);
+        // Pass raw confidence to gate - threshold knob in gate controls the rest
+        linkwitzGate.setNeuralConfidence(confidence);
     }
     else
     {

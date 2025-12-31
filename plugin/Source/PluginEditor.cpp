@@ -165,6 +165,9 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     gainReductionMeter = std::make_unique<GainReductionMeter>();
     addAndMakeVisible(gainReductionMeter.get());
 
+    confidenceMeter = std::make_unique<ConfidenceMeter>();
+    addAndMakeVisible(confidenceMeter.get());
+
     // Parameter attachments - General
     mixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_MIX, mixSlider);
@@ -412,12 +415,19 @@ void DeBleedAudioProcessorEditor::layoutVisualizingTab(juce::Rectangle<int> boun
     // Two rows of knobs at bottom - 200px total
     auto knobArea = bounds.removeFromBottom(200);
 
-    // RTA and GR meter
+    // RTA and meters (Confidence + GR side by side)
     auto vizArea = bounds;
-    int meterWidth = 40;
+    int meterWidth = 55;  // Each meter width
+    int totalMeterWidth = meterWidth * 2 + 5;  // Two meters with gap
 
-    rtaView->setBounds(vizArea.removeFromLeft(vizArea.getWidth() - meterWidth - 15));
+    rtaView->setBounds(vizArea.removeFromLeft(vizArea.getWidth() - totalMeterWidth - 15));
     vizArea.removeFromLeft(15);
+
+    // Confidence meter (left) - shows neural confidence & threshold
+    confidenceMeter->setBounds(vizArea.removeFromLeft(meterWidth));
+    vizArea.removeFromLeft(5);
+
+    // GR meter (right) - shows gain reduction
     gainReductionMeter->setBounds(vizArea);
 
     // Knob sizing
@@ -498,30 +508,29 @@ void DeBleedAudioProcessorEditor::timerCallback()
         if (rtaView)
             rtaView->updateFromQueue();
 
+        // Get expander visualization data
+        const auto& gate = audioProcessor.getLinkwitzGate();
+        float reductionDb = gate.getGainReductionDb();
+        float confidence = gate.getNeuralConfidence();
+        bool gateOpen = gate.isGateOpen();
+
+        // Get threshold directly from parameter (0-1 scale)
+        float thresholdParam = *audioProcessor.getParameters().getRawParameterValue(
+            DeBleedAudioProcessor::PARAM_EXPANDER_THRESHOLD);
+
+        // Update Confidence Meter (shows confidence 0-100% and threshold line)
+        if (confidenceMeter)
+        {
+            confidenceMeter->setConfidence(confidence);
+            confidenceMeter->setThreshold(thresholdParam);
+            confidenceMeter->setGateOpen(gateOpen);
+            confidenceMeter->repaint();
+        }
+
+        // Update GR Meter (shows gain reduction in dB)
         if (gainReductionMeter)
         {
-            // Get expander visualization data
-            const auto& gate = audioProcessor.getLinkwitzGate();
-            float reductionDb = gate.getGainReductionDb();
-            float confidence = gate.getNeuralConfidence();
-            float thresholdDb = gate.getThresholdDb();
-            bool gateOpen = gate.isGateOpen();
-
-            // Convert confidence to dB-like scale for meter display
-            // confidence 1.0 → 0dB, confidence 0.0 → -60dB
-            float confidenceDb = (confidence > 0.001f) ?
-                juce::Decibels::gainToDecibels(confidence) : -60.0f;
-
-            // Convert threshold to same scale as confidence
-            // thresholdDb maps to confidence: 1.0 + (thresholdDb / 60)
-            // Then convert that confidence to dB
-            float confidenceThreshold = 1.0f + (thresholdDb / 60.0f);
-            confidenceThreshold = juce::jlimit(0.0f, 1.0f, confidenceThreshold);
-            float thresholdDisplayDb = (confidenceThreshold > 0.001f) ?
-                juce::Decibels::gainToDecibels(confidenceThreshold) : -60.0f;
-
             gainReductionMeter->setReductionLevel(reductionDb);
-            gainReductionMeter->setGateInfo(confidenceDb, thresholdDisplayDb, gateOpen);
             gainReductionMeter->repaint();
         }
 

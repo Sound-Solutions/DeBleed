@@ -32,9 +32,9 @@ public:
 
     // Gate parameters
     void setThreshold(float db) { thresholdDb = juce::jlimit(-80.0f, 0.0f, db); }
-    void setAttack(float ms) { attackMs = juce::jlimit(0.1f, 100.0f, ms); }
-    void setRelease(float ms) { releaseMs = juce::jlimit(10.0f, 2000.0f, ms); }
-    void setHold(float ms) { holdMs = juce::jlimit(0.0f, 500.0f, ms); }
+    void setAttack(float ms) { attackMs = juce::jlimit(0.1f, 1000.0f, ms); }
+    void setRelease(float ms) { releaseMs = juce::jlimit(0.1f, 1000.0f, ms); }
+    void setHold(float ms) { holdMs = juce::jlimit(0.1f, 1000.0f, ms); }
     void setRange(float db) { rangeDb = juce::jlimit(-80.0f, 0.0f, db); }
 
     // Sidechain filter bounds (uses existing HPF/LPF parameters)

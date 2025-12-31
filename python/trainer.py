@@ -752,7 +752,7 @@ def parse_args():
     parser.add_argument(
         '--epochs',
         type=int,
-        default=50,
+        default=100,
         help='Number of training epochs'
     )
 
@@ -766,21 +766,21 @@ def parse_args():
     parser.add_argument(
         '--samples_per_epoch',
         type=int,
-        default=1000,
+        default=8000,
         help='Number of synthetic samples per epoch'
     )
 
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=5e-4,
         help='Learning rate'
     )
 
     parser.add_argument(
         '--hidden_dim',
         type=int,
-        default=64,
+        default=256,
         help='Hidden dimension of the mask estimator'
     )
 
@@ -974,6 +974,11 @@ def main():
         print(f"LOSS:{avg_loss:.6f}")
         print(f"PROGRESS:{progress}")
         sys.stdout.flush()
+
+        # Save checkpoint every 10 epochs (for resume on crash/sleep)
+        if (epoch + 1) % 10 == 0:
+            save_checkpoint(args.output_path, model, trainer, epoch, history,
+                           clean_files, noise_files)
 
     print("STATUS:Training complete!")
     sys.stdout.flush()

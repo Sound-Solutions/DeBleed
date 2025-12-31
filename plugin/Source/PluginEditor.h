@@ -5,6 +5,7 @@
 #include "AudioDropZone.h"
 #include "RTAVisualization.h"
 #include "GainReductionMeter.h"
+#include "ConfidenceMeter.h"
 #include "DeBleedLookAndFeel.h"
 
 /**
@@ -69,6 +70,7 @@ private:
     // Visualization components
     std::unique_ptr<RTAVisualization> rtaView;
     std::unique_ptr<GainReductionMeter> gainReductionMeter;
+    std::unique_ptr<ConfidenceMeter> confidenceMeter;
 
     // Parameter knobs (rotary style)
     // Row 1: Hunter controls (compressor-style, surgical)

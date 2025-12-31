@@ -94,9 +94,9 @@ float LinkwitzRileyGate::detectLevel(const float* input, int numSamples)
 
 void LinkwitzRileyGate::processEnvelope(float levelDb, int numSamples)
 {
-    // NEURAL EXPANDER: Uses neural confidence to drive expansion
-    // - High confidence (singer present): unity gain
-    // - Low confidence (bleed): proportional reduction
+    // NEURAL EXPANDER: Uses neural confidence + threshold to drive expansion
+    // - neuralConfidence = raw mask value (0.0 = bleed, 1.0 = singer)
+    // - thresholdDb = user control (-80 to 0 dB, maps to confidence threshold)
 
     // Timing coefficients
     float attackCoeff = std::exp(-1.0f / (static_cast<float>(sampleRate) * attackMs / 1000.0f));
@@ -105,45 +105,67 @@ void LinkwitzRileyGate::processEnvelope(float levelDb, int numSamples)
     // Floor gain (maximum attenuation)
     float floorGain = juce::Decibels::decibelsToGain(rangeDb);
 
+    // Convert threshold dB to confidence threshold:
+    // -80 dB → 0.0 (gate always open, no GR)
+    //   0 dB → 1.0 (needs full confidence to open)
+    float confThreshold = 1.0f + (thresholdDb / 80.0f);
+    confThreshold = juce::jlimit(0.0f, 1.0f, confThreshold);
+
     // Smooth the neural confidence
     float confCoeff = (neuralConfidence < smoothedConfidence) ? 0.3f : 0.1f;
     smoothedConfidence += confCoeff * (neuralConfidence - smoothedConfidence);
 
-    // Map threshold from dB to confidence (0-1)
-    // thresholdDb = 0   → confidenceThreshold = 1.0 (need very high confidence to open)
-    // thresholdDb = -60 → confidenceThreshold = 0.0 (anything opens it)
-    // This gives intuitive control: lower threshold = easier to open
-    float confidenceThreshold = 1.0f + (thresholdDb / 60.0f);
-    confidenceThreshold = juce::jlimit(0.0f, 1.0f, confidenceThreshold);
+    // Calculate desired gain based on threshold
+    float desiredGain = 1.0f;  // Default: fully open
 
-    // Calculate target gain based on neural confidence
-    if (smoothedConfidence >= confidenceThreshold)
+    if (confThreshold <= 0.01f)
     {
-        // High confidence - singer is present, unity gain
-        targetGain = 1.0f;
-        isGating = false;
+        // Threshold at minimum - gate always fully open, no GR
+        desiredGain = 1.0f;
+    }
+    else if (confThreshold >= 0.99f)
+    {
+        // Threshold at maximum - only full confidence opens
+        desiredGain = (smoothedConfidence >= 0.99f) ? 1.0f : floorGain;
     }
     else
     {
-        // Low confidence - probably bleed, apply expansion
-        // How far below threshold (0-1 range)
-        float belowThreshold = confidenceThreshold - smoothedConfidence;
-
-        // Progressive ratio: gentle near threshold, harder as confidence drops
-        float ratio = 2.0f + (belowThreshold * 6.0f);  // 2:1 to 8:1
-        ratio = std::min(ratio, 8.0f);
-
-        // Convert to dB reduction
-        // belowThreshold of 0.5 with ratio 4:1 → significant reduction
-        float reductionDb = (belowThreshold * 60.0f) * (1.0f - 1.0f / ratio);
-
-        // Limit to range
-        reductionDb = std::min(reductionDb, -rangeDb);
-
-        targetGain = juce::Decibels::decibelsToGain(-reductionDb);
-        targetGain = std::max(targetGain, floorGain);
-        isGating = true;
+        // Normal operation: confidence below threshold = closed, above = open
+        if (smoothedConfidence >= confThreshold)
+        {
+            // Above threshold - gate open
+            desiredGain = 1.0f;
+        }
+        else
+        {
+            // Below threshold - gate closes proportionally
+            float ratio = smoothedConfidence / confThreshold;
+            desiredGain = floorGain + ratio * (1.0f - floorGain);
+        }
     }
+
+    // Hold logic: when gate wants to close, wait for hold time first
+    int holdSamples = static_cast<int>(holdMs * sampleRate / 1000.0f);
+
+    if (desiredGain >= 0.99f)
+    {
+        // Gate wants to open - reset hold counter, open immediately
+        holdCounter = holdSamples;
+        targetGain = desiredGain;
+    }
+    else if (holdCounter > 0)
+    {
+        // Gate wants to close but we're in hold period - stay open
+        holdCounter -= numSamples;
+        targetGain = 1.0f;  // Keep fully open during hold
+    }
+    else
+    {
+        // Hold expired, allow gate to close
+        targetGain = desiredGain;
+    }
+
+    isGating = (targetGain < 0.99f);
 
     // Smooth gain changes (attack for reduction, release for recovery)
     float coeff = (targetGain < currentGain) ? attackCoeff : releaseCoeff;
@@ -155,7 +177,7 @@ void LinkwitzRileyGate::processEnvelope(float levelDb, int numSamples)
 
     currentGain = juce::jlimit(floorGain, 1.0f, currentGain);
 
-    // Store level for visualization (still useful to see input level)
+    // Store level for visualization
     detectedLevelDb = levelDb;
 }
 

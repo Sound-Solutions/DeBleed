@@ -178,6 +178,10 @@ juce::StringArray TrainerProcess::buildCommandLine()
         args.add("python");
         args.add("-u");  // Unbuffered stdout/stderr
 #else
+        // Use caffeinate to prevent idle sleep during training
+        args.add("/usr/bin/caffeinate");
+        args.add("-i");  // Prevent idle sleep
+
         // Try to find python3 - check common locations
         juce::StringArray pythonPaths = {
             "/usr/bin/python3",
@@ -203,7 +207,11 @@ juce::StringArray TrainerProcess::buildCommandLine()
     }
     else
     {
-        // Compiled executable
+        // Compiled executable (also wrap with caffeinate on macOS)
+#if !defined(_WIN32)
+        args.add("/usr/bin/caffeinate");
+        args.add("-i");
+#endif
         args.add(executable);
     }
 
