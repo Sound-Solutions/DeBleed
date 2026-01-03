@@ -34,6 +34,9 @@ import math
 import os
 import sys
 import random
+
+# Redirect stderr to stdout so plugin captures all output
+sys.stderr = sys.stdout
 from pathlib import Path
 from typing import Tuple, List, Optional
 
@@ -44,23 +47,123 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import torchaudio
 import torchaudio.transforms as T
+import torchaudio.functional as tF
+
+# Import SVF-based filter chain that matches C++ plugin exactly
+from differentiable_svf import DifferentiableBiquadChain
 
 # ============================================================================
 # Configuration Constants
 # ============================================================================
 
 SAMPLE_RATE = 96000          # High quality sample rate for training
-CHUNK_DURATION = 1.5         # 1.5-second chunks (shorter for IIR memory)
+CHUNK_DURATION = 1.0         # 1.0-second chunks (balance of speed + quality)
 CHUNK_SAMPLES = int(SAMPLE_RATE * CHUNK_DURATION)
 
 # Frame rate for parameter updates
-FRAME_SIZE = 64              # Update coefficients every 64 samples (~0.67ms @ 96kHz)
+FRAME_SIZE = 2048            # Update coefficients every 2048 samples (~21ms @ 96kHz) - musical rate
 
 # Filter bank configuration
 N_BIQUADS = 16               # Total number of biquad stages
 N_PARAMS_PER_BIQUAD = 3      # freq, gain, Q
 N_EXTRA_PARAMS = 2           # input gain, output gain
 N_TOTAL_PARAMS = N_BIQUADS * N_PARAMS_PER_BIQUAD + N_EXTRA_PARAMS  # 50 params
+
+
+# ============================================================================
+# Progress Reporter (file-based for reliable plugin communication)
+# ============================================================================
+
+class ProgressReporter:
+    """
+    Writes progress to both stdout and a JSON file.
+    The plugin reads the JSON file for reliable progress updates.
+    Also writes to a log file for detailed message history.
+    """
+    def __init__(self, output_dir: str):
+        self.output_dir = output_dir
+        self.progress_file = os.path.join(output_dir, "training_progress.json")
+        self.log_file = os.path.join(output_dir, "training_log.txt")
+        self.state = {
+            "status": "initializing",
+            "progress": 0,
+            "epoch": 0,
+            "total_epochs": 0,
+            "loss": 0.0,
+            "error": "",
+            "model_path": ""
+        }
+        # Clear log file on start
+        with open(self.log_file, 'w') as f:
+            f.write("")
+
+    def update(self, status: str = None, progress: int = None, epoch: int = None,
+               total_epochs: int = None, loss: float = None, error: str = None,
+               model_path: str = None):
+        """Update progress state and write to file."""
+        if status is not None:
+            self.state["status"] = status
+        if progress is not None:
+            self.state["progress"] = progress
+        if epoch is not None:
+            self.state["epoch"] = epoch
+        if total_epochs is not None:
+            self.state["total_epochs"] = total_epochs
+        if loss is not None:
+            self.state["loss"] = loss
+        if error is not None:
+            self.state["error"] = error
+        if model_path is not None:
+            self.state["model_path"] = model_path
+
+        # Write to file atomically (write to temp, then rename)
+        try:
+            temp_file = self.progress_file + ".tmp"
+            with open(temp_file, 'w') as f:
+                json.dump(self.state, f)
+            os.replace(temp_file, self.progress_file)
+        except Exception as e:
+            pass  # Don't let file writing errors stop training
+
+        # Also print to stdout and log file for terminal/plugin usage
+        if status:
+            print(f"STATUS:{status}")
+            sys.stdout.flush()
+            self._write_log(f"STATUS:{status}")
+
+    def log(self, message: str):
+        """Log a message to stdout and log file."""
+        print(message)
+        sys.stdout.flush()
+        self._write_log(message)
+
+    def _write_log(self, message: str):
+        """Append message to log file."""
+        try:
+            with open(self.log_file, 'a') as f:
+                f.write(message + "\n")
+        except:
+            pass
+
+    def set_error(self, error: str):
+        """Set error state."""
+        self.update(status=f"Error: {error}", error=error)
+        print(f"ERROR:{error}")
+        sys.stdout.flush()
+
+    def set_complete(self, model_path: str):
+        """Set completion state."""
+        self.update(status="complete", progress=100, model_path=model_path)
+        print(f"MODEL_PATH:{model_path}")
+        print("RESULT:SUCCESS")
+        sys.stdout.flush()
+
+
+# Global progress reporter (initialized in main)
+_progress_reporter: Optional[ProgressReporter] = None
+
+def get_reporter() -> Optional[ProgressReporter]:
+    return _progress_reporter
 
 # Biquad roles (indices into the 16 biquads)
 BIQUAD_HPF = 0               # High-pass filter
@@ -83,9 +186,17 @@ BROADBAND_RANGE = (-60.0, 0.0)  # Broadband gain (mostly reduction)
 # Q ranges
 Q_RANGE = (0.5, 16.0)
 
-# SNR range for synthetic mixing (in dB)
-SNR_MIN = 0.0
-SNR_MAX = 25.0
+# SNR range for synthetic mixing (in dB) - wider range for real-world scenarios
+# Negative SNR = noise louder than signal (challenging cases)
+SNR_MIN = -5.0
+SNR_MAX = 30.0
+
+# Data augmentation: random gain on clean audio (dB)
+AUGMENT_GAIN_MIN = -6.0
+AUGMENT_GAIN_MAX = 6.0
+
+# Validation split ratio
+VALIDATION_SPLIT = 0.1  # 10% of files for validation
 
 
 # ============================================================================
@@ -148,306 +259,11 @@ def mix_at_snr(clean: torch.Tensor, noise: torch.Tensor, snr_db: float) -> torch
 # Differentiable Biquad Filter (Direct Form II Transposed)
 # ============================================================================
 
-class DifferentiableBiquad(nn.Module):
-    """
-    A differentiable biquad filter using Direct Form II Transposed.
-
-    Processes audio sample-by-sample with coefficients that can vary per-frame.
-    Uses bilinear transform to convert analog prototype to digital coefficients.
-    """
-
-    def __init__(self):
-        super().__init__()
-        # State registers (per channel)
-        self.register_buffer('s1', torch.zeros(1))
-        self.register_buffer('s2', torch.zeros(1))
-
-    def reset_state(self, batch_size: int = 1, device: torch.device = None):
-        """Reset filter state for new audio."""
-        if device is None:
-            device = self.s1.device
-        self.s1 = torch.zeros(batch_size, device=device)
-        self.s2 = torch.zeros(batch_size, device=device)
-
-    def forward(self, x: torch.Tensor, b0: torch.Tensor, b1: torch.Tensor, b2: torch.Tensor,
-                a1: torch.Tensor, a2: torch.Tensor) -> torch.Tensor:
-        """
-        Process audio through biquad filter.
-
-        Args:
-            x: Input audio (batch, samples) or (samples,)
-            b0, b1, b2: Numerator coefficients (batch,) or scalar
-            a1, a2: Denominator coefficients (batch,) or scalar (a0 normalized to 1)
-
-        Returns:
-            Filtered audio (batch, samples)
-        """
-        if x.dim() == 1:
-            x = x.unsqueeze(0)
-
-        batch_size, n_samples = x.shape
-
-        # Ensure state is correct size
-        if self.s1.shape[0] != batch_size:
-            self.reset_state(batch_size, x.device)
-
-        # Expand coefficients if needed
-        if b0.dim() == 0:
-            b0 = b0.expand(batch_size)
-            b1 = b1.expand(batch_size)
-            b2 = b2.expand(batch_size)
-            a1 = a1.expand(batch_size)
-            a2 = a2.expand(batch_size)
-
-        outputs = []
-        s1, s2 = self.s1, self.s2
-
-        for i in range(n_samples):
-            inp = x[:, i]
-
-            # Direct Form II Transposed
-            out = b0 * inp + s1
-            s1_new = b1 * inp - a1 * out + s2
-            s2_new = b2 * inp - a2 * out
-
-            s1, s2 = s1_new, s2_new
-            outputs.append(out)
-
-        self.s1, self.s2 = s1, s2
-
-        return torch.stack(outputs, dim=1)
-
-
-def bilinear_biquad_lowpass(fc: torch.Tensor, Q: torch.Tensor, fs: float) -> Tuple[torch.Tensor, ...]:
-    """
-    Compute biquad coefficients for lowpass filter using bilinear transform.
-
-    Args:
-        fc: Cutoff frequency in Hz
-        Q: Quality factor
-        fs: Sample rate
-
-    Returns:
-        b0, b1, b2, a1, a2 coefficients
-    """
-    w0 = 2 * math.pi * fc / fs
-    alpha = torch.sin(w0) / (2 * Q)
-    cos_w0 = torch.cos(w0)
-
-    b0 = (1 - cos_w0) / 2
-    b1 = 1 - cos_w0
-    b2 = (1 - cos_w0) / 2
-    a0 = 1 + alpha
-    a1 = -2 * cos_w0
-    a2 = 1 - alpha
-
-    return b0/a0, b1/a0, b2/a0, a1/a0, a2/a0
-
-
-def bilinear_biquad_highpass(fc: torch.Tensor, Q: torch.Tensor, fs: float) -> Tuple[torch.Tensor, ...]:
-    """Compute biquad coefficients for highpass filter."""
-    w0 = 2 * math.pi * fc / fs
-    alpha = torch.sin(w0) / (2 * Q)
-    cos_w0 = torch.cos(w0)
-
-    b0 = (1 + cos_w0) / 2
-    b1 = -(1 + cos_w0)
-    b2 = (1 + cos_w0) / 2
-    a0 = 1 + alpha
-    a1 = -2 * cos_w0
-    a2 = 1 - alpha
-
-    return b0/a0, b1/a0, b2/a0, a1/a0, a2/a0
-
-
-def bilinear_biquad_peak(fc: torch.Tensor, gain_db: torch.Tensor, Q: torch.Tensor,
-                         fs: float) -> Tuple[torch.Tensor, ...]:
-    """Compute biquad coefficients for peaking EQ filter."""
-    A = 10 ** (gain_db / 40)  # amplitude
-    w0 = 2 * math.pi * fc / fs
-    alpha = torch.sin(w0) / (2 * Q)
-    cos_w0 = torch.cos(w0)
-
-    b0 = 1 + alpha * A
-    b1 = -2 * cos_w0
-    b2 = 1 - alpha * A
-    a0 = 1 + alpha / A
-    a1 = -2 * cos_w0
-    a2 = 1 - alpha / A
-
-    return b0/a0, b1/a0, b2/a0, a1/a0, a2/a0
-
-
-def bilinear_biquad_lowshelf(fc: torch.Tensor, gain_db: torch.Tensor, Q: torch.Tensor,
-                             fs: float) -> Tuple[torch.Tensor, ...]:
-    """Compute biquad coefficients for low shelf filter."""
-    A = 10 ** (gain_db / 40)
-    w0 = 2 * math.pi * fc / fs
-    alpha = torch.sin(w0) / (2 * Q)
-    cos_w0 = torch.cos(w0)
-    sqrt_A = torch.sqrt(A)
-
-    b0 = A * ((A + 1) - (A - 1) * cos_w0 + 2 * sqrt_A * alpha)
-    b1 = 2 * A * ((A - 1) - (A + 1) * cos_w0)
-    b2 = A * ((A + 1) - (A - 1) * cos_w0 - 2 * sqrt_A * alpha)
-    a0 = (A + 1) + (A - 1) * cos_w0 + 2 * sqrt_A * alpha
-    a1 = -2 * ((A - 1) + (A + 1) * cos_w0)
-    a2 = (A + 1) + (A - 1) * cos_w0 - 2 * sqrt_A * alpha
-
-    return b0/a0, b1/a0, b2/a0, a1/a0, a2/a0
-
-
-def bilinear_biquad_highshelf(fc: torch.Tensor, gain_db: torch.Tensor, Q: torch.Tensor,
-                              fs: float) -> Tuple[torch.Tensor, ...]:
-    """Compute biquad coefficients for high shelf filter."""
-    A = 10 ** (gain_db / 40)
-    w0 = 2 * math.pi * fc / fs
-    alpha = torch.sin(w0) / (2 * Q)
-    cos_w0 = torch.cos(w0)
-    sqrt_A = torch.sqrt(A)
-
-    b0 = A * ((A + 1) + (A - 1) * cos_w0 + 2 * sqrt_A * alpha)
-    b1 = -2 * A * ((A - 1) + (A + 1) * cos_w0)
-    b2 = A * ((A + 1) + (A - 1) * cos_w0 - 2 * sqrt_A * alpha)
-    a0 = (A + 1) - (A - 1) * cos_w0 + 2 * sqrt_A * alpha
-    a1 = 2 * ((A - 1) - (A + 1) * cos_w0)
-    a2 = (A + 1) - (A - 1) * cos_w0 - 2 * sqrt_A * alpha
-
-    return b0/a0, b1/a0, b2/a0, a1/a0, a2/a0
-
 
 # ============================================================================
-# Differentiable Filter Chain
-# ============================================================================
-
-class DifferentiableBiquadChain(nn.Module):
-    """
-    A chain of 16 differentiable biquad filters for source separation.
-
-    Structure:
-        HPF → LowShelf → 12x Peaking → HighShelf → LPF
-
-    Takes 50 normalized parameters (0-1) and converts to filter coefficients.
-    """
-
-    def __init__(self, sample_rate: float = SAMPLE_RATE):
-        super().__init__()
-        self.sample_rate = sample_rate
-
-        # Create biquad filters
-        self.biquads = nn.ModuleList([DifferentiableBiquad() for _ in range(N_BIQUADS)])
-
-    def reset_state(self, batch_size: int = 1, device: torch.device = None):
-        """Reset all filter states."""
-        for bq in self.biquads:
-            bq.reset_state(batch_size, device)
-
-    def _denormalize_freq(self, norm: torch.Tensor, freq_range: Tuple[float, float]) -> torch.Tensor:
-        """Convert normalized (0-1) to frequency (Hz) with log scaling."""
-        log_low = math.log(freq_range[0])
-        log_high = math.log(freq_range[1])
-        log_freq = log_low + norm * (log_high - log_low)
-        return torch.exp(log_freq)
-
-    def _denormalize_gain(self, norm: torch.Tensor, gain_range: Tuple[float, float] = GAIN_RANGE) -> torch.Tensor:
-        """Convert normalized (0-1) to gain (dB)."""
-        return gain_range[0] + norm * (gain_range[1] - gain_range[0])
-
-    def _denormalize_q(self, norm: torch.Tensor) -> torch.Tensor:
-        """Convert normalized (0-1) to Q with log scaling."""
-        log_low = math.log(Q_RANGE[0])
-        log_high = math.log(Q_RANGE[1])
-        log_q = log_low + norm * (log_high - log_low)
-        return torch.exp(log_q)
-
-    def _denormalize_broadband(self, norm: torch.Tensor) -> torch.Tensor:
-        """Convert normalized (0-1) to broadband gain (dB)."""
-        return BROADBAND_RANGE[0] + norm * (BROADBAND_RANGE[1] - BROADBAND_RANGE[0])
-
-    def forward(self, audio: torch.Tensor, params: torch.Tensor) -> torch.Tensor:
-        """
-        Process audio through the filter chain.
-
-        Args:
-            audio: Input audio (batch, samples)
-            params: Normalized parameters (batch, 50) in range [0, 1]
-
-        Returns:
-            Filtered audio (batch, samples)
-        """
-        batch_size = audio.shape[0] if audio.dim() > 1 else 1
-        if audio.dim() == 1:
-            audio = audio.unsqueeze(0)
-
-        # Extract parameters
-        # Layout: [16 biquads × 3 params] + [input_gain, output_gain]
-        biquad_params = params[:, :N_BIQUADS * N_PARAMS_PER_BIQUAD].view(batch_size, N_BIQUADS, 3)
-        input_gain_norm = params[:, -2]
-        output_gain_norm = params[:, -1]
-
-        # Convert input/output gains
-        input_gain_db = self._denormalize_broadband(input_gain_norm)
-        output_gain_db = self._denormalize_broadband(output_gain_norm)
-        input_gain_linear = 10 ** (input_gain_db / 20)
-        output_gain_linear = 10 ** (output_gain_db / 20)
-
-        # Apply input gain
-        x = audio * input_gain_linear.unsqueeze(1)
-
-        # Process each biquad
-        for i in range(N_BIQUADS):
-            freq_norm = biquad_params[:, i, 0]
-            gain_norm = biquad_params[:, i, 1]
-            q_norm = biquad_params[:, i, 2]
-
-            # Determine filter type and compute coefficients
-            if i == BIQUAD_HPF:
-                freq = self._denormalize_freq(freq_norm, HPF_FREQ_RANGE)
-                Q = self._denormalize_q(q_norm)
-                # Process batch
-                for b in range(batch_size):
-                    b0, b1, b2, a1, a2 = bilinear_biquad_highpass(freq[b], Q[b], self.sample_rate)
-                    x[b:b+1] = self.biquads[i](x[b:b+1], b0, b1, b2, a1, a2)
-
-            elif i == BIQUAD_LPF:
-                freq = self._denormalize_freq(freq_norm, LPF_FREQ_RANGE)
-                Q = self._denormalize_q(q_norm)
-                for b in range(batch_size):
-                    b0, b1, b2, a1, a2 = bilinear_biquad_lowpass(freq[b], Q[b], self.sample_rate)
-                    x[b:b+1] = self.biquads[i](x[b:b+1], b0, b1, b2, a1, a2)
-
-            elif i == BIQUAD_LOW_SHELF:
-                freq = self._denormalize_freq(freq_norm, SHELF_FREQ_RANGE)
-                gain = self._denormalize_gain(gain_norm)
-                Q = self._denormalize_q(q_norm)
-                for b in range(batch_size):
-                    b0, b1, b2, a1, a2 = bilinear_biquad_lowshelf(freq[b], gain[b], Q[b], self.sample_rate)
-                    x[b:b+1] = self.biquads[i](x[b:b+1], b0, b1, b2, a1, a2)
-
-            elif i == BIQUAD_HIGH_SHELF:
-                freq = self._denormalize_freq(freq_norm, SHELF_FREQ_RANGE)
-                gain = self._denormalize_gain(gain_norm)
-                Q = self._denormalize_q(q_norm)
-                for b in range(batch_size):
-                    b0, b1, b2, a1, a2 = bilinear_biquad_highshelf(freq[b], gain[b], Q[b], self.sample_rate)
-                    x[b:b+1] = self.biquads[i](x[b:b+1], b0, b1, b2, a1, a2)
-
-            else:  # Peaking EQ
-                freq = self._denormalize_freq(freq_norm, PEAK_FREQ_RANGE)
-                gain = self._denormalize_gain(gain_norm)
-                Q = self._denormalize_q(q_norm)
-                for b in range(batch_size):
-                    b0, b1, b2, a1, a2 = bilinear_biquad_peak(freq[b], gain[b], Q[b], self.sample_rate)
-                    x[b:b+1] = self.biquads[i](x[b:b+1], b0, b1, b2, a1, a2)
-
-        # Apply output gain
-        x = x * output_gain_linear.unsqueeze(1)
-
-        return x
-
-
-# ============================================================================
-# Neural Network Architecture (Dilated TCN)
+# Note: Old DifferentiableBiquad and bilinear_biquad_* functions removed.
+# Now using DifferentiableBiquadChain from differentiable_svf.py which
+# implements SVF TPT filters matching the C++ plugin exactly.
 # ============================================================================
 
 class ConvBlock(nn.Module):
@@ -594,35 +410,65 @@ class MultiResolutionSTFTLoss(nn.Module):
 # ============================================================================
 
 class SyntheticMixtureDataset(Dataset):
-    """Dataset that creates synthetic mixtures at 96kHz."""
+    """Dataset that creates synthetic mixtures at 96kHz with data augmentation."""
 
     def __init__(self, clean_files: List[str], noise_files: List[str],
-                 samples_per_epoch: int = 2000, chunk_samples: int = CHUNK_SAMPLES):
+                 samples_per_epoch: int = 2000, chunk_samples: int = CHUNK_SAMPLES,
+                 augment: bool = True):
         self.clean_files = clean_files
         self.noise_files = noise_files
         self.samples_per_epoch = samples_per_epoch
         self.chunk_samples = chunk_samples
+        self.augment = augment
 
-        print("STATUS:Loading audio files into memory...")
+        reporter = get_reporter()
+        if reporter:
+            reporter.log("STATUS:Loading audio files into memory...")
+        else:
+            print("STATUS:Loading audio files into memory...")
+            sys.stdout.flush()
+
         self.clean_audio = self._load_all_audio(clean_files, "clean")
         self.noise_audio = self._load_all_audio(noise_files, "noise")
-        print(f"STATUS:Loaded {len(self.clean_audio)} clean files and {len(self.noise_audio)} noise files")
+
+        msg = f"STATUS:Loaded {len(self.clean_audio)} clean files and {len(self.noise_audio)} noise files"
+        if reporter:
+            reporter.log(msg)
+        else:
+            print(msg)
+            sys.stdout.flush()
 
     def _load_all_audio(self, files: List[str], label: str) -> List[torch.Tensor]:
+        reporter = get_reporter()
         audio_list = []
         for i, f in enumerate(files):
             audio = load_audio_file(f, SAMPLE_RATE)
             if audio is not None and len(audio) >= self.chunk_samples:
                 audio_list.append(audio)
             if (i + 1) % 10 == 0:
-                print(f"STATUS:Loaded {i + 1}/{len(files)} {label} files")
+                msg = f"STATUS:Loaded {i + 1}/{len(files)} {label} files"
+                if reporter:
+                    reporter.log(msg)
+                else:
+                    print(msg)
+                    sys.stdout.flush()
         return audio_list
 
-    def _random_chunk(self, audio: torch.Tensor) -> torch.Tensor:
+    def _random_chunk(self, audio: torch.Tensor, max_retries: int = 10) -> torch.Tensor:
+        """Select random chunk, preferring non-silent regions."""
         if len(audio) <= self.chunk_samples:
             return F.pad(audio, (0, self.chunk_samples - len(audio)))
-        start_idx = random.randint(0, len(audio) - self.chunk_samples)
-        return audio[start_idx:start_idx + self.chunk_samples]
+
+        silence_threshold = 1e-3  # ~-60dB (safe: silence is -200dB, quiet vocals are -50dB)
+
+        for _ in range(max_retries):
+            start_idx = random.randint(0, len(audio) - self.chunk_samples)
+            chunk = audio[start_idx:start_idx + self.chunk_samples]
+            rms = torch.sqrt(torch.mean(chunk ** 2))
+            if rms > silence_threshold:
+                return chunk
+
+        return chunk  # Fallback to last attempted chunk
 
     def __len__(self) -> int:
         return self.samples_per_epoch
@@ -633,6 +479,12 @@ class SyntheticMixtureDataset(Dataset):
 
         clean_chunk = self._random_chunk(clean_audio)
         noise_chunk = self._random_chunk(noise_audio)
+
+        # Data augmentation: random gain on clean audio
+        if self.augment:
+            gain_db = random.uniform(AUGMENT_GAIN_MIN, AUGMENT_GAIN_MAX)
+            gain_linear = 10 ** (gain_db / 20)
+            clean_chunk = clean_chunk * gain_linear
 
         snr_db = random.uniform(SNR_MIN, SNR_MAX)
         mixture = mix_at_snr(clean_chunk, noise_chunk, snr_db)
@@ -648,45 +500,60 @@ class Trainer:
     """Training loop for Neural 5045."""
 
     def __init__(self, model: Neural5045Net, filter_chain: DifferentiableBiquadChain,
-                 train_loader: DataLoader, learning_rate: float = 1e-4, device: str = 'cpu'):
-        self.model = model.to(device)
-        self.filter_chain = filter_chain.to(device)
+                 train_loader: DataLoader, val_loader: DataLoader = None,
+                 learning_rate: float = 1e-4, device: str = 'cpu'):
+        # Hybrid device setup: neural network on GPU (if available), filter chain on CPU
+        # This is because torchaudio.functional.lfilter is 530x slower on MPS than CPU
+        self.nn_device = device
+        self.filter_device = 'cpu'  # Always CPU for filter chain
+
+        # Check if we can use MPS for neural network
+        if device == 'cpu' and torch.backends.mps.is_available():
+            self.nn_device = 'mps'
+            print("STATUS:Using hybrid mode: Neural network on MPS, filters on CPU")
+            sys.stdout.flush()
+
+        self.model = model.to(self.nn_device)
+        self.filter_chain = filter_chain.to(self.filter_device)
         self.train_loader = train_loader
-        self.device = device
+        self.val_loader = val_loader
+        self.device = device  # Keep for compatibility
 
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer, T_max=len(train_loader) * 100
         )
 
-        self.stft_loss = MultiResolutionSTFTLoss().to(device)
+        self.stft_loss = MultiResolutionSTFTLoss().to(self.filter_device)
 
     def train_epoch(self, epoch: int, total_epochs: int) -> float:
-        """Train for one epoch."""
+        """Train for one epoch with hybrid device support."""
         self.model.train()
         total_loss = 0.0
         n_batches = len(self.train_loader)
 
         for batch_idx, (mixture, clean) in enumerate(self.train_loader):
-            mixture = mixture.to(self.device)
-            clean = clean.to(self.device)
+            # Keep clean on filter device (CPU) for loss computation
+            clean = clean.to(self.filter_device)
 
-            # Reset filter states
-            self.filter_chain.reset_state(mixture.shape[0], self.device)
+            # Move mixture to neural network device for parameter prediction
+            mixture_nn = mixture.to(self.nn_device)
 
-            # Predict parameters from mixture
-            params = self.model(mixture)  # (batch, 50, n_frames)
+            # Predict parameters from mixture (on MPS if available)
+            params = self.model(mixture_nn)  # (batch, 50, n_frames)
 
-            # For now, use frame-averaged parameters (TODO: per-frame processing)
-            params_avg = params.mean(dim=2)  # (batch, 50)
+            # Move params back to filter device (keep per-frame for dynamic EQ)
+            params_cpu = params.to(self.filter_device)
+            mixture_cpu = mixture.to(self.filter_device)
 
-            # Apply filter chain
-            filtered = self.filter_chain(mixture, params_avg)
+            # Reset filter states and apply filter chain with per-frame params (on CPU)
+            self.filter_chain.reset_state(mixture_cpu.shape[0], self.filter_device)
+            filtered = self.filter_chain(mixture_cpu, params_cpu)
 
-            # Compute loss
+            # Compute loss (on CPU)
             loss = self.stft_loss(filtered, clean)
 
-            # Backward
+            # Backward - gradients flow back through the device transfer
             self.optimizer.zero_grad()
             loss.backward()
 
@@ -698,14 +565,44 @@ class Trainer:
 
             total_loss += loss.item()
 
-            # Progress
-            if (batch_idx + 1) % max(1, n_batches // 10) == 0:
+            # Progress - update every 20 batches or 5% of epoch
+            if (batch_idx + 1) % max(1, min(20, n_batches // 20)) == 0:
                 progress = int(((epoch * n_batches + batch_idx + 1) /
                               (total_epochs * n_batches)) * 100)
+                avg_loss = total_loss / (batch_idx + 1)
                 print(f"PROGRESS:{progress}")
+                print(f"LOSS:{avg_loss:.6f}")
+                print(f"STATUS:Epoch {epoch+1}/{total_epochs} batch {batch_idx+1}/{n_batches}")
                 sys.stdout.flush()
 
         return total_loss / n_batches
+
+    @torch.no_grad()
+    def validate(self) -> float:
+        """Run validation and return average loss."""
+        if self.val_loader is None:
+            return 0.0
+
+        self.model.eval()
+        total_loss = 0.0
+        n_batches = 0
+
+        for mixture, clean in self.val_loader:
+            clean = clean.to(self.filter_device)
+            mixture_nn = mixture.to(self.nn_device)
+
+            params = self.model(mixture_nn)
+            params_cpu = params.to(self.filter_device)
+            mixture_cpu = mixture.to(self.filter_device)
+
+            self.filter_chain.reset_state(mixture_cpu.shape[0], self.filter_device)
+            filtered = self.filter_chain(mixture_cpu, params_cpu)
+
+            loss = self.stft_loss(filtered, clean)
+            total_loss += loss.item()
+            n_batches += 1
+
+        return total_loss / n_batches if n_batches > 0 else 0.0
 
 
 # ============================================================================
@@ -845,25 +742,29 @@ def get_device(device_arg: str) -> str:
     if device_arg == 'auto':
         if torch.cuda.is_available():
             return 'cuda'
-        elif torch.backends.mps.is_available():
-            return 'mps'
+        # NOTE: MPS (Apple Metal) is extremely slow for lfilter operations
+        # (530x slower than CPU), so we default to CPU for this model
         return 'cpu'
     return device_arg
 
 
 def main():
+    global _progress_reporter
     args = parse_args()
 
-    print("STATUS:Neural 5045 Trainer starting...")
-    print(f"STATUS:Sample rate: {SAMPLE_RATE}Hz")
-    print(f"STATUS:Parameters per frame: {N_TOTAL_PARAMS}")
-    sys.stdout.flush()
+    # Create output directory first so we can write progress file
+    os.makedirs(args.output_path, exist_ok=True)
+
+    # Initialize progress reporter
+    _progress_reporter = ProgressReporter(args.output_path)
+    reporter = _progress_reporter
+
+    reporter.update(status="Neural 5045 Trainer starting...")
+    reporter.update(status=f"Sample rate: {SAMPLE_RATE}Hz")
+    reporter.update(status=f"Parameters per frame: {N_TOTAL_PARAMS}")
 
     device = get_device(args.device)
-    print(f"STATUS:Using device: {device}")
-    sys.stdout.flush()
-
-    os.makedirs(args.output_path, exist_ok=True)
+    reporter.update(status=f"Using device: {device}")
 
     # Load checkpoint if continuing
     checkpoint = None
@@ -877,54 +778,86 @@ def main():
             start_epoch = checkpoint['epoch'] + 1
             history = checkpoint.get('history', {'losses': []})
             hidden_dim = checkpoint.get('hidden_dim', args.hidden_dim)
-            print(f"STATUS:Resuming from epoch {start_epoch}")
-            sys.stdout.flush()
+            reporter.update(status=f"Resuming from epoch {start_epoch}")
 
     # Collect audio files
-    print("STATUS:Collecting audio files...")
+    reporter.update(status="Collecting audio files...")
     try:
         clean_files = collect_audio_files(args.clean_audio_dir)
         noise_files = collect_audio_files(args.noise_audio_dir)
     except FileNotFoundError as e:
-        print(f"ERROR:{e}")
+        reporter.set_error(str(e))
         sys.exit(1)
 
     if len(clean_files) == 0 or len(noise_files) == 0:
-        print("ERROR:No audio files found")
+        reporter.set_error("No audio files found")
         sys.exit(1)
 
-    print(f"STATUS:Found {len(clean_files)} clean, {len(noise_files)} noise files")
-    sys.stdout.flush()
+    reporter.update(status=f"Found {len(clean_files)} clean, {len(noise_files)} noise files")
 
-    # Create dataset
-    dataset = SyntheticMixtureDataset(
-        clean_files=clean_files,
+    # Split clean files into train/validation sets
+    random.shuffle(clean_files)
+    n_val = max(1, int(len(clean_files) * VALIDATION_SPLIT))
+    val_clean_files = clean_files[:n_val]
+    train_clean_files = clean_files[n_val:]
+    reporter.update(status=f"Split: {len(train_clean_files)} train, {len(val_clean_files)} val clean files")
+
+    # Create training dataset (this loads all audio into memory)
+    reporter.update(status=f"Loading {len(train_clean_files) + len(noise_files)} audio files into memory...")
+    train_dataset = SyntheticMixtureDataset(
+        clean_files=train_clean_files,
         noise_files=noise_files,
-        samples_per_epoch=args.samples_per_epoch
+        samples_per_epoch=args.samples_per_epoch,
+        augment=True  # Data augmentation for training
     )
 
     train_loader = DataLoader(
-        dataset,
+        train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=0,
         pin_memory=(device == 'cuda')
     )
 
+    # Create validation dataset (no augmentation)
+    reporter.update(status=f"Loading {len(val_clean_files)} validation files...")
+    val_dataset = SyntheticMixtureDataset(
+        clean_files=val_clean_files,
+        noise_files=noise_files,
+        samples_per_epoch=max(100, args.samples_per_epoch // 10),  # Smaller validation set
+        augment=False  # No augmentation for validation
+    )
+
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=(device == 'cuda')
+    )
+
     # Create model and filter chain
-    print("STATUS:Creating Neural 5045 model...")
+    reporter.update(status="Creating Neural 5045 model...")
     model = Neural5045Net(hidden_dim=hidden_dim)
     filter_chain = DifferentiableBiquadChain(sample_rate=SAMPLE_RATE)
 
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"STATUS:Model has {n_params:,} parameters")
-    sys.stdout.flush()
+    reporter.update(status=f"Model has {n_params:,} parameters")
+
+    # Estimate training time
+    batches_per_epoch = args.samples_per_epoch // args.batch_size
+    total_batches = batches_per_epoch * args.epochs
+    total_epochs = start_epoch + args.epochs
+    reporter.update(status=f"Training {args.epochs} epochs x {batches_per_epoch} batches",
+                   total_epochs=total_epochs)
+    reporter.update(status="Pro quality training - this may take 1-2+ hours...")
 
     # Create trainer
     trainer = Trainer(
         model=model,
         filter_chain=filter_chain,
         train_loader=train_loader,
+        val_loader=val_loader,
         learning_rate=args.learning_rate,
         device=device
     )
@@ -934,29 +867,42 @@ def main():
         model.load_state_dict(checkpoint['model_state_dict'])
         trainer.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         trainer.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        print("STATUS:Loaded checkpoint state")
-        sys.stdout.flush()
+        reporter.update(status="Loaded checkpoint state")
 
     # Training loop
-    total_epochs = start_epoch + args.epochs
-    print(f"STATUS:Training from epoch {start_epoch + 1} to {total_epochs}...")
-    sys.stdout.flush()
+    reporter.update(status=f"Training from epoch {start_epoch + 1} to {total_epochs}...")
 
     for epoch in range(start_epoch, total_epochs):
+        progress = int(((epoch - start_epoch) / args.epochs) * 100)
+        reporter.update(status=f"Epoch {epoch + 1}/{total_epochs}",
+                       epoch=epoch + 1, progress=progress)
+
         avg_loss = trainer.train_epoch(epoch - start_epoch, args.epochs)
         history['losses'].append(avg_loss)
 
+        # Run validation
+        val_loss = trainer.validate()
+        if 'val_losses' not in history:
+            history['val_losses'] = []
+        history['val_losses'].append(val_loss)
+
         progress = int(((epoch - start_epoch + 1) / args.epochs) * 100)
+        reporter.update(status=f"Epoch {epoch + 1}/{total_epochs} - Train: {avg_loss:.4f}, Val: {val_loss:.4f}",
+                       epoch=epoch + 1, progress=progress, loss=avg_loss)
+
+        # Also print legacy format for stdout parsing
         print(f"EPOCH:{epoch + 1}/{total_epochs}")
         print(f"LOSS:{avg_loss:.6f}")
+        print(f"VAL_LOSS:{val_loss:.6f}")
         print(f"PROGRESS:{progress}")
         sys.stdout.flush()
 
         # Checkpoint every 10 epochs
         if (epoch + 1) % 10 == 0:
             save_checkpoint(args.output_path, model, trainer, epoch, history)
+            reporter.update(status=f"Checkpoint saved at epoch {epoch + 1}")
 
-    print("STATUS:Training complete!")
+    reporter.update(status="Training complete! Exporting model...")
 
     # Final checkpoint
     save_checkpoint(args.output_path, model, trainer, total_epochs - 1, history)
@@ -965,9 +911,7 @@ def main():
     onnx_path = export_to_onnx(model, args.output_path, args.model_name)
     save_metadata(args.output_path, model, history)
 
-    print("RESULT:SUCCESS")
-    print(f"MODEL_PATH:{onnx_path}")
-    sys.stdout.flush()
+    reporter.set_complete(onnx_path)
 
 
 if __name__ == '__main__':

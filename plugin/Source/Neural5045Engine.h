@@ -35,8 +35,8 @@ public:
     static constexpr int N_EXTRA_PARAMS = 2;       // input gain, output gain
     static constexpr int N_PARAMS = N_FILTERS * N_PARAMS_PER_FILTER + N_EXTRA_PARAMS;  // 50
 
-    // Frame size for parameter updates
-    static constexpr int FRAME_SIZE = 64;  // Samples per parameter frame
+    // Frame size for parameter updates (~21ms at 96kHz for musical dynamics)
+    static constexpr int FRAME_SIZE = 2048;  // Samples per parameter frame
 
     Neural5045Engine();
     ~Neural5045Engine();

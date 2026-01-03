@@ -64,13 +64,13 @@ private:
     juce::Label modelStatusLabel;
     double progressValue = 0.0;
 
-    // Parameter attachments
+    // Hidden mix slider (must be declared BEFORE attachment for correct destruction order)
+    juce::Slider mixSlider;
+
+    // Parameter attachments (destroyed before the components they attach to)
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> liveModeAttachment;
-
-    // Hidden mix slider (for attachment)
-    juce::Slider mixSlider;
 
     // Training log
     juce::TextEditor logTextBox;

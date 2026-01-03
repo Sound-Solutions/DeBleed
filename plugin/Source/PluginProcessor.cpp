@@ -184,22 +184,42 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // 3. Run neural network to predict EQ parameters
     //    Returns pointer to [N_PARAMS × numFrames] array
-    const float* params = neural5045Engine_.process(monoSidechain_.data(), numSamples);
+    const float* allParams = neural5045Engine_.process(monoSidechain_.data(), numSamples);
+    int numFrames = neural5045Engine_.getNumFrames();
 
-    // 4. Apply neural parameters to the biquad chain
-    //    The chain handles frame-by-frame coefficient updates internally
-    //    For simplicity, we use the first frame's params (64-sample granularity)
-    //    The biquad chain uses SmoothedValue for interpolation
-    if (params != nullptr)
+    // 4. Process audio frame-by-frame with corresponding neural parameters
+    //    Each frame is FRAME_SIZE samples (2048 = ~21ms at 96kHz)
+    //    This ensures the filter coefficients track the neural network predictions
+    constexpr int FRAME_SIZE = Neural5045Engine::FRAME_SIZE;
+
+    int samplesRemaining = numSamples;
+    int bufferOffset = 0;
+
+    for (int frame = 0; frame < numFrames && samplesRemaining > 0; ++frame)
     {
-        // Use first frame's parameters (they're smoothed internally)
-        biquadChain_.setParameters(params);
-    }
+        // Get parameters for this frame
+        const float* frameParams = neural5045Engine_.getFrameParams(frame);
+        if (frameParams != nullptr)
+        {
+            biquadChain_.setParameters(frameParams);
+        }
 
-    // 5. Process audio through the filter cascade
-    //    This applies the SVF TPT biquad chain in series:
-    //    HPF → LowShelf → [12x Peaking] → HighShelf → LPF → Gain
-    biquadChain_.process(buffer);
+        // Calculate samples to process in this frame
+        int samplesThisFrame = std::min(FRAME_SIZE, samplesRemaining);
+
+        // Create a sub-buffer for this frame's audio
+        juce::AudioBuffer<float> frameBuffer(buffer.getArrayOfWritePointers(),
+                                              totalNumInputChannels,
+                                              bufferOffset,
+                                              samplesThisFrame);
+
+        // 5. Process this frame through the filter cascade
+        //    HPF → LowShelf → [12x Peaking] → HighShelf → LPF → Gain
+        biquadChain_.process(frameBuffer);
+
+        bufferOffset += samplesThisFrame;
+        samplesRemaining -= samplesThisFrame;
+    }
 
     // 6. Apply wet/dry mix
     if (currentMix < 0.999f)

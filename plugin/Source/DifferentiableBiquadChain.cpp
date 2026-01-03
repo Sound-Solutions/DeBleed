@@ -10,6 +10,34 @@ DifferentiableBiquadChain::DifferentiableBiquadChain()
     // Initialize gains to unity (normalized 1.0 = 0dB for broadband)
     currentParams_[N_FILTERS * N_PARAMS_PER_FILTER].store(1.0f);      // Input gain
     currentParams_[N_FILTERS * N_PARAMS_PER_FILTER + 1].store(1.0f);  // Output gain
+
+    // Initialize coefficients to safe bypass values
+    // This ensures getFrequencyResponse() works even before prepare() is called
+    for (int i = 0; i < N_FILTERS; ++i)
+    {
+        SVFCoeffs c;
+        c.g = 0.0f;
+        c.k = 1.0f;
+        c.A = 1.0f;
+        c.a1 = 1.0f;
+        c.a2 = 0.0f;
+        c.a3 = 0.0f;
+        c.m0 = 1.0f;
+        c.m1 = 0.0f;
+        c.m2 = 0.0f;
+        targetCoeffs_[i] = c;
+        currentCoeffs_[i] = c;
+    }
+
+    // Initialize filter states to zero
+    for (auto& filterStates : filterStates_)
+    {
+        for (auto& state : filterStates)
+        {
+            state.ic1eq = 0.0f;
+            state.ic2eq = 0.0f;
+        }
+    }
 }
 
 void DifferentiableBiquadChain::prepare(double sampleRate, int maxBlockSize)
@@ -266,14 +294,15 @@ void DifferentiableBiquadChain::computeCoeffs(int filterIndex, float freqHz, flo
             c.A = A;
 
             // For peaking EQ, k depends on whether we're boosting or cutting
+            // This maintains consistent Q across boost/cut
             if (gainDb >= 0.0f)
             {
-                // Boost
+                // Boost: k = 1/(Q*A)
                 c.k = 1.0f / (q * A);
             }
             else
             {
-                // Cut
+                // Cut: k = A/Q
                 c.k = A / q;
             }
 
@@ -282,21 +311,12 @@ void DifferentiableBiquadChain::computeCoeffs(int filterIndex, float freqHz, flo
             c.a3 = c.g * c.a2;
 
             // Peak: output = input + (A^2 - 1) * k * band
-            // But we need different formulation for boost vs cut
-            if (gainDb >= 0.0f)
-            {
-                c.m0 = 1.0f;
-                c.m1 = c.k * (A * A - 1.0f);
-                c.m2 = 0.0f;
-            }
-            else
-            {
-                // For cut, we need to invert the response
-                float invA = 1.0f / A;
-                c.m0 = 1.0f;
-                c.m1 = c.k * (invA * invA - 1.0f);
-                c.m2 = 0.0f;
-            }
+            // Same formula for both boost and cut - sign is automatic
+            // For boost (A > 1): A^2 - 1 > 0, positive contribution
+            // For cut (A < 1): A^2 - 1 < 0, negative contribution
+            c.m0 = 1.0f;
+            c.m1 = c.k * (A * A - 1.0f);
+            c.m2 = 0.0f;
             break;
         }
 
@@ -304,37 +324,34 @@ void DifferentiableBiquadChain::computeCoeffs(int filterIndex, float freqHz, flo
         {
             float A = std::pow(10.0f, gainDb / 40.0f);
             c.A = A;
+            c.k = 1.0f / q;
 
-            // Low shelf uses modified g
+            // Low shelf uses modified g based on gain direction
             float sqrtA = std::sqrt(A);
-            float gShelf = c.g / sqrtA;
 
             if (gainDb >= 0.0f)
             {
-                // Boost
-                c.k = 1.0f / q;
+                // Boost: g_shelf = g / sqrt(A)
+                float gShelf = c.g / sqrtA;
                 c.a1 = 1.0f / (1.0f + gShelf * (gShelf + c.k));
                 c.a2 = gShelf * c.a1;
                 c.a3 = gShelf * c.a2;
-
-                c.m0 = 1.0f;
-                c.m1 = c.k * (A - 1.0f);
-                c.m2 = A * A - 1.0f;
             }
             else
             {
-                // Cut - different topology
-                c.k = 1.0f / q;
-                float gShelfCut = c.g * sqrtA;
-                c.a1 = 1.0f / (1.0f + gShelfCut * (gShelfCut + c.k));
-                c.a2 = gShelfCut * c.a1;
-                c.a3 = gShelfCut * c.a2;
-
-                float invA = 1.0f / A;
-                c.m0 = 1.0f;
-                c.m1 = c.k * (invA - 1.0f);
-                c.m2 = invA * invA - 1.0f;
+                // Cut: g_shelf = g * sqrt(A)
+                float gShelf = c.g * sqrtA;
+                c.a1 = 1.0f / (1.0f + gShelf * (gShelf + c.k));
+                c.a2 = gShelf * c.a1;
+                c.a3 = gShelf * c.a2;
             }
+
+            // Same mixing formula for both - sign handled by A value
+            // For boost (A > 1): positive gains
+            // For cut (A < 1): A - 1 < 0 and A^2 - 1 < 0
+            c.m0 = 1.0f;
+            c.m1 = c.k * (A - 1.0f);
+            c.m2 = A * A - 1.0f;
             break;
         }
 
@@ -342,36 +359,31 @@ void DifferentiableBiquadChain::computeCoeffs(int filterIndex, float freqHz, flo
         {
             float A = std::pow(10.0f, gainDb / 40.0f);
             c.A = A;
+            c.k = 1.0f / q;
 
             float sqrtA = std::sqrt(A);
-            float gShelf = c.g * sqrtA;
 
             if (gainDb >= 0.0f)
             {
-                // Boost
-                c.k = 1.0f / q;
+                // Boost: g_shelf = g * sqrt(A)
+                float gShelf = c.g * sqrtA;
                 c.a1 = 1.0f / (1.0f + gShelf * (gShelf + c.k));
                 c.a2 = gShelf * c.a1;
                 c.a3 = gShelf * c.a2;
-
-                c.m0 = A * A;
-                c.m1 = c.k * (1.0f - A) * A;
-                c.m2 = 1.0f - A * A;
             }
             else
             {
-                // Cut
-                c.k = 1.0f / q;
-                float gShelfCut = c.g / sqrtA;
-                c.a1 = 1.0f / (1.0f + gShelfCut * (gShelfCut + c.k));
-                c.a2 = gShelfCut * c.a1;
-                c.a3 = gShelfCut * c.a2;
-
-                float invA = 1.0f / A;
-                c.m0 = invA * invA;
-                c.m1 = c.k * (1.0f - invA) * invA;
-                c.m2 = 1.0f - invA * invA;
+                // Cut: g_shelf = g / sqrt(A)
+                float gShelf = c.g / sqrtA;
+                c.a1 = 1.0f / (1.0f + gShelf * (gShelf + c.k));
+                c.a2 = gShelf * c.a1;
+                c.a3 = gShelf * c.a2;
             }
+
+            // Same mixing formula for both - sign handled by A value
+            c.m0 = A * A;
+            c.m1 = c.k * (1.0f - A) * A;
+            c.m2 = 1.0f - A * A;
             break;
         }
 
@@ -468,9 +480,17 @@ float DifferentiableBiquadChain::getFrequencyResponse(float freqHz) const
         totalResponse *= std::complex<float>(gain, 0.0f);
     }
 
-    // Include input/output gains
-    float inputGain = inputGainLinear_.getCurrentValue();
-    float outputGain = outputGainLinear_.getCurrentValue();
+    // Include input/output gains (with safety check for uninitialized state)
+    float inputGain = 1.0f;
+    float outputGain = 1.0f;
+
+    // SmoothedValue might not be initialized yet if prepare() wasn't called
+    // Check if we're in a valid state by checking if sampleRate_ has been set
+    if (sampleRate_ > 0.0)
+    {
+        inputGain = inputGainLinear_.getCurrentValue();
+        outputGain = outputGainLinear_.getCurrentValue();
+    }
 
     return std::abs(totalResponse) * inputGain * outputGain;
 }

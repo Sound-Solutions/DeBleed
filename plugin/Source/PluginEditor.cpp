@@ -406,12 +406,14 @@ void DeBleedAudioProcessorEditor::startTrainingWithName(const juce::String& mode
     statusLabel.setText("Preparing training...", juce::dontSendNotification);
     progressValue = 0.0;
 
+    // Pro quality: 150 epochs for new training, 75 for continuation
+    // With 4000 samples/epoch, this gives thorough convergence
     bool started = audioProcessor.getTrainerProcess().startTraining(
         cleanAudioPath,
         noiseAudioPath,
         outputDir.getFullPathName(),
         modelName,
-        isContinuation ? 25 : 50,
+        isContinuation ? 75 : 150,
         isContinuation
     );
 

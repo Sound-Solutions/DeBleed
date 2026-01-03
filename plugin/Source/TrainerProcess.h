@@ -55,7 +55,7 @@ public:
                        const juce::String& noiseAudioDir,
                        const juce::String& outputDir,
                        const juce::String& modelName = "model",
-                       int epochs = 50,
+                       int epochs = 150,
                        bool continueFromCheckpoint = false);
 
     /**
@@ -132,7 +132,7 @@ private:
     juce::String noiseAudioDir;
     juce::String outputDir;
     juce::String modelName;
-    int epochs = 50;
+    int epochs = 150;
     bool continueFromCheckpoint = false;
 
     // Trainer executable path

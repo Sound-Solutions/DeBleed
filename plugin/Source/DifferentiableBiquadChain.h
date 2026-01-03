@@ -39,8 +39,8 @@ public:
     static constexpr int FILTER_HIGH_SHELF = 14;
     static constexpr int FILTER_LPF = 15;
 
-    // Coefficient update rate
-    static constexpr int FRAME_SIZE = 64;  // Update coeffs every 64 samples
+    // Coefficient update rate (~21ms at 96kHz for musical dynamics)
+    static constexpr int FRAME_SIZE = 2048;  // Update coeffs every 2048 samples
 
     // Smoothing time for coefficient interpolation
     static constexpr float SMOOTHING_TIME_MS = 5.0f;
