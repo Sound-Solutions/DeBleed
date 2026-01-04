@@ -6,6 +6,13 @@ const juce::String DeBleedAudioProcessor::PARAM_MIX = "mix";
 const juce::String DeBleedAudioProcessor::PARAM_BYPASS = "bypass";
 const juce::String DeBleedAudioProcessor::PARAM_LIVE_MODE = "liveMode";
 
+// Phase 3 Parameter IDs
+const juce::String DeBleedAudioProcessor::PARAM_OUTPUT_GAIN = "outputGain";
+const juce::String DeBleedAudioProcessor::PARAM_HPF_FREQ = "hpfFreq";
+const juce::String DeBleedAudioProcessor::PARAM_LPF_FREQ = "lpfFreq";
+const juce::String DeBleedAudioProcessor::PARAM_SENSITIVITY = "sensitivity";
+const juce::String DeBleedAudioProcessor::PARAM_SMOOTHING = "smoothing";
+
 DeBleedAudioProcessor::DeBleedAudioProcessor()
     : AudioProcessor(BusesProperties()
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
@@ -15,16 +22,31 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     // Add parameter listeners
     parameters.addParameterListener(PARAM_MIX, this);
     parameters.addParameterListener(PARAM_BYPASS, this);
+    parameters.addParameterListener(PARAM_OUTPUT_GAIN, this);
+    parameters.addParameterListener(PARAM_HPF_FREQ, this);
+    parameters.addParameterListener(PARAM_LPF_FREQ, this);
+    parameters.addParameterListener(PARAM_SENSITIVITY, this);
+    parameters.addParameterListener(PARAM_SMOOTHING, this);
 
     // Initialize atomic values
     mix.store(*parameters.getRawParameterValue(PARAM_MIX));
     bypassed.store(*parameters.getRawParameterValue(PARAM_BYPASS) > 0.5f);
+    outputGain.store(*parameters.getRawParameterValue(PARAM_OUTPUT_GAIN));
+    hpfFreq.store(*parameters.getRawParameterValue(PARAM_HPF_FREQ));
+    lpfFreq.store(*parameters.getRawParameterValue(PARAM_LPF_FREQ));
+    sensitivity.store(*parameters.getRawParameterValue(PARAM_SENSITIVITY));
+    smoothing.store(*parameters.getRawParameterValue(PARAM_SMOOTHING));
 }
 
 DeBleedAudioProcessor::~DeBleedAudioProcessor()
 {
     parameters.removeParameterListener(PARAM_MIX, this);
     parameters.removeParameterListener(PARAM_BYPASS, this);
+    parameters.removeParameterListener(PARAM_OUTPUT_GAIN, this);
+    parameters.removeParameterListener(PARAM_HPF_FREQ, this);
+    parameters.removeParameterListener(PARAM_LPF_FREQ, this);
+    parameters.removeParameterListener(PARAM_SENSITIVITY, this);
+    parameters.removeParameterListener(PARAM_SMOOTHING, this);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::createParameterLayout()
@@ -57,12 +79,75 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         false
     ));
 
-    // TODO: Add Neural 5045 parameters in Phase 3:
-    // - Broadband gain (master output level)
-    // - HPF frequency (highpass cutoff)
-    // - LPF frequency (lowpass cutoff)
-    // - Model sensitivity (how aggressively to apply neural predictions)
-    // - Smoothing attack/release (coefficient interpolation speed)
+    // Phase 3: Neural 5045 Parameters
+
+    // Output Gain - master output level in dB
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_OUTPUT_GAIN, 1},
+        "Output Gain",
+        juce::NormalisableRange<float>(-24.0f, 12.0f, 0.1f),
+        0.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) {
+            if (value >= 0.0f)
+                return "+" + juce::String(value, 1) + " dB";
+            return juce::String(value, 1) + " dB";
+        },
+        nullptr
+    ));
+
+    // HPF Frequency - highpass filter cutoff
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_HPF_FREQ, 1},
+        "HPF Freq",
+        juce::NormalisableRange<float>(20.0f, 500.0f, 1.0f, 0.5f), // Skewed for better low-end control
+        20.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(static_cast<int>(value)) + " Hz"; },
+        nullptr
+    ));
+
+    // LPF Frequency - lowpass filter cutoff
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_LPF_FREQ, 1},
+        "LPF Freq",
+        juce::NormalisableRange<float>(5000.0f, 20000.0f, 1.0f, 0.5f), // Skewed for better high-end control
+        20000.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) {
+            if (value >= 1000.0f)
+                return juce::String(value / 1000.0f, 1) + " kHz";
+            return juce::String(static_cast<int>(value)) + " Hz";
+        },
+        nullptr
+    ));
+
+    // Sensitivity - how aggressively to apply neural predictions (0 = subtle, 1 = full)
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_SENSITIVITY, 1},
+        "Sensitivity",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
+        1.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(static_cast<int>(value * 100)) + "%"; },
+        nullptr
+    ));
+
+    // Smoothing - coefficient interpolation time in ms
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_SMOOTHING, 1},
+        "Smoothing",
+        juce::NormalisableRange<float>(1.0f, 200.0f, 1.0f, 0.5f),
+        50.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(static_cast<int>(value)) + " ms"; },
+        nullptr
+    ));
 
     return {params.begin(), params.end()};
 }
@@ -73,6 +158,16 @@ void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, fl
         mix.store(newValue);
     else if (parameterID == PARAM_BYPASS)
         bypassed.store(newValue > 0.5f);
+    else if (parameterID == PARAM_OUTPUT_GAIN)
+        outputGain.store(newValue);
+    else if (parameterID == PARAM_HPF_FREQ)
+        hpfFreq.store(newValue);
+    else if (parameterID == PARAM_LPF_FREQ)
+        lpfFreq.store(newValue);
+    else if (parameterID == PARAM_SENSITIVITY)
+        sensitivity.store(newValue);
+    else if (parameterID == PARAM_SMOOTHING)
+        smoothing.store(newValue);
 }
 
 void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
@@ -141,6 +236,30 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Early bypass if mix is 0%
     if (currentMix < 0.001f)
         return;
+
+    // =========================================================================
+    // Phase 3: Update biquad chain with user overrides
+    // =========================================================================
+    float currentHpfFreq = hpfFreq.load();
+    float currentLpfFreq = lpfFreq.load();
+    float currentOutputGain = outputGain.load();
+    float currentSensitivity = sensitivity.load();
+    float currentSmoothing = smoothing.load();
+
+    // HPF: Override if > 20Hz (user has adjusted from default)
+    biquadChain_.setHPFOverride(currentHpfFreq > 20.5f ? currentHpfFreq : -1.0f);
+
+    // LPF: Override if < 20kHz (user has adjusted from default)
+    biquadChain_.setLPFOverride(currentLpfFreq < 19500.0f ? currentLpfFreq : 20001.0f);
+
+    // Output gain offset
+    biquadChain_.setOutputGainOffset(currentOutputGain);
+
+    // Sensitivity
+    biquadChain_.setSensitivity(currentSensitivity);
+
+    // Smoothing time
+    biquadChain_.setSmoothingTime(currentSmoothing);
 
     // =========================================================================
     // Neural 5045 Processing

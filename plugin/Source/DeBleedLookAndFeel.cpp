@@ -123,27 +123,88 @@ void DeBleedLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
     g.strokePath(bgPath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
     // B. Value Arc
-    juce::Path valPath;
+    // Calculate center angle (12 o'clock position)
+    float centerAngle = (rotaryStartAngle + rotaryEndAngle) * 0.5f;
 
-    // Check if arc should be inverted (fill from current to end instead of start to current)
-    bool invertArc = slider.getProperties().contains("invertArc") &&
-                     static_cast<bool>(slider.getProperties()["invertArc"]);
+    // Check for bias knob (center-based arc)
+    bool isBiasKnob = slider.getProperties().contains("isBiasKnob");
 
-    if (invertArc)
-        valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, toAngle, rotaryEndAngle, true);
-    else
+    if (isBiasKnob)
+    {
+        // BIAS KNOB: Center-based arc with gradient from Orange (top) to Cyan (bottom)
+        juce::Path valPath;
+
+        if (toAngle > centerAngle) {
+            valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, centerAngle, toAngle, true);
+        } else if (toAngle < centerAngle) {
+            valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, toAngle, centerAngle, true);
+        }
+
+        // Color based on direction from center
+        juce::Colour arcColor;
+        if (toAngle > centerAngle) {
+            float intensity = (toAngle - centerAngle) / (rotaryEndAngle - centerAngle);
+            arcColor = juce::Colours::cyan.interpolatedWith(juce::Colours::orange, intensity);
+        } else {
+            float intensity = (centerAngle - toAngle) / (centerAngle - rotaryStartAngle);
+            arcColor = juce::Colours::orange.interpolatedWith(juce::Colours::cyan, intensity);
+        }
+
+        g.setColour(arcColor.withAlpha(0.9f));
+        g.strokePath(valPath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+        // Draw center tick mark
+        g.setColour(juce::Colours::white.withAlpha(0.4f));
+        float tickInner = radius - 6.0f;
+        float tickOuter = radius + 2.0f;
+        float tickX1 = center.x + tickInner * std::sin(centerAngle);
+        float tickY1 = center.y - tickInner * std::cos(centerAngle);
+        float tickX2 = center.x + tickOuter * std::sin(centerAngle);
+        float tickY2 = center.y - tickOuter * std::cos(centerAngle);
+        g.drawLine(tickX1, tickY1, tickX2, tickY2, 1.5f);
+    }
+    else if (slider.getProperties().contains("isDualColor"))
+    {
+        // GRADIENT: Orange (start) -> Cyan (end)
+        juce::Path valPath;
         valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, rotaryStartAngle, toAngle, true);
 
-    // Get knob color from properties, default to cyan
-    juce::Colour arcColor = juce::Colour::fromRGB(0, 255, 255);  // Pure cyan (DrumCipher style)
-    if (slider.getProperties().contains("knobColor"))
-    {
-        juce::int64 colorVal = static_cast<juce::int64>(slider.getProperties()["knobColor"]);
-        arcColor = juce::Colour(static_cast<juce::uint32>(colorVal));
-    }
+        juce::Point<float> startPt(center.x + radius * std::sin(rotaryStartAngle),
+                                   center.y - radius * std::cos(rotaryStartAngle));
+        juce::Point<float> endPt(center.x + radius * std::sin(toAngle),
+                                 center.y - radius * std::cos(toAngle));
 
-    g.setColour(arcColor);
-    g.strokePath(valPath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        juce::ColourGradient grad(juce::Colours::orange, startPt,
+                                  juce::Colours::cyan, endPt, false);
+
+        g.setGradientFill(grad);
+        g.strokePath(valPath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
+    else
+    {
+        // Standard single-color arc
+        juce::Path valPath;
+
+        // Check if arc should be inverted (fill from current to end instead of start to current)
+        bool invertArc = slider.getProperties().contains("invertArc") &&
+                         static_cast<bool>(slider.getProperties()["invertArc"]);
+
+        if (invertArc)
+            valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, toAngle, rotaryEndAngle, true);
+        else
+            valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, rotaryStartAngle, toAngle, true);
+
+        // Get knob color from properties, default to cyan
+        juce::Colour arcColor = juce::Colour::fromRGB(0, 255, 255);  // Pure cyan
+        if (slider.getProperties().contains("knobColor"))
+        {
+            juce::int64 colorVal = static_cast<juce::int64>(slider.getProperties()["knobColor"]);
+            arcColor = juce::Colour(static_cast<juce::uint32>(colorVal));
+        }
+
+        g.setColour(arcColor);
+        g.strokePath(valPath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
 
     // C. Knob Body
     auto knobRadius = radius - 5.0f;

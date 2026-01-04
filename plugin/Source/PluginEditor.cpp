@@ -9,7 +9,8 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
       audioProcessor(p),
       cleanDropZone("Target Vocals", true),
       noiseDropZone("Stage Noise", true),
-      progressBar(progressValue)
+      progressBar(progressValue),
+      controlPanel_(p)
 {
     setLookAndFeel(&customLookAndFeel);
 
@@ -24,13 +25,13 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     trainingTabButton.setButtonText("TRAIN");
     trainingTabButton.getProperties().set("isTabButton", true);
     trainingTabButton.setClickingTogglesState(true);
-    trainingTabButton.setToggleState(true, juce::dontSendNotification);
     trainingTabButton.onClick = [this]() { setActiveTab(Tab::Training); };
     addAndMakeVisible(trainingTabButton);
 
     visualizingTabButton.setButtonText("VISUALIZE");
     visualizingTabButton.getProperties().set("isTabButton", true);
     visualizingTabButton.setClickingTogglesState(true);
+    visualizingTabButton.setToggleState(true, juce::dontSendNotification);  // Default tab
     visualizingTabButton.onClick = [this]() { setActiveTab(Tab::Visualizing); };
     addAndMakeVisible(visualizingTabButton);
 
@@ -100,12 +101,7 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     modelStatusLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.7f));
     addAndMakeVisible(modelStatusLabel);
 
-    // Hidden mix slider (for parameter attachment)
-    mixSlider.setVisible(false);
-
     // Parameter attachments
-    mixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_MIX, mixSlider);
     bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_BYPASS, bypassButton);
     liveModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
@@ -119,6 +115,24 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
 
     // EQ Curve display for visualizing tab
     addAndMakeVisible(eqCurveDisplay_);
+
+    // Connect EQ curve handle dragging to parameters
+    eqCurveDisplay_.setHPFChangedCallback([this](float freq) {
+        if (auto* param = audioProcessor.getParameters().getParameter(DeBleedAudioProcessor::PARAM_HPF_FREQ))
+        {
+            param->setValueNotifyingHost(param->convertTo0to1(freq));
+        }
+    });
+
+    eqCurveDisplay_.setLPFChangedCallback([this](float freq) {
+        if (auto* param = audioProcessor.getParameters().getParameter(DeBleedAudioProcessor::PARAM_LPF_FREQ))
+        {
+            param->setValueNotifyingHost(param->convertTo0to1(freq));
+        }
+    });
+
+    // Control panel (always visible at bottom)
+    addAndMakeVisible(controlPanel_);
 
     // Set up trainer callbacks
     audioProcessor.getTrainerProcess().setProgressCallback(
@@ -146,11 +160,11 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     // Start timer for UI updates
     startTimer(100);
 
-    // Set window size
-    setSize(900, 600);
+    // Set window size - Kinetics style
+    setSize(1100, 700);
 
     // Initialize tab visibility
-    setActiveTab(Tab::Training);
+    setActiveTab(Tab::Visualizing);
 }
 
 DeBleedAudioProcessorEditor::~DeBleedAudioProcessorEditor()
@@ -180,32 +194,32 @@ void DeBleedAudioProcessorEditor::setActiveTab(Tab tab)
     // Visualizing tab components
     eqCurveDisplay_.setVisible(tab == Tab::Visualizing);
 
+    // Control panel is always visible
+    controlPanel_.setVisible(true);
+
     resized();
     repaint();
 }
 
 void DeBleedAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // Dark background
-    g.fillAll(juce::Colour(DeBleedLookAndFeel::mainBackground));
+    // Dark background (Kinetics style)
+    g.fillAll(juce::Colour::fromRGB(10, 11, 13));
 
     // Header background
-    auto headerBounds = getLocalBounds().removeFromTop(50);
-    g.setColour(juce::Colour(DeBleedLookAndFeel::panelBackground));
+    auto headerBounds = getLocalBounds().removeFromTop(headerHeight);
+    g.setColour(juce::Colours::black.withAlpha(0.3f));
     g.fillRect(headerBounds);
 
     // Header bottom line
     g.setColour(juce::Colours::white.withAlpha(0.1f));
-    g.drawHorizontalLine(49, 0, static_cast<float>(getWidth()));
-
-    // Visualizing tab - EQ curve display has its own paint
-    // (no placeholder needed - EQCurveDisplay handles rendering)
+    g.drawHorizontalLine(headerHeight - 1, 0, static_cast<float>(getWidth()));
 
 #if DEBUG || JUCE_DEBUG
-    g.setColour(juce::Colours::grey.withAlpha(0.5f));
+    g.setColour(juce::Colours::white.withAlpha(0.3f));
     g.setFont(9.0f);
     g.drawText("Build: " BUILD_TIMESTAMP,
-               getLocalBounds().removeFromBottom(14),
+               getWidth() - 140, 0, 130, headerHeight,
                juce::Justification::centredRight);
 #endif
 }
@@ -215,8 +229,7 @@ void DeBleedAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
 
     // Header - 50px
-    auto header = bounds.removeFromTop(50);
-    header = header.reduced(15, 10);
+    auto header = bounds.removeFromTop(headerHeight).reduced(15, 10);
 
     // Title on left
     titleLabel.setBounds(header.removeFromLeft(100));
@@ -235,7 +248,10 @@ void DeBleedAudioProcessorEditor::resized()
     tabArea.removeFromLeft(10);
     visualizingTabButton.setBounds(tabArea);
 
-    // Content area
+    // Control panel at bottom
+    controlPanel_.setBounds(bounds.removeFromBottom(controlPanelHeight));
+
+    // Main content area
     auto content = bounds.reduced(15);
 
     if (currentTab == Tab::Training)
@@ -307,6 +323,11 @@ void DeBleedAudioProcessorEditor::timerCallback()
     if (currentTab == Tab::Visualizing)
     {
         eqCurveDisplay_.updateFromChain(audioProcessor.getBiquadChain());
+
+        // Sync handle positions with current parameter values
+        float hpfFreq = *audioProcessor.getParameters().getRawParameterValue(DeBleedAudioProcessor::PARAM_HPF_FREQ);
+        float lpfFreq = *audioProcessor.getParameters().getRawParameterValue(DeBleedAudioProcessor::PARAM_LPF_FREQ);
+        eqCurveDisplay_.setFilterFrequencies(hpfFreq, lpfFreq);
     }
 
     updateModelStatus();
@@ -407,7 +428,6 @@ void DeBleedAudioProcessorEditor::startTrainingWithName(const juce::String& mode
     progressValue = 0.0;
 
     // Pro quality: 150 epochs for new training, 75 for continuation
-    // With 4000 samples/epoch, this gives thorough convergence
     bool started = audioProcessor.getTrainerProcess().startTraining(
         cleanAudioPath,
         noiseAudioPath,

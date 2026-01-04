@@ -5,13 +5,15 @@
 #include "AudioDropZone.h"
 #include "DeBleedLookAndFeel.h"
 #include "EQCurveDisplay.h"
+#include "ControlPanel.h"
 
 /**
  * DeBleedAudioProcessorEditor - GUI for the DeBleed Neural 5045 plugin.
  *
- * Two-tab layout:
- * - Training tab: Drop zones, progress, train buttons
- * - Visualizing tab: Real-time EQ curve from neural network
+ * Kinetics-style layout:
+ * - Header: Title, tab buttons, power button
+ * - Main area: EQ curve visualization (interactive) or Training panel
+ * - Bottom: Control panel with rotary knobs
  */
 class DeBleedAudioProcessorEditor : public juce::AudioProcessorEditor,
                                      public juce::Timer
@@ -44,7 +46,7 @@ private:
     DeBleedLookAndFeel customLookAndFeel;
 
     // Current tab
-    Tab currentTab = Tab::Training;
+    Tab currentTab = Tab::Visualizing;  // Default to visualizing
 
     // Header components
     juce::Label titleLabel;
@@ -64,14 +66,6 @@ private:
     juce::Label modelStatusLabel;
     double progressValue = 0.0;
 
-    // Hidden mix slider (must be declared BEFORE attachment for correct destruction order)
-    juce::Slider mixSlider;
-
-    // Parameter attachments (destroyed before the components they attach to)
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> liveModeAttachment;
-
     // Training log
     juce::TextEditor logTextBox;
     bool showLog = false;
@@ -85,6 +79,17 @@ private:
 
     // Visualizing tab components
     EQCurveDisplay eqCurveDisplay_;
+
+    // Bottom control panel (always visible)
+    ControlPanel controlPanel_;
+
+    // Parameter attachments for header controls
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> liveModeAttachment;
+
+    // Layout constants
+    static constexpr int headerHeight = 50;
+    static constexpr int controlPanelHeight = 150;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessorEditor)
 };

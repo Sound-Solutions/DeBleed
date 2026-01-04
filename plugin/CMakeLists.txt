@@ -141,6 +141,16 @@ set(PLUGIN_SOURCES
     Source/PluginProcessor.h
     Source/PluginEditor.cpp
     Source/PluginEditor.h
+    Source/ControlPanel.cpp
+    Source/ControlPanel.h
+    Source/DeBleedLookAndFeel.cpp
+    Source/DeBleedLookAndFeel.h
+    Source/EQCurveDisplay.cpp
+    Source/EQCurveDisplay.h
+    Source/DifferentiableBiquadChain.cpp
+    Source/DifferentiableBiquadChain.h
+    Source/Neural5045Engine.cpp
+    Source/Neural5045Engine.h
     Source/NeuralGateEngine.cpp
     Source/NeuralGateEngine.h
     Source/STFTProcessor.cpp
@@ -149,6 +159,7 @@ set(PLUGIN_SOURCES
     Source/TrainerProcess.h
     Source/AudioDropZone.cpp
     Source/AudioDropZone.h
+    Source/EnvelopeFollower.h
 )
 
 # Determine formats to build

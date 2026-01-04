@@ -109,6 +109,9 @@ void DifferentiableBiquadChain::setParameters(const float* params)
     float outputGainDb = denormalizeGain(params[N_FILTERS * N_PARAMS_PER_FILTER + 1],
                                           BROADBAND_MIN_GAIN, BROADBAND_MAX_GAIN);
 
+    // Add user output gain offset (Phase 3)
+    outputGainDb += outputGainOffset_.load();
+
     inputGainLinear_.setTargetValue(std::pow(10.0f, inputGainDb / 20.0f));
     outputGainLinear_.setTargetValue(std::pow(10.0f, outputGainDb / 20.0f));
 }
@@ -123,6 +126,11 @@ void DifferentiableBiquadChain::process(juce::AudioBuffer<float>& buffer)
         // Update coefficients every FRAME_SIZE samples
         if (frameCounter_ == 0)
         {
+            // Get Phase 3 overrides
+            float hpfOver = hpfOverride_.load();
+            float lpfOver = lpfOverride_.load();
+            float sens = sensitivity_.load();
+
             for (int f = 0; f < N_FILTERS; ++f)
             {
                 int baseIdx = f * N_PARAMS_PER_FILTER;
@@ -139,13 +147,21 @@ void DifferentiableBiquadChain::process(juce::AudioBuffer<float>& buffer)
                 switch (type)
                 {
                     case FilterType::HighPass:
-                        freqHz = denormalizeFreq(freqNorm, HPF_MIN_FREQ, HPF_MAX_FREQ);
+                        // Check for user override (hpfOver > 0 means override is active)
+                        if (hpfOver > 0.0f)
+                            freqHz = hpfOver;
+                        else
+                            freqHz = denormalizeFreq(freqNorm, HPF_MIN_FREQ, HPF_MAX_FREQ);
                         gainDb = 0.0f;  // HPF doesn't use gain
                         q = denormalizeQ(qNorm);
                         break;
 
                     case FilterType::LowPass:
-                        freqHz = denormalizeFreq(freqNorm, LPF_MIN_FREQ, LPF_MAX_FREQ);
+                        // Check for user override (lpfOver < 20000 means override is active)
+                        if (lpfOver < 20000.0f)
+                            freqHz = lpfOver;
+                        else
+                            freqHz = denormalizeFreq(freqNorm, LPF_MIN_FREQ, LPF_MAX_FREQ);
                         gainDb = 0.0f;  // LPF doesn't use gain
                         q = denormalizeQ(qNorm);
                         break;
@@ -154,6 +170,8 @@ void DifferentiableBiquadChain::process(juce::AudioBuffer<float>& buffer)
                     case FilterType::HighShelf:
                         freqHz = denormalizeFreq(freqNorm, SHELF_MIN_FREQ, SHELF_MAX_FREQ);
                         gainDb = denormalizeGain(gainNorm, FILTER_MIN_GAIN, FILTER_MAX_GAIN);
+                        // Apply sensitivity: 0 = no EQ (0dB), 1 = full EQ
+                        gainDb *= sens;
                         q = denormalizeQ(qNorm);
                         break;
 
@@ -161,6 +179,8 @@ void DifferentiableBiquadChain::process(juce::AudioBuffer<float>& buffer)
                     default:
                         freqHz = denormalizeFreq(freqNorm, PEAK_MIN_FREQ, PEAK_MAX_FREQ);
                         gainDb = denormalizeGain(gainNorm, FILTER_MIN_GAIN, FILTER_MAX_GAIN);
+                        // Apply sensitivity: 0 = no EQ (0dB), 1 = full EQ
+                        gainDb *= sens;
                         q = denormalizeQ(qNorm);
                         break;
                 }
@@ -535,4 +555,43 @@ void DifferentiableBiquadChain::getFilterParams(int filterIndex, float& freqHz, 
     }
 
     q = denormalizeQ(qNorm);
+}
+
+// Phase 3: User control override methods
+
+void DifferentiableBiquadChain::setHPFOverride(float freqHz)
+{
+    hpfOverride_.store(freqHz);
+}
+
+void DifferentiableBiquadChain::setLPFOverride(float freqHz)
+{
+    lpfOverride_.store(freqHz);
+}
+
+void DifferentiableBiquadChain::setOutputGainOffset(float gainDb)
+{
+    outputGainOffset_.store(gainDb);
+}
+
+void DifferentiableBiquadChain::setSmoothingTime(float timeMs)
+{
+    smoothingTimeMs_ = std::clamp(timeMs, 1.0f, 200.0f);
+
+    // Update smoothed values with new ramp time
+    if (sampleRate_ > 0.0)
+    {
+        float rampSecs = smoothingTimeMs_ / 1000.0f;
+
+        for (auto& sv : smoothedParams_)
+            sv.reset(sampleRate_, rampSecs);
+
+        inputGainLinear_.reset(sampleRate_, rampSecs);
+        outputGainLinear_.reset(sampleRate_, rampSecs);
+    }
+}
+
+void DifferentiableBiquadChain::setSensitivity(float sens)
+{
+    sensitivity_.store(std::clamp(sens, 0.0f, 1.0f));
 }

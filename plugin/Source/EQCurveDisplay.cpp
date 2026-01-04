@@ -35,6 +35,7 @@ void EQCurveDisplay::paint(juce::Graphics& g)
         drawGrid(g);
 
     drawCurve(g);
+    drawHandles(g);
     drawLabels(g);
 }
 
@@ -63,6 +64,13 @@ void EQCurveDisplay::updateFromChain(const DifferentiableBiquadChain& chain)
         magnitudeResponseDb_[i] = juce::jlimit(minDb_, maxDb_, magnitudeResponseDb_[i]);
     }
 
+    repaint();
+}
+
+void EQCurveDisplay::setFilterFrequencies(float hpfHz, float lpfHz)
+{
+    hpfFreqHz_ = hpfHz;
+    lpfFreqHz_ = lpfHz;
     repaint();
 }
 
@@ -101,6 +109,105 @@ float EQCurveDisplay::xToFrequency(float x) const
     float logFreq = logMin + normalized * (logMax - logMin);
 
     return std::pow(10.0f, logFreq);
+}
+
+juce::Rectangle<float> EQCurveDisplay::getHandleBounds(HandleType type) const
+{
+    float x = 0.0f;
+    float y = decibelToY(0.0f);  // HPF/LPF at 0dB line
+
+    if (type == HandleType::HPF)
+        x = frequencyToX(hpfFreqHz_);
+    else if (type == HandleType::LPF)
+        x = frequencyToX(lpfFreqHz_);
+
+    return juce::Rectangle<float>(x - handleRadius_, y - handleRadius_,
+                                   handleRadius_ * 2, handleRadius_ * 2);
+}
+
+EQCurveDisplay::HandleType EQCurveDisplay::hitTestHandle(juce::Point<float> point) const
+{
+    // Check LPF first (drawn on top)
+    auto lpfBounds = getHandleBounds(HandleType::LPF).expanded(handleHitRadius_ - handleRadius_);
+    if (lpfBounds.contains(point))
+        return HandleType::LPF;
+
+    auto hpfBounds = getHandleBounds(HandleType::HPF).expanded(handleHitRadius_ - handleRadius_);
+    if (hpfBounds.contains(point))
+        return HandleType::HPF;
+
+    return HandleType::None;
+}
+
+void EQCurveDisplay::mouseMove(const juce::MouseEvent& e)
+{
+    HandleType newHover = hitTestHandle(e.position);
+
+    if (newHover != hoveredHandle_)
+    {
+        hoveredHandle_ = newHover;
+
+        if (hoveredHandle_ != HandleType::None)
+            setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+        else
+            setMouseCursor(juce::MouseCursor::NormalCursor);
+
+        repaint();
+    }
+}
+
+void EQCurveDisplay::mouseDown(const juce::MouseEvent& e)
+{
+    draggedHandle_ = hitTestHandle(e.position);
+
+    if (draggedHandle_ == HandleType::HPF)
+        dragStartFreq_ = hpfFreqHz_;
+    else if (draggedHandle_ == HandleType::LPF)
+        dragStartFreq_ = lpfFreqHz_;
+}
+
+void EQCurveDisplay::mouseDrag(const juce::MouseEvent& e)
+{
+    if (draggedHandle_ == HandleType::None)
+        return;
+
+    float newFreq = xToFrequency(e.position.x);
+
+    if (draggedHandle_ == HandleType::HPF)
+    {
+        // Constrain HPF: 20-500 Hz, must be less than LPF
+        newFreq = juce::jlimit(20.0f, std::min(500.0f, lpfFreqHz_ - 100.0f), newFreq);
+        hpfFreqHz_ = newFreq;
+
+        if (hpfChangedCallback_)
+            hpfChangedCallback_(newFreq);
+    }
+    else if (draggedHandle_ == HandleType::LPF)
+    {
+        // Constrain LPF: 5000-20000 Hz, must be greater than HPF
+        newFreq = juce::jlimit(std::max(5000.0f, hpfFreqHz_ + 100.0f), 20000.0f, newFreq);
+        lpfFreqHz_ = newFreq;
+
+        if (lpfChangedCallback_)
+            lpfChangedCallback_(newFreq);
+    }
+
+    repaint();
+}
+
+void EQCurveDisplay::mouseUp(const juce::MouseEvent& e)
+{
+    draggedHandle_ = HandleType::None;
+}
+
+void EQCurveDisplay::mouseExit(const juce::MouseEvent& e)
+{
+    if (draggedHandle_ == HandleType::None)
+    {
+        hoveredHandle_ = HandleType::None;
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+        repaint();
+    }
 }
 
 void EQCurveDisplay::drawGrid(juce::Graphics& g)
@@ -175,6 +282,70 @@ void EQCurveDisplay::drawCurve(juce::Graphics& g)
     // Draw curve
     g.setColour(curveColor_);
     g.strokePath(curvePath, juce::PathStrokeType(2.0f));
+}
+
+void EQCurveDisplay::drawHandles(juce::Graphics& g)
+{
+    // Draw HPF handle
+    auto hpfBounds = getHandleBounds(HandleType::HPF);
+    bool hpfHovered = (hoveredHandle_ == HandleType::HPF) || (draggedHandle_ == HandleType::HPF);
+
+    // Draw vertical line at HPF position
+    g.setColour(hpfHandleColor_.withAlpha(0.3f));
+    g.drawVerticalLine(static_cast<int>(hpfBounds.getCentreX()),
+                       plotArea_.getY(), plotArea_.getBottom());
+
+    // Draw handle circle
+    if (hpfHovered)
+    {
+        g.setColour(handleHoverColor_);
+        g.fillEllipse(hpfBounds.expanded(2));
+    }
+    g.setColour(hpfHandleColor_);
+    g.fillEllipse(hpfBounds);
+
+    // Draw handle outline
+    g.setColour(juce::Colours::white.withAlpha(0.8f));
+    g.drawEllipse(hpfBounds, 1.5f);
+
+    // Draw HPF label
+    g.setFont(9.0f);
+    g.setColour(hpfHandleColor_);
+    juce::String hpfText = juce::String(static_cast<int>(hpfFreqHz_)) + " Hz";
+    g.drawText(hpfText, hpfBounds.translated(0, -20).withWidth(50).withX(hpfBounds.getCentreX() - 25),
+               juce::Justification::centred);
+
+    // Draw LPF handle
+    auto lpfBounds = getHandleBounds(HandleType::LPF);
+    bool lpfHovered = (hoveredHandle_ == HandleType::LPF) || (draggedHandle_ == HandleType::LPF);
+
+    // Draw vertical line at LPF position
+    g.setColour(lpfHandleColor_.withAlpha(0.3f));
+    g.drawVerticalLine(static_cast<int>(lpfBounds.getCentreX()),
+                       plotArea_.getY(), plotArea_.getBottom());
+
+    // Draw handle circle
+    if (lpfHovered)
+    {
+        g.setColour(handleHoverColor_);
+        g.fillEllipse(lpfBounds.expanded(2));
+    }
+    g.setColour(lpfHandleColor_);
+    g.fillEllipse(lpfBounds);
+
+    // Draw handle outline
+    g.setColour(juce::Colours::white.withAlpha(0.8f));
+    g.drawEllipse(lpfBounds, 1.5f);
+
+    // Draw LPF label
+    g.setColour(lpfHandleColor_);
+    juce::String lpfText;
+    if (lpfFreqHz_ >= 1000.0f)
+        lpfText = juce::String(lpfFreqHz_ / 1000.0f, 1) + " kHz";
+    else
+        lpfText = juce::String(static_cast<int>(lpfFreqHz_)) + " Hz";
+    g.drawText(lpfText, lpfBounds.translated(0, -20).withWidth(50).withX(lpfBounds.getCentreX() - 25),
+               juce::Justification::centred);
 }
 
 void EQCurveDisplay::drawLabels(juce::Graphics& g)

@@ -79,11 +79,12 @@ public:
     static const juce::String PARAM_BYPASS;
     static const juce::String PARAM_LIVE_MODE;
 
-    // TODO: Neural 5045 parameters will be added in Phase 3
-    // - Broadband gain
-    // - HPF/LPF frequencies
-    // - Model sensitivity
-    // - Attack/Release smoothing
+    // Phase 3 Parameters
+    static const juce::String PARAM_OUTPUT_GAIN;
+    static const juce::String PARAM_HPF_FREQ;
+    static const juce::String PARAM_LPF_FREQ;
+    static const juce::String PARAM_SENSITIVITY;
+    static const juce::String PARAM_SMOOTHING;
 
 private:
     // Create parameter layout
@@ -95,6 +96,13 @@ private:
     // Atomic parameter values for real-time access
     std::atomic<float> mix{1.0f};
     std::atomic<bool> bypassed{false};
+
+    // Phase 3 parameter atomics
+    std::atomic<float> outputGain{0.0f};    // dB (-24 to +12)
+    std::atomic<float> hpfFreq{20.0f};      // Hz (20 to 500)
+    std::atomic<float> lpfFreq{20000.0f};   // Hz (5000 to 20000)
+    std::atomic<float> sensitivity{1.0f};   // 0 to 1
+    std::atomic<float> smoothing{50.0f};    // ms (1 to 200)
 
     // Neural 5045 DSP components
     Neural5045Engine neural5045Engine_;      // ONNX inference for EQ parameters

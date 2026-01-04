@@ -47,6 +47,7 @@
 		5BAFA48C64B9142C1F7AFEFE /* include_juce_audio_plugin_client_VST3.mm */ = {isa = PBXBuildFile; fileRef = BBC1FA9AC725AD89CC49168F; };
 		5DD6FE6BBCA717B29BCFCFAB /* Neural5045Engine.cpp */ = {isa = PBXBuildFile; fileRef = DD95EA27747E9C810617BB7E; };
 		604DFDF1CE739CB0704100C3 /* include_juce_audio_plugin_client_ARA.cpp */ = {isa = PBXBuildFile; fileRef = 3C5CC8E102F0569139264739; };
+		622383044DD0416EE644D752 /* ControlPanel.cpp */ = {isa = PBXBuildFile; fileRef = B7B072693FEDEAD430B5AAF4; };
 		686E872DD1F0102F8FA81565 /* DifferentiableBiquadChain.cpp */ = {isa = PBXBuildFile; fileRef = F999BAC8EE4E8705B2A301B1; };
 		6C95C60B9BF6704F52965ECC /* include_juce_audio_utils.mm */ = {isa = PBXBuildFile; fileRef = AB5C59DF26AF5D56B3EA2D31; };
 		6E8D6BD4B0D36C1BABBF472D /* QuartzCore.framework */ = {isa = PBXBuildFile; fileRef = 9F53C5636E461FE71AE1786C; };
@@ -156,6 +157,7 @@
 		B43986E392E7C2925113B7E5 /* include_juce_dsp.mm */ /* include_juce_dsp.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_dsp.mm; path = ../../JuceLibraryCode/include_juce_dsp.mm; sourceTree = SOURCE_ROOT; };
 		B58D87DAD7C6085FAD9060ED /* CoreAudioKit.framework */ /* CoreAudioKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudioKit.framework; path = System/Library/Frameworks/CoreAudioKit.framework; sourceTree = SDKROOT; };
 		B60EEA5148633A1B8B42DF60 /* Foundation.framework */ /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		B7B072693FEDEAD430B5AAF4 /* ControlPanel.cpp */ /* ControlPanel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ControlPanel.cpp; path = ../../plugin/Source/ControlPanel.cpp; sourceTree = SOURCE_ROOT; };
 		B98AB16790F4916F6FEE774B /* EQCurveDisplay.cpp */ /* EQCurveDisplay.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = EQCurveDisplay.cpp; path = ../../plugin/Source/EQCurveDisplay.cpp; sourceTree = SOURCE_ROOT; };
 		BBC1FA9AC725AD89CC49168F /* include_juce_audio_plugin_client_VST3.mm */ /* include_juce_audio_plugin_client_VST3.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_plugin_client_VST3.mm; path = ../../JuceLibraryCode/include_juce_audio_plugin_client_VST3.mm; sourceTree = SOURCE_ROOT; };
 		BDDF38B7CE70616CEF796FA8 /* juce_VST3ManifestHelper.mm */ /* juce_VST3ManifestHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = juce_VST3ManifestHelper.mm; path = /Applications/JUCE/modules/juce_audio_plugin_client/VST3/juce_VST3ManifestHelper.mm; sourceTree = "<absolute>"; };
@@ -164,6 +166,7 @@
 		C1C3302681ED944C8DD7F683 /* juce_core */ /* juce_core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_core; path = /Applications/JUCE/modules/juce_core; sourceTree = "<absolute>"; };
 		D2242C35E5359BDA92CDB83C /* juce_events */ /* juce_events */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_events; path = /Applications/JUCE/modules/juce_events; sourceTree = "<absolute>"; };
 		DD95EA27747E9C810617BB7E /* Neural5045Engine.cpp */ /* Neural5045Engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Neural5045Engine.cpp; path = ../../plugin/Source/Neural5045Engine.cpp; sourceTree = SOURCE_ROOT; };
+		E048D47D4568D22E3677C162 /* ControlPanel.h */ /* ControlPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ControlPanel.h; path = ../../plugin/Source/ControlPanel.h; sourceTree = SOURCE_ROOT; };
 		E803459422AB6EADC5AE3EE5 /* NeuralGateEngine.h */ /* NeuralGateEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = NeuralGateEngine.h; path = ../../plugin/Source/NeuralGateEngine.h; sourceTree = SOURCE_ROOT; };
 		EC6EFD59F927AC0A8EA35B8E /* CoreAudio.framework */ /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		F999BAC8EE4E8705B2A301B1 /* DifferentiableBiquadChain.cpp */ /* DifferentiableBiquadChain.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = DifferentiableBiquadChain.cpp; path = ../../plugin/Source/DifferentiableBiquadChain.cpp; sourceTree = SOURCE_ROOT; };
@@ -284,6 +287,8 @@
 				87E96126219F220456B15832,
 				B98AB16790F4916F6FEE774B,
 				8749BC352F6A59F5836C7D72,
+				B7B072693FEDEAD430B5AAF4,
+				E048D47D4568D22E3677C162,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -910,6 +915,7 @@
 				686E872DD1F0102F8FA81565,
 				5DD6FE6BBCA717B29BCFCFAB,
 				B6AB2E9624A0B25B9BDD4F1B,
+				622383044DD0416EE644D752,
 				83244953AF9FF90354A4AAFA,
 				167FA7EF3EF53C2A6A7F29FF,
 				C7A87105A26B7016B6DBE44D,

@@ -89,6 +89,38 @@ public:
      */
     void getFilterParams(int filterIndex, float& freqHz, float& gainDb, float& q) const;
 
+    // Phase 3: User control overrides
+
+    /**
+     * Override HPF cutoff frequency (takes priority over neural prediction).
+     * @param freqHz Frequency in Hz (20-500), or <= 0 to use neural prediction
+     */
+    void setHPFOverride(float freqHz);
+
+    /**
+     * Override LPF cutoff frequency (takes priority over neural prediction).
+     * @param freqHz Frequency in Hz (5000-20000), or >= 20000 to use neural prediction
+     */
+    void setLPFOverride(float freqHz);
+
+    /**
+     * Add additional output gain offset (summed with neural prediction).
+     * @param gainDb Gain offset in dB
+     */
+    void setOutputGainOffset(float gainDb);
+
+    /**
+     * Set coefficient smoothing time.
+     * @param timeMs Smoothing time in milliseconds
+     */
+    void setSmoothingTime(float timeMs);
+
+    /**
+     * Set sensitivity (scales how aggressively neural predictions are applied).
+     * @param sens 0.0 = bypass (flat EQ), 1.0 = full neural predictions
+     */
+    void setSensitivity(float sens);
+
 private:
     // SVF TPT filter state (per filter, per channel)
     struct SVFState
@@ -163,6 +195,13 @@ private:
 
     // Frame counter for coefficient updates
     int frameCounter_ = 0;
+
+    // Phase 3: User override values
+    std::atomic<float> hpfOverride_{-1.0f};      // -1 = use neural, else override freq
+    std::atomic<float> lpfOverride_{20001.0f};   // >20000 = use neural, else override freq
+    std::atomic<float> outputGainOffset_{0.0f};  // Additional dB to add to output gain
+    std::atomic<float> sensitivity_{1.0f};       // 0-1, scales neural predictions
+    float smoothingTimeMs_ = 5.0f;               // Coefficient smoothing time
 
     // Frequency ranges for each filter type (Hz)
     static constexpr float HPF_MIN_FREQ = 20.0f;

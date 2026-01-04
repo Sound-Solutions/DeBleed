@@ -54,6 +54,10 @@
             file="plugin/Source/EQCurveDisplay.cpp"/>
       <FILE id="EQCurveDisplay_h" name="EQCurveDisplay.h" compile="0" resource="0"
             file="plugin/Source/EQCurveDisplay.h"/>
+      <FILE id="ControlPanel_cpp" name="ControlPanel.cpp" compile="1" resource="0"
+            file="plugin/Source/ControlPanel.cpp"/>
+      <FILE id="ControlPanel_h" name="ControlPanel.h" compile="0" resource="0"
+            file="plugin/Source/ControlPanel.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

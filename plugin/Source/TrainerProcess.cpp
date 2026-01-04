@@ -176,9 +176,9 @@ juce::StringArray TrainerProcess::buildCommandLine()
         args.add("python");
         args.add("-u");  // Unbuffered stdout/stderr
 #else
-        // Use caffeinate to prevent idle sleep during training
-        args.add("/usr/bin/caffeinate");
-        args.add("-i");  // Prevent idle sleep
+        // NOTE: We don't use caffeinate here because it doesn't forward stdout
+        // from the child process, breaking our progress reporting.
+        // Users should configure Energy Saver settings if needed.
 
         // Try to find python3 - check common locations
         juce::StringArray pythonPaths = {
@@ -205,11 +205,7 @@ juce::StringArray TrainerProcess::buildCommandLine()
     }
     else
     {
-        // Compiled executable (also wrap with caffeinate on macOS)
-#if !defined(_WIN32)
-        args.add("/usr/bin/caffeinate");
-        args.add("-i");
-#endif
+        // Compiled executable
         args.add(executable);
     }
 
@@ -461,13 +457,28 @@ void TrainerProcess::parseLine(const juce::String& line)
     }
     else if (line.startsWith("STATUS:"))
     {
-        juce::ScopedLock lock(statusLock);
-        statusMessage = line.substring(7);
-
-        // Check for specific states
-        if (statusMessage.containsIgnoreCase("export"))
+        juce::String newStatus;
         {
-            currentState.store(State::Exporting);
+            juce::ScopedLock lock(statusLock);
+            statusMessage = line.substring(7);
+            newStatus = statusMessage;
+
+            // Check for specific states
+            if (statusMessage.containsIgnoreCase("export"))
+            {
+                currentState.store(State::Exporting);
+            }
+        }
+
+        // Also trigger progress callback to update UI immediately
+        if (progressCallback)
+        {
+            int progress = currentProgress.load();
+            juce::MessageManager::callAsync([this, progress, newStatus]()
+            {
+                if (progressCallback)
+                    progressCallback(progress, newStatus);
+            });
         }
     }
     else if (line.startsWith("ERROR:"))
