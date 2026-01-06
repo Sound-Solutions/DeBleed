@@ -4,6 +4,10 @@
 #include "Neural5045Engine.h"
 #include "DifferentiableBiquadChain.h"
 #include "TrainerProcess.h"
+#include "SimpleVAD.h"
+#include "SpectralVAD.h"
+#include "DynamicEQ.h"
+#include "SimpleExpander.h"
 
 /**
  * DeBleedAudioProcessor - Neural 5045: DDSP Source Separation Plugin
@@ -86,6 +90,24 @@ public:
     static const juce::String PARAM_SENSITIVITY;
     static const juce::String PARAM_SMOOTHING;
 
+    // V2 Expander Parameters
+    static const juce::String PARAM_EXP_THRESHOLD;
+    static const juce::String PARAM_EXP_RATIO;
+    static const juce::String PARAM_EXP_ATTACK;
+    static const juce::String PARAM_EXP_RELEASE;
+    static const juce::String PARAM_EXP_RANGE;
+    static const juce::String PARAM_USE_V2;  // Toggle between v1 and v2 architectures
+
+    // V2 component access for visualization
+    const SpectralVAD& getSpectralVAD() const { return spectralVAD_; }
+    const DynamicEQ& getDynamicEQ() const { return dynamicEQ_; }
+    const SimpleExpander& getExpander() const { return expander_; }
+    float getVADConfidence() const { return spectralVAD_.getConfidence(); }
+    float getOutputLevelDb() const { return outputLevelDb_.load(); }
+
+    // Load v2 learned parameters from JSON
+    bool loadV2Params(const juce::String& jsonPath);
+
 private:
     // Create parameter layout
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
@@ -104,13 +126,27 @@ private:
     std::atomic<float> sensitivity{1.0f};   // 0 to 1
     std::atomic<float> smoothing{50.0f};    // ms (1 to 200)
 
-    // Neural 5045 DSP components
+    // V2 Expander parameter atomics
+    std::atomic<float> expThreshold{-40.0f};  // dB
+    std::atomic<float> expRatio{4.0f};        // ratio
+    std::atomic<float> expAttack{1.0f};       // ms
+    std::atomic<float> expRelease{100.0f};    // ms
+    std::atomic<float> expRange{-40.0f};      // dB
+    std::atomic<bool> useV2{true};            // Use v2 architecture
+
+    // V1: Neural 5045 DSP components (legacy)
     Neural5045Engine neural5045Engine_;      // ONNX inference for EQ parameters
     DifferentiableBiquadChain biquadChain_;  // SVF TPT filter cascade
+
+    // V2: Zero-latency vocal-preservation architecture
+    SpectralVAD spectralVAD_;                // Spectral VAD with learned frequency weights
+    DynamicEQ dynamicEQ_;                    // 6-band VAD-gated dynamic EQ
+    SimpleExpander expander_;                // User-controlled expander
 
     // Buffers for processing
     juce::AudioBuffer<float> dryBuffer_;     // Dry signal for wet/dry mix
     std::vector<float> monoSidechain_;       // Mono mix for neural network input
+    std::vector<float> vadConfidence_;       // Per-sample VAD confidence for v2
 
     // Training process
     TrainerProcess trainerProcess;
@@ -118,6 +154,9 @@ private:
     // Processing state
     double currentSampleRate_ = 48000.0;
     int currentBlockSize_ = 512;
+
+    // Output level metering
+    std::atomic<float> outputLevelDb_{-60.0f};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessor)
 };

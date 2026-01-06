@@ -58,6 +58,26 @@
             file="plugin/Source/ControlPanel.cpp"/>
       <FILE id="ControlPanel_h" name="ControlPanel.h" compile="0" resource="0"
             file="plugin/Source/ControlPanel.h"/>
+      <FILE id="SimpleVAD_cpp" name="SimpleVAD.cpp" compile="1" resource="0"
+            file="plugin/Source/SimpleVAD.cpp"/>
+      <FILE id="SimpleVAD_h" name="SimpleVAD.h" compile="0" resource="0"
+            file="plugin/Source/SimpleVAD.h"/>
+      <FILE id="DynamicEQ_cpp" name="DynamicEQ.cpp" compile="1" resource="0"
+            file="plugin/Source/DynamicEQ.cpp"/>
+      <FILE id="DynamicEQ_h" name="DynamicEQ.h" compile="0" resource="0"
+            file="plugin/Source/DynamicEQ.h"/>
+      <FILE id="SimpleExpander_cpp" name="SimpleExpander.cpp" compile="1" resource="0"
+            file="plugin/Source/SimpleExpander.cpp"/>
+      <FILE id="SimpleExpander_h" name="SimpleExpander.h" compile="0" resource="0"
+            file="plugin/Source/SimpleExpander.h"/>
+      <FILE id="SpectralVAD_cpp" name="SpectralVAD.cpp" compile="1" resource="0"
+            file="plugin/Source/SpectralVAD.cpp"/>
+      <FILE id="SpectralVAD_h" name="SpectralVAD.h" compile="0" resource="0"
+            file="plugin/Source/SpectralVAD.h"/>
+      <FILE id="ArcMeter_cpp" name="ArcMeter.cpp" compile="1" resource="0"
+            file="plugin/Source/ArcMeter.cpp"/>
+      <FILE id="ArcMeter_h" name="ArcMeter.h" compile="0" resource="0"
+            file="plugin/Source/ArcMeter.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

@@ -1,7 +1,7 @@
 /*
   ==============================================================================
     ControlPanel.cpp
-    Bottom panel with rotary knobs for DeBleed parameters
+    Two-row control panel for DeBleed V2 expander
   ==============================================================================
 */
 
@@ -12,24 +12,32 @@ ControlPanel::ControlPanel(DeBleedAudioProcessor& processor)
 {
     auto& apvts = processor.getParameters();
 
-    // Set up knobs with their parameter attachments
+    // =========================================================================
+    // Row 1: Output controls (Cyan)
+    // =========================================================================
     mixKnob.setup(this, "MIX", apvts, DeBleedAudioProcessor::PARAM_MIX);
-    mixKnob.setDualColor(true);  // Orange to cyan gradient
+    mixKnob.setKnobColor(cyanColor);
 
     outputGainKnob.setup(this, "OUTPUT", apvts, DeBleedAudioProcessor::PARAM_OUTPUT_GAIN);
-    outputGainKnob.setKnobColor(juce::Colours::white.getARGB());
+    outputGainKnob.setKnobColor(cyanColor);
 
-    hpfKnob.setup(this, "HPF", apvts, DeBleedAudioProcessor::PARAM_HPF_FREQ);
-    hpfKnob.setKnobColor(juce::Colours::orange.getARGB());
+    // =========================================================================
+    // Row 2: Expander controls (Orange)
+    // =========================================================================
+    thresholdKnob.setup(this, "THRESH", apvts, DeBleedAudioProcessor::PARAM_EXP_THRESHOLD);
+    thresholdKnob.setKnobColor(orangeColor);
 
-    lpfKnob.setup(this, "LPF", apvts, DeBleedAudioProcessor::PARAM_LPF_FREQ);
-    lpfKnob.setKnobColor(juce::Colours::cyan.getARGB());
+    ratioKnob.setup(this, "RATIO", apvts, DeBleedAudioProcessor::PARAM_EXP_RATIO);
+    ratioKnob.setKnobColor(orangeColor);
 
-    sensitivityKnob.setup(this, "SENSITIVITY", apvts, DeBleedAudioProcessor::PARAM_SENSITIVITY);
-    sensitivityKnob.setKnobColor(juce::Colours::cyan.getARGB());
+    attackKnob.setup(this, "ATTACK", apvts, DeBleedAudioProcessor::PARAM_EXP_ATTACK);
+    attackKnob.setKnobColor(orangeColor);
 
-    smoothingKnob.setup(this, "SMOOTH", apvts, DeBleedAudioProcessor::PARAM_SMOOTHING);
-    smoothingKnob.setKnobColor(juce::Colours::grey.getARGB());
+    releaseKnob.setup(this, "RELEASE", apvts, DeBleedAudioProcessor::PARAM_EXP_RELEASE);
+    releaseKnob.setKnobColor(orangeColor);
+
+    rangeKnob.setup(this, "RANGE", apvts, DeBleedAudioProcessor::PARAM_EXP_RANGE);
+    rangeKnob.setKnobColor(orangeColor);
 }
 
 ControlPanel::~ControlPanel()
@@ -39,39 +47,47 @@ ControlPanel::~ControlPanel()
 void ControlPanel::paint(juce::Graphics& g)
 {
     // Dark panel background
-    g.setColour(juce::Colour::fromRGB(10, 11, 13));
+    g.setColour(juce::Colour::fromRGB(18, 18, 20));
     g.fillRect(getLocalBounds());
 
     // Top border line
-    g.setColour(juce::Colours::white.withAlpha(0.1f));
+    g.setColour(juce::Colours::white.withAlpha(0.08f));
     g.drawHorizontalLine(0, 0.0f, static_cast<float>(getWidth()));
+
+    // Row separator
+    int rowHeight = getHeight() / 2;
+    g.setColour(juce::Colours::white.withAlpha(0.04f));
+    g.drawHorizontalLine(rowHeight, 20.0f, static_cast<float>(getWidth() - 20));
 }
 
 void ControlPanel::resized()
 {
-    auto bounds = getLocalBounds().reduced(20, 15);
+    auto bounds = getLocalBounds().reduced(15, 8);
+    int rowHeight = bounds.getHeight() / 2;
 
-    // Calculate knob size - evenly distribute across width
-    int numKnobs = 6;
-    int knobWidth = bounds.getWidth() / numKnobs;
-    int knobHeight = bounds.getHeight();
+    // =========================================================================
+    // Row 1: Mix and Output (centered)
+    // =========================================================================
+    auto row1 = bounds.removeFromTop(rowHeight);
+    int knobWidth1 = 90;
+    int totalWidth1 = knobWidth1 * 2 + 30;
+    int startX1 = row1.getCentreX() - totalWidth1 / 2;
 
-    // Minimum size for knobs
-    knobWidth = std::min(knobWidth, 120);
-    knobHeight = std::min(knobHeight, 120);
+    mixKnob.setBounds(juce::Rectangle<int>(startX1, row1.getY(), knobWidth1, rowHeight - 5));
+    outputGainKnob.setBounds(juce::Rectangle<int>(startX1 + knobWidth1 + 30, row1.getY(), knobWidth1, rowHeight - 5));
 
-    // Center the knobs
-    int totalWidth = knobWidth * numKnobs;
-    int startX = bounds.getX() + (bounds.getWidth() - totalWidth) / 2;
+    // =========================================================================
+    // Row 2: Expander controls (5 knobs, evenly spaced)
+    // =========================================================================
+    auto row2 = bounds;
+    int numKnobs = 5;
+    int knobWidth2 = std::min(row2.getWidth() / numKnobs, 90);
+    int totalWidth2 = knobWidth2 * numKnobs;
+    int startX2 = row2.getCentreX() - totalWidth2 / 2;
 
-    auto getKnobBounds = [&](int index) {
-        return juce::Rectangle<int>(startX + index * knobWidth, bounds.getY(), knobWidth, knobHeight);
-    };
-
-    mixKnob.setBounds(getKnobBounds(0));
-    outputGainKnob.setBounds(getKnobBounds(1));
-    hpfKnob.setBounds(getKnobBounds(2));
-    lpfKnob.setBounds(getKnobBounds(3));
-    sensitivityKnob.setBounds(getKnobBounds(4));
-    smoothingKnob.setBounds(getKnobBounds(5));
+    thresholdKnob.setBounds(juce::Rectangle<int>(startX2 + knobWidth2 * 0, row2.getY(), knobWidth2, rowHeight - 5));
+    ratioKnob.setBounds(juce::Rectangle<int>(startX2 + knobWidth2 * 1, row2.getY(), knobWidth2, rowHeight - 5));
+    attackKnob.setBounds(juce::Rectangle<int>(startX2 + knobWidth2 * 2, row2.getY(), knobWidth2, rowHeight - 5));
+    releaseKnob.setBounds(juce::Rectangle<int>(startX2 + knobWidth2 * 3, row2.getY(), knobWidth2, rowHeight - 5));
+    rangeKnob.setBounds(juce::Rectangle<int>(startX2 + knobWidth2 * 4, row2.getY(), knobWidth2, rowHeight - 5));
 }

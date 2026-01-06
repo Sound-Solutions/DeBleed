@@ -13,6 +13,14 @@ const juce::String DeBleedAudioProcessor::PARAM_LPF_FREQ = "lpfFreq";
 const juce::String DeBleedAudioProcessor::PARAM_SENSITIVITY = "sensitivity";
 const juce::String DeBleedAudioProcessor::PARAM_SMOOTHING = "smoothing";
 
+// V2 Expander Parameter IDs
+const juce::String DeBleedAudioProcessor::PARAM_EXP_THRESHOLD = "expThreshold";
+const juce::String DeBleedAudioProcessor::PARAM_EXP_RATIO = "expRatio";
+const juce::String DeBleedAudioProcessor::PARAM_EXP_ATTACK = "expAttack";
+const juce::String DeBleedAudioProcessor::PARAM_EXP_RELEASE = "expRelease";
+const juce::String DeBleedAudioProcessor::PARAM_EXP_RANGE = "expRange";
+const juce::String DeBleedAudioProcessor::PARAM_USE_V2 = "useV2";
+
 DeBleedAudioProcessor::DeBleedAudioProcessor()
     : AudioProcessor(BusesProperties()
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
@@ -27,6 +35,12 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     parameters.addParameterListener(PARAM_LPF_FREQ, this);
     parameters.addParameterListener(PARAM_SENSITIVITY, this);
     parameters.addParameterListener(PARAM_SMOOTHING, this);
+    parameters.addParameterListener(PARAM_EXP_THRESHOLD, this);
+    parameters.addParameterListener(PARAM_EXP_RATIO, this);
+    parameters.addParameterListener(PARAM_EXP_ATTACK, this);
+    parameters.addParameterListener(PARAM_EXP_RELEASE, this);
+    parameters.addParameterListener(PARAM_EXP_RANGE, this);
+    parameters.addParameterListener(PARAM_USE_V2, this);
 
     // Initialize atomic values
     mix.store(*parameters.getRawParameterValue(PARAM_MIX));
@@ -36,6 +50,12 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     lpfFreq.store(*parameters.getRawParameterValue(PARAM_LPF_FREQ));
     sensitivity.store(*parameters.getRawParameterValue(PARAM_SENSITIVITY));
     smoothing.store(*parameters.getRawParameterValue(PARAM_SMOOTHING));
+    expThreshold.store(*parameters.getRawParameterValue(PARAM_EXP_THRESHOLD));
+    expRatio.store(*parameters.getRawParameterValue(PARAM_EXP_RATIO));
+    expAttack.store(*parameters.getRawParameterValue(PARAM_EXP_ATTACK));
+    expRelease.store(*parameters.getRawParameterValue(PARAM_EXP_RELEASE));
+    expRange.store(*parameters.getRawParameterValue(PARAM_EXP_RANGE));
+    useV2.store(*parameters.getRawParameterValue(PARAM_USE_V2) > 0.5f);
 }
 
 DeBleedAudioProcessor::~DeBleedAudioProcessor()
@@ -47,6 +67,12 @@ DeBleedAudioProcessor::~DeBleedAudioProcessor()
     parameters.removeParameterListener(PARAM_LPF_FREQ, this);
     parameters.removeParameterListener(PARAM_SENSITIVITY, this);
     parameters.removeParameterListener(PARAM_SMOOTHING, this);
+    parameters.removeParameterListener(PARAM_EXP_THRESHOLD, this);
+    parameters.removeParameterListener(PARAM_EXP_RATIO, this);
+    parameters.removeParameterListener(PARAM_EXP_ATTACK, this);
+    parameters.removeParameterListener(PARAM_EXP_RELEASE, this);
+    parameters.removeParameterListener(PARAM_EXP_RANGE, this);
+    parameters.removeParameterListener(PARAM_USE_V2, this);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::createParameterLayout()
@@ -149,6 +175,77 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         nullptr
     ));
 
+    // =========================================================================
+    // V2 Architecture Parameters - Expander
+    // =========================================================================
+
+    // Use V2 - toggle between v1 (neural EQ) and v2 (VAD + dynamic EQ + expander)
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID{PARAM_USE_V2, 1},
+        "Use V2",
+        true  // Default to v2 architecture
+    ));
+
+    // Expander Threshold - level below which expansion kicks in
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_EXP_THRESHOLD, 1},
+        "Exp Threshold",
+        juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f),
+        -40.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + " dB"; },
+        nullptr
+    ));
+
+    // Expander Ratio
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_EXP_RATIO, 1},
+        "Exp Ratio",
+        juce::NormalisableRange<float>(1.0f, 20.0f, 0.1f, 0.5f),
+        4.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + ":1"; },
+        nullptr
+    ));
+
+    // Expander Attack
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_EXP_ATTACK, 1},
+        "Exp Attack",
+        juce::NormalisableRange<float>(0.1f, 50.0f, 0.1f, 0.5f),
+        1.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + " ms"; },
+        nullptr
+    ));
+
+    // Expander Release
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_EXP_RELEASE, 1},
+        "Exp Release",
+        juce::NormalisableRange<float>(10.0f, 500.0f, 1.0f, 0.5f),
+        100.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(static_cast<int>(value)) + " ms"; },
+        nullptr
+    ));
+
+    // Expander Range - maximum gain reduction
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_EXP_RANGE, 1},
+        "Exp Range",
+        juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f),  // Extended to -80dB for full gating
+        -40.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + " dB"; },
+        nullptr
+    ));
+
     return {params.begin(), params.end()};
 }
 
@@ -168,6 +265,37 @@ void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, fl
         sensitivity.store(newValue);
     else if (parameterID == PARAM_SMOOTHING)
         smoothing.store(newValue);
+    // V2 Expander parameters
+    else if (parameterID == PARAM_EXP_THRESHOLD)
+    {
+        expThreshold.store(newValue);
+        expander_.setThresholdDb(newValue);
+    }
+    else if (parameterID == PARAM_EXP_RATIO)
+    {
+        expRatio.store(newValue);
+        expander_.setRatio(newValue);
+    }
+    else if (parameterID == PARAM_EXP_ATTACK)
+    {
+        expAttack.store(newValue);
+        expander_.setAttackMs(newValue);
+    }
+    else if (parameterID == PARAM_EXP_RELEASE)
+    {
+        expRelease.store(newValue);
+        expander_.setReleaseMs(newValue);
+    }
+    else if (parameterID == PARAM_EXP_RANGE)
+    {
+        expRange.store(newValue);
+        expander_.setRangeDb(newValue);
+    }
+    else if (parameterID == PARAM_USE_V2)
+    {
+        useV2.store(newValue > 0.5f);
+        DBG("V2 mode changed to: " << (newValue > 0.5f ? "ENABLED" : "DISABLED"));
+    }
 }
 
 void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
@@ -175,16 +303,27 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     currentSampleRate_ = sampleRate;
     currentBlockSize_ = samplesPerBlock;
 
-    // Prepare Neural5045 engine for inference
+    // V1: Prepare Neural5045 engine for inference
     neural5045Engine_.prepare(sampleRate, samplesPerBlock);
-
-    // Prepare the biquad filter chain
     biquadChain_.prepare(sampleRate, samplesPerBlock);
+
+    // V2: Prepare zero-latency components
+    spectralVAD_.prepare(sampleRate);
+    dynamicEQ_.prepare(sampleRate, samplesPerBlock);
+    expander_.prepare(sampleRate);
+
+    // Initialize expander with current parameter values
+    expander_.setThresholdDb(expThreshold.load());
+    expander_.setRatio(expRatio.load());
+    expander_.setAttackMs(expAttack.load());
+    expander_.setReleaseMs(expRelease.load());
+    expander_.setRangeDb(expRange.load());
 
     // Allocate buffers
     int numChannels = std::max(getTotalNumInputChannels(), getTotalNumOutputChannels());
     dryBuffer_.setSize(numChannels, samplesPerBlock);
     monoSidechain_.resize(samplesPerBlock);
+    vadConfidence_.resize(samplesPerBlock);
 
     // Zero latency - IIR filters are causal, no lookahead
     setLatencySamples(0);
@@ -195,8 +334,13 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
 
 void DeBleedAudioProcessor::releaseResources()
 {
-    // Reset filter states
+    // Reset V1 filter states
     biquadChain_.reset();
+
+    // Reset V2 components
+    spectralVAD_.reset();
+    dynamicEQ_.reset();
+    expander_.reset();
 }
 
 bool DeBleedAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -230,117 +374,71 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     if (bypassed.load())
         return;
 
-    // Get parameter values
+    // Get common parameter values
     float currentMix = mix.load();
+    float currentOutputGain = outputGain.load();
 
     // Early bypass if mix is 0%
     if (currentMix < 0.001f)
         return;
 
-    // =========================================================================
-    // Phase 3: Update biquad chain with user overrides
-    // =========================================================================
-    float currentHpfFreq = hpfFreq.load();
-    float currentLpfFreq = lpfFreq.load();
-    float currentOutputGain = outputGain.load();
-    float currentSensitivity = sensitivity.load();
-    float currentSmoothing = smoothing.load();
-
-    // HPF: Override if > 20Hz (user has adjusted from default)
-    biquadChain_.setHPFOverride(currentHpfFreq > 20.5f ? currentHpfFreq : -1.0f);
-
-    // LPF: Override if < 20kHz (user has adjusted from default)
-    biquadChain_.setLPFOverride(currentLpfFreq < 19500.0f ? currentLpfFreq : 20001.0f);
-
-    // Output gain offset
-    biquadChain_.setOutputGainOffset(currentOutputGain);
-
-    // Sensitivity
-    biquadChain_.setSensitivity(currentSensitivity);
-
-    // Smoothing time
-    biquadChain_.setSmoothingTime(currentSmoothing);
-
-    // =========================================================================
-    // Neural 5045 Processing
-    // =========================================================================
-
-    // 1. Store dry signal for wet/dry mix
+    // Store dry signal for wet/dry mix
     if (currentMix < 0.999f)
     {
         for (int ch = 0; ch < totalNumInputChannels; ++ch)
             dryBuffer_.copyFrom(ch, 0, buffer.getReadPointer(ch), numSamples);
     }
 
-    // 2. Create mono sidechain for neural network analysis
-    //    Sum all input channels to mono (normalized by channel count)
-    if (totalNumInputChannels > 0 && numSamples > 0)
+    // =========================================================================
+    // V2 Architecture: VAD + Expander (Zero Latency)
+    // =========================================================================
+
+    // Ensure buffers are large enough
+    if (static_cast<int>(monoSidechain_.size()) < numSamples)
+        monoSidechain_.resize(numSamples);
+    if (static_cast<int>(vadConfidence_.size()) < numSamples)
+        vadConfidence_.resize(numSamples);
+
+    // Create mono sidechain for VAD
+    const float* ch0 = buffer.getReadPointer(0);
+    std::copy(ch0, ch0 + numSamples, monoSidechain_.begin());
+
+    if (totalNumInputChannels > 1)
     {
-        // Ensure buffer is large enough
-        if (static_cast<int>(monoSidechain_.size()) < numSamples)
-            monoSidechain_.resize(numSamples);
-
-        // Start with first channel
-        const float* ch0 = buffer.getReadPointer(0);
-        std::copy(ch0, ch0 + numSamples, monoSidechain_.begin());
-
-        // Add remaining channels
         for (int ch = 1; ch < totalNumInputChannels; ++ch)
         {
             const float* chData = buffer.getReadPointer(ch);
             for (int s = 0; s < numSamples; ++s)
                 monoSidechain_[s] += chData[s];
         }
-
-        // Normalize by channel count
-        if (totalNumInputChannels > 1)
-        {
-            float normFactor = 1.0f / static_cast<float>(totalNumInputChannels);
-            for (int s = 0; s < numSamples; ++s)
-                monoSidechain_[s] *= normFactor;
-        }
+        float normFactor = 1.0f / static_cast<float>(totalNumInputChannels);
+        for (int s = 0; s < numSamples; ++s)
+            monoSidechain_[s] *= normFactor;
     }
 
-    // 3. Run neural network to predict EQ parameters
-    //    Returns pointer to [N_PARAMS × numFrames] array
-    const float* allParams = neural5045Engine_.process(monoSidechain_.data(), numSamples);
-    int numFrames = neural5045Engine_.getNumFrames();
+    // 1. Run Spectral VAD to get per-sample confidence
+    spectralVAD_.processBlock(monoSidechain_.data(), vadConfidence_.data(), numSamples);
 
-    // 4. Process audio frame-by-frame with corresponding neural parameters
-    //    Each frame is FRAME_SIZE samples (2048 = ~21ms at 96kHz)
-    //    This ensures the filter coefficients track the neural network predictions
-    constexpr int FRAME_SIZE = Neural5045Engine::FRAME_SIZE;
-
-    int samplesRemaining = numSamples;
-    int bufferOffset = 0;
-
-    for (int frame = 0; frame < numFrames && samplesRemaining > 0; ++frame)
+    // 2. Process each channel through expander
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
-        // Get parameters for this frame
-        const float* frameParams = neural5045Engine_.getFrameParams(frame);
-        if (frameParams != nullptr)
-        {
-            biquadChain_.setParameters(frameParams);
-        }
-
-        // Calculate samples to process in this frame
-        int samplesThisFrame = std::min(FRAME_SIZE, samplesRemaining);
-
-        // Create a sub-buffer for this frame's audio
-        juce::AudioBuffer<float> frameBuffer(buffer.getArrayOfWritePointers(),
-                                              totalNumInputChannels,
-                                              bufferOffset,
-                                              samplesThisFrame);
-
-        // 5. Process this frame through the filter cascade
-        //    HPF → LowShelf → [12x Peaking] → HighShelf → LPF → Gain
-        biquadChain_.process(frameBuffer);
-
-        bufferOffset += samplesThisFrame;
-        samplesRemaining -= samplesThisFrame;
+        float* channelData = buffer.getWritePointer(ch);
+        expander_.processBlock(channelData, vadConfidence_.data(), numSamples);
     }
 
-    // 6. Apply wet/dry mix
+    // 3. Apply output gain
+    if (std::abs(currentOutputGain) > 0.01f)
+    {
+        float gainLinear = std::pow(10.0f, currentOutputGain / 20.0f);
+        for (int ch = 0; ch < totalNumInputChannels; ++ch)
+        {
+            float* channelData = buffer.getWritePointer(ch);
+            for (int s = 0; s < numSamples; ++s)
+                channelData[s] *= gainLinear;
+        }
+    }
+
+    // Apply wet/dry mix
     if (currentMix < 0.999f)
     {
         float wetGain = currentMix;
@@ -355,6 +453,21 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 wetData[s] = wetData[s] * wetGain + dryData[s] * dryGain;
         }
     }
+
+    // Calculate output level for metering
+    float peakLevel = 0.0f;
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
+    {
+        const float* data = buffer.getReadPointer(ch);
+        for (int s = 0; s < numSamples; ++s)
+        {
+            float absVal = std::abs(data[s]);
+            if (absVal > peakLevel)
+                peakLevel = absVal;
+        }
+    }
+    float levelDb = 20.0f * std::log10(peakLevel + 1e-10f);
+    outputLevelDb_.store(std::max(-60.0f, levelDb));
 }
 
 bool DeBleedAudioProcessor::loadModel(const juce::String& modelPath)
@@ -381,6 +494,84 @@ void DeBleedAudioProcessor::unloadModel()
 {
     neural5045Engine_.unloadModel();
     biquadChain_.reset();
+}
+
+bool DeBleedAudioProcessor::loadV2Params(const juce::String& jsonPath)
+{
+    // Load learned band parameters from JSON exported by trainer_v2.py
+    juce::File jsonFile(jsonPath);
+    if (!jsonFile.existsAsFile())
+    {
+        DBG("V2 params file not found: " << jsonPath);
+        return false;
+    }
+
+    juce::String jsonContent = jsonFile.loadFileAsString();
+    auto json = juce::JSON::parse(jsonContent);
+
+    if (json.isVoid())
+    {
+        DBG("Failed to parse V2 params JSON");
+        return false;
+    }
+
+    // Parse dynamic EQ bands
+    auto* bandsArray = json.getProperty("dynamic_eq_bands", juce::var()).getArray();
+    if (bandsArray != nullptr)
+    {
+        std::array<DynamicEQ::BandParams, DynamicEQ::NUM_BANDS> eqParams;
+
+        for (int i = 0; i < std::min(static_cast<int>(bandsArray->size()), DynamicEQ::NUM_BANDS); ++i)
+        {
+            auto band = (*bandsArray)[i];
+            eqParams[i].freqHz = static_cast<float>(band.getProperty("freq_hz", 1000.0));
+            eqParams[i].q = static_cast<float>(band.getProperty("q", 1.0));
+            eqParams[i].maxCutDb = static_cast<float>(band.getProperty("max_cut_db", -6.0));
+        }
+
+        dynamicEQ_.loadParams(eqParams);
+        DBG("Loaded " << bandsArray->size() << " dynamic EQ bands from V2 params");
+    }
+
+    // Parse Spectral VAD parameters
+    auto spectralVadParams = json.getProperty("spectral_vad", juce::var());
+    if (!spectralVadParams.isVoid())
+    {
+        // Load threshold and knee
+        float thresholdDb = static_cast<float>(spectralVadParams.getProperty("threshold_db", -35.0));
+        float kneeDb = static_cast<float>(spectralVadParams.getProperty("knee_db", 15.0));
+        spectralVAD_.setThresholdDb(thresholdDb);
+        spectralVAD_.setKneeDb(kneeDb);
+
+        // Load band frequencies
+        auto* freqArray = spectralVadParams.getProperty("band_frequencies", juce::var()).getArray();
+        if (freqArray != nullptr && freqArray->size() == SpectralVAD::NUM_BANDS)
+        {
+            std::array<float, SpectralVAD::NUM_BANDS> frequencies;
+            for (int i = 0; i < SpectralVAD::NUM_BANDS; ++i)
+                frequencies[i] = static_cast<float>((*freqArray)[i]);
+            spectralVAD_.setBandFrequencies(frequencies);
+        }
+
+        // Load learned band weights
+        auto* weightsArray = spectralVadParams.getProperty("band_weights", juce::var()).getArray();
+        if (weightsArray != nullptr && weightsArray->size() == SpectralVAD::NUM_BANDS)
+        {
+            std::array<float, SpectralVAD::NUM_BANDS> weights;
+            for (int i = 0; i < SpectralVAD::NUM_BANDS; ++i)
+                weights[i] = static_cast<float>((*weightsArray)[i]);
+            spectralVAD_.setBandWeights(weights);
+
+            DBG("Loaded Spectral VAD weights:");
+            for (int i = 0; i < SpectralVAD::NUM_BANDS; ++i)
+                DBG("  Band " << i << " (" << static_cast<float>((*freqArray)[i]) << "Hz): weight=" << weights[i]);
+        }
+
+        DBG("Loaded Spectral VAD params: threshold=" << thresholdDb << "dB, knee=" << kneeDb << "dB");
+    }
+
+    DBG("V2 params loaded successfully from: " << jsonPath);
+    return true;
 }
 
 juce::AudioProcessorEditor* DeBleedAudioProcessor::createEditor()
