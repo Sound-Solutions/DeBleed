@@ -22,10 +22,6 @@
             file="plugin/Source/PluginEditor.cpp"/>
       <FILE id="PluginEditor_h" name="PluginEditor.h" compile="0" resource="0"
             file="plugin/Source/PluginEditor.h"/>
-      <FILE id="NeuralGateEngine_cpp" name="NeuralGateEngine.cpp" compile="1"
-            resource="0" file="plugin/Source/NeuralGateEngine.cpp"/>
-      <FILE id="NeuralGateEngine_h" name="NeuralGateEngine.h" compile="0"
-            resource="0" file="plugin/Source/NeuralGateEngine.h"/>
       <FILE id="TrainerProcess_cpp" name="TrainerProcess.cpp" compile="1"
             resource="0" file="plugin/Source/TrainerProcess.cpp"/>
       <FILE id="TrainerProcess_h" name="TrainerProcess.h" compile="0" resource="0"
@@ -46,10 +42,6 @@
             file="plugin/Source/DifferentiableBiquadChain.cpp"/>
       <FILE id="DifferentiableBiquadChain_h" name="DifferentiableBiquadChain.h" compile="0" resource="0"
             file="plugin/Source/DifferentiableBiquadChain.h"/>
-      <FILE id="Neural5045Engine_cpp" name="Neural5045Engine.cpp" compile="1" resource="0"
-            file="plugin/Source/Neural5045Engine.cpp"/>
-      <FILE id="Neural5045Engine_h" name="Neural5045Engine.h" compile="0" resource="0"
-            file="plugin/Source/Neural5045Engine.h"/>
       <FILE id="EQCurveDisplay_cpp" name="EQCurveDisplay.cpp" compile="1" resource="0"
             file="plugin/Source/EQCurveDisplay.cpp"/>
       <FILE id="EQCurveDisplay_h" name="EQCurveDisplay.h" compile="0" resource="0"
@@ -101,19 +93,14 @@
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"
                JUCE_WEB_BROWSER="0" JUCE_USE_CURL="0"/>
   <EXPORTFORMATS>
-    <XCODE_MAC targetFolder="Builds/MacOSX" xcodeValidArchs="arm64,x86_64" extraLinkerFlags="-lonnxruntime"
-               externalLibraries="onnxruntime"
+    <XCODE_MAC targetFolder="Builds/MacOSX" xcodeValidArchs="arm64,x86_64"
                microphonePermissionNeeded="1"
                microphonePermissionText="DeBleed needs microphone access to process live audio input in standalone mode."
                prebuildCommand="&quot;${PROJECT_DIR}/../../scripts/update_timestamp.sh&quot; &quot;${PROJECT_DIR}/../..&quot;"
                postbuildCommand="&quot;${PROJECT_DIR}/../../scripts/touch_bundles.sh&quot; &quot;${PRODUCT_NAME}&quot; &quot;${BUILT_PRODUCTS_DIR}&quot;">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="DeBleed" headerPath="$(HOME)/onnxruntime/include&#10;/usr/local/include"
-                       libraryPath="$(HOME)/onnxruntime/lib&#10;/usr/local/lib" osxArchitecture="Native"
-                       extraLinkerFlags="-lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="DeBleed" headerPath="$(HOME)/onnxruntime/include&#10;/usr/local/include"
-                       libraryPath="$(HOME)/onnxruntime/lib&#10;/usr/local/lib" osxArchitecture="Native"
-                       extraLinkerFlags="-lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="DeBleed" osxArchitecture="Native"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="DeBleed" osxArchitecture="Native"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_audio_basics" path="/Applications/JUCE/modules"/>

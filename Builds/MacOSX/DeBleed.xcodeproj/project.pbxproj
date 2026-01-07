@@ -48,7 +48,6 @@
 		4F568324CBC5CB33878EB75C /* include_juce_gui_basics.mm */ = {isa = PBXBuildFile; fileRef = 2421776D6D34E6E6762DFBF3; };
 		553F0ADACC531A6727CD8343 /* CoreAudioKit.framework */ = {isa = PBXBuildFile; fileRef = B58D87DAD7C6085FAD9060ED; };
 		5BAFA48C64B9142C1F7AFEFE /* include_juce_audio_plugin_client_VST3.mm */ = {isa = PBXBuildFile; fileRef = BBC1FA9AC725AD89CC49168F; };
-		5DD6FE6BBCA717B29BCFCFAB /* Neural5045Engine.cpp */ = {isa = PBXBuildFile; fileRef = DD95EA27747E9C810617BB7E; };
 		604DFDF1CE739CB0704100C3 /* include_juce_audio_plugin_client_ARA.cpp */ = {isa = PBXBuildFile; fileRef = 3C5CC8E102F0569139264739; };
 		622383044DD0416EE644D752 /* ControlPanel.cpp */ = {isa = PBXBuildFile; fileRef = B7B072693FEDEAD430B5AAF4; };
 		686E872DD1F0102F8FA81565 /* DifferentiableBiquadChain.cpp */ = {isa = PBXBuildFile; fileRef = F999BAC8EE4E8705B2A301B1; };
@@ -84,7 +83,6 @@
 		E777D260999751240B965040 /* include_juce_graphics_Harfbuzz.cpp */ = {isa = PBXBuildFile; fileRef = 86CDF7502B9E65F64C524B71; };
 		E88D47BD8D59B117F82C6706 /* Foundation.framework */ = {isa = PBXBuildFile; fileRef = B60EEA5148633A1B8B42DF60; };
 		EF3B3C10181B027AB1C335D4 /* include_juce_audio_processors_headless_ara.cpp */ = {isa = PBXBuildFile; fileRef = B20D9A9D790861F932BB246F; };
-		F02B34919DE074A3D2682C74 /* NeuralGateEngine.cpp */ = {isa = PBXBuildFile; fileRef = A5173B645649D790AF8431CD; };
 		F1AEAEB186C2E002C8C58A5F /* include_juce_events.mm */ = {isa = PBXBuildFile; fileRef = 815519D33DBF12FE4A260685; };
 		F4A3E110C7D60DA2A8AE5EE4 /* include_juce_audio_processors_headless_lv2_libs.cpp */ = {isa = PBXBuildFile; fileRef = 2A8C58D50F32F5916D720F8D; };
 		F608EB5E66C4BAFE3AEF9904 /* Shared Code */ = {isa = PBXBuildFile; fileRef = 684AD16462281DFB513C5ACC; };
@@ -153,7 +151,6 @@
 		8659B69DE467F1313300D71C /* IOKit.framework */ /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		86CDF7502B9E65F64C524B71 /* include_juce_graphics_Harfbuzz.cpp */ /* include_juce_graphics_Harfbuzz.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_graphics_Harfbuzz.cpp; path = ../../JuceLibraryCode/include_juce_graphics_Harfbuzz.cpp; sourceTree = SOURCE_ROOT; };
 		8749BC352F6A59F5836C7D72 /* EQCurveDisplay.h */ /* EQCurveDisplay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = EQCurveDisplay.h; path = ../../plugin/Source/EQCurveDisplay.h; sourceTree = SOURCE_ROOT; };
-		87E96126219F220456B15832 /* Neural5045Engine.h */ /* Neural5045Engine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Neural5045Engine.h; path = ../../plugin/Source/Neural5045Engine.h; sourceTree = SOURCE_ROOT; };
 		88755AAFDAE2D55A011D3018 /* Standalone Plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeBleed.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B1EBEC42934E98443113F7F /* include_juce_gui_extra.mm */ /* include_juce_gui_extra.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_gui_extra.mm; path = ../../JuceLibraryCode/include_juce_gui_extra.mm; sourceTree = SOURCE_ROOT; };
 		8BB1CFFB9EDAC3C705FADA89 /* juce_audio_utils */ /* juce_audio_utils */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_utils; path = /Applications/JUCE/modules/juce_audio_utils; sourceTree = "<absolute>"; };
@@ -161,7 +158,6 @@
 		98333E61762E6C7695E6F9CB /* juce_audio_processors */ /* juce_audio_processors */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_processors; path = /Applications/JUCE/modules/juce_audio_processors; sourceTree = "<absolute>"; };
 		9E5F8423AE7CFDDAA4A93548 /* juce_audio_formats */ /* juce_audio_formats */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_formats; path = /Applications/JUCE/modules/juce_audio_formats; sourceTree = "<absolute>"; };
 		9F53C5636E461FE71AE1786C /* QuartzCore.framework */ /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		A5173B645649D790AF8431CD /* NeuralGateEngine.cpp */ /* NeuralGateEngine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = NeuralGateEngine.cpp; path = ../../plugin/Source/NeuralGateEngine.cpp; sourceTree = SOURCE_ROOT; };
 		A90D017B38C32682CCB2620A /* DeBleedLookAndFeel.cpp */ /* DeBleedLookAndFeel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = DeBleedLookAndFeel.cpp; path = ../../plugin/Source/DeBleedLookAndFeel.cpp; sourceTree = SOURCE_ROOT; };
 		AB5C59DF26AF5D56B3EA2D31 /* include_juce_audio_utils.mm */ /* include_juce_audio_utils.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_utils.mm; path = ../../JuceLibraryCode/include_juce_audio_utils.mm; sourceTree = SOURCE_ROOT; };
 		ABC39D5F7ECB212834055D20 /* RecentFilesMenuTemplate.nib */ /* RecentFilesMenuTemplate.nib */ = {isa = PBXFileReference; lastKnownFileType = file.nib; name = RecentFilesMenuTemplate.nib; path = RecentFilesMenuTemplate.nib; sourceTree = SOURCE_ROOT; };
@@ -179,9 +175,7 @@
 		C1C3302681ED944C8DD7F683 /* juce_core */ /* juce_core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_core; path = /Applications/JUCE/modules/juce_core; sourceTree = "<absolute>"; };
 		C39DA42226F6C776893E9FDF /* SpectralVAD.cpp */ /* SpectralVAD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SpectralVAD.cpp; path = ../../plugin/Source/SpectralVAD.cpp; sourceTree = SOURCE_ROOT; };
 		D2242C35E5359BDA92CDB83C /* juce_events */ /* juce_events */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_events; path = /Applications/JUCE/modules/juce_events; sourceTree = "<absolute>"; };
-		DD95EA27747E9C810617BB7E /* Neural5045Engine.cpp */ /* Neural5045Engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Neural5045Engine.cpp; path = ../../plugin/Source/Neural5045Engine.cpp; sourceTree = SOURCE_ROOT; };
 		E048D47D4568D22E3677C162 /* ControlPanel.h */ /* ControlPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ControlPanel.h; path = ../../plugin/Source/ControlPanel.h; sourceTree = SOURCE_ROOT; };
-		E803459422AB6EADC5AE3EE5 /* NeuralGateEngine.h */ /* NeuralGateEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = NeuralGateEngine.h; path = ../../plugin/Source/NeuralGateEngine.h; sourceTree = SOURCE_ROOT; };
 		EC6EFD59F927AC0A8EA35B8E /* CoreAudio.framework */ /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		F817FED0CF8346AACE2A7CBD /* ArcMeter.cpp */ /* ArcMeter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ArcMeter.cpp; path = ../../plugin/Source/ArcMeter.cpp; sourceTree = SOURCE_ROOT; };
 		F999BAC8EE4E8705B2A301B1 /* DifferentiableBiquadChain.cpp */ /* DifferentiableBiquadChain.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = DifferentiableBiquadChain.cpp; path = ../../plugin/Source/DifferentiableBiquadChain.cpp; sourceTree = SOURCE_ROOT; };
@@ -286,8 +280,6 @@
 				286B11C8341536B97D5BF579,
 				3F94A2928A3243814CDBE1F5,
 				0B38FFE414AF19EBA37DB191,
-				A5173B645649D790AF8431CD,
-				E803459422AB6EADC5AE3EE5,
 				46D488FB65667A4C2EF58515,
 				3437B6EE5E0D3EB99AD991EB,
 				39AD446504209B10549A5E12,
@@ -298,8 +290,6 @@
 				4E9AB4B1F660B781B2401505,
 				F999BAC8EE4E8705B2A301B1,
 				FC597CB533890C4FDB8C755C,
-				DD95EA27747E9C810617BB7E,
-				87E96126219F220456B15832,
 				B98AB16790F4916F6FEE774B,
 				8749BC352F6A59F5836C7D72,
 				B7B072693FEDEAD430B5AAF4,
@@ -932,13 +922,11 @@
 			files = (
 				BE12F1E44021693841F1F7F2,
 				E5A5A25D827E6C22EAEBA600,
-				F02B34919DE074A3D2682C74,
 				4A1BC0D955D8E7B76546969F,
 				4A6EDB754CED6A25C65C8C80,
 				D0E2AB97F70D5EA6AD324691,
 				3328BD0693BE143F6DEC0E62,
 				686E872DD1F0102F8FA81565,
-				5DD6FE6BBCA717B29BCFCFAB,
 				B6AB2E9624A0B25B9BDD4F1B,
 				622383044DD0416EE644D752,
 				8F4C580E36C44F847410F154,
@@ -1126,24 +1114,17 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Info-AU.plist;
 				INFOPLIST_PREPROCESS = NO;
 				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/Components/";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				LIBRARY_STYLE = Bundle;
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-bundle -lDeBleed -lonnxruntime -lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_LDFLAGS = "-bundle -lDeBleed";
 				OTHER_REZFLAGS = "-d ppc_$ppc -d i386_$i386 -d ppc64_$ppc64 -d x86_64_$x86_64 -d arm64_$arm64 -I /System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Versions/A/Headers -I \"$(DEVELOPER_DIR)/Extras/CoreAudio/AudioUnits/AUPublic/AUBase\" -I \"$(DEVELOPER_DIR)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AudioUnit.framework/Headers\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
@@ -1253,23 +1234,16 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Info-AU.plist;
 				INFOPLIST_PREPROCESS = NO;
 				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/Components/";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-bundle -lDeBleed -lonnxruntime -lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_LDFLAGS = "-bundle -lDeBleed";
 				OTHER_REZFLAGS = "-d ppc_$ppc -d i386_$i386 -d ppc64_$ppc64 -d x86_64_$x86_64 -d arm64_$arm64 -I /System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Versions/A/Headers -I \"$(DEVELOPER_DIR)/Extras/CoreAudio/AudioUnits/AUPublic/AUBase\" -I \"$(DEVELOPER_DIR)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AudioUnit.framework/Headers\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
@@ -1386,22 +1360,15 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Info-Standalone_Plugin.plist;
 				INFOPLIST_PREPROCESS = NO;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-lDeBleed -lonnxruntime -lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_LDFLAGS = "-lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
 				USE_HEADERMAP = NO;
@@ -1508,21 +1475,13 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Info-VST3_Manifest_Helper.plist;
 				INFOPLIST_PREPROCESS = NO;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "juce_vst3_helper";
 				USE_HEADERMAP = NO;
@@ -1630,21 +1589,13 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INSTALL_PATH = "@executable_path/../Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
 				SKIP_INSTALL = YES;
@@ -1752,22 +1703,14 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Info-VST3_Manifest_Helper.plist;
 				INFOPLIST_PREPROCESS = NO;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "juce_vst3_helper";
 				USE_HEADERMAP = NO;
@@ -1875,20 +1818,12 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INSTALL_PATH = "@executable_path/../Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
 				SKIP_INSTALL = YES;
@@ -1996,21 +1931,14 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Info-Standalone_Plugin.plist;
 				INFOPLIST_PREPROCESS = NO;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-lDeBleed -lonnxruntime -lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_LDFLAGS = "-lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
 				USE_HEADERMAP = NO;
@@ -2166,24 +2094,17 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Info-VST3.plist;
 				INFOPLIST_PREPROCESS = NO;
 				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/VST3/";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				LIBRARY_STYLE = Bundle;
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-bundle -lDeBleed -lonnxruntime -lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_LDFLAGS = "-bundle -lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
 				USE_HEADERMAP = NO;
@@ -2292,23 +2213,16 @@
 					"/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK",
 					"$(SRCROOT)/../../JuceLibraryCode",
 					"/Applications/JUCE/modules",
-					"$(HOME)/onnxruntime/include",
-					"/usr/local/include",
 					"/Applications/JUCE/modules/juce_audio_plugin_client/AU",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Info-VST3.plist;
 				INFOPLIST_PREPROCESS = NO;
 				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/VST3/";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(HOME)/onnxruntime/lib\"",
-					"\"/usr/local/lib\"",
-				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules $(HOME)/onnxruntime/include /usr/local/include /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-bundle -lDeBleed -lonnxruntime -lonnxruntime  -lonnxruntime -rpath @executable_path/../Frameworks -rpath $(HOME)/onnxruntime/lib";
+				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_LDFLAGS = "-bundle -lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
 				USE_HEADERMAP = NO;

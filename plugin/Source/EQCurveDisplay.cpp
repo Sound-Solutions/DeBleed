@@ -67,6 +67,34 @@ void EQCurveDisplay::updateFromChain(const DifferentiableBiquadChain& chain)
     repaint();
 }
 
+void EQCurveDisplay::updateFromDynamicEQ(const DynamicEQ& eq)
+{
+    if (plotArea_.isEmpty())
+        return;
+
+    int numPoints = static_cast<int>(magnitudeResponseDb_.size());
+
+    for (int i = 0; i < numPoints; ++i)
+    {
+        float x = plotArea_.getX() + static_cast<float>(i);
+        float freqHz = xToFrequency(x);
+
+        // Get magnitude response from the DynamicEQ
+        float magnitude = eq.getFrequencyResponse(freqHz);
+
+        // Convert to dB, with protection for zero/negative values
+        if (magnitude > 0.0f)
+            magnitudeResponseDb_[i] = 20.0f * std::log10(magnitude);
+        else
+            magnitudeResponseDb_[i] = minDb_;
+
+        // Clamp to display range
+        magnitudeResponseDb_[i] = juce::jlimit(minDb_, maxDb_, magnitudeResponseDb_[i]);
+    }
+
+    repaint();
+}
+
 void EQCurveDisplay::setFilterFrequencies(float hpfHz, float lpfHz)
 {
     hpfFreqHz_ = hpfHz;

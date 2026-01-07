@@ -215,7 +215,7 @@ private:
 
     // Gain ranges (dB)
     static constexpr float FILTER_MIN_GAIN = -24.0f;
-    static constexpr float FILTER_MAX_GAIN = 24.0f;
+    static constexpr float FILTER_MAX_GAIN = 24.0f;  // Model trained with this range
     static constexpr float BROADBAND_MIN_GAIN = -60.0f;
     static constexpr float BROADBAND_MAX_GAIN = 0.0f;
 

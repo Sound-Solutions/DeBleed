@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include "DifferentiableBiquadChain.h"
+#include "DynamicEQ.h"
 
 /**
  * EQCurveDisplay - Interactive frequency response visualization for Neural 5045.
@@ -32,10 +33,15 @@ public:
     void mouseExit(const juce::MouseEvent& e) override;
 
     /**
-     * Update the display from a biquad chain's frequency response.
+     * Update the display from a biquad chain's frequency response (v1 mode).
      * Call this periodically (e.g., every 50-100ms) to update the visualization.
      */
     void updateFromChain(const DifferentiableBiquadChain& chain);
+
+    /**
+     * Update the display from a DynamicEQ's frequency response (v2 mode).
+     */
+    void updateFromDynamicEQ(const DynamicEQ& eq);
 
     /**
      * Set callback for when HPF frequency is changed via dragging.

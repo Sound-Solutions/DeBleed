@@ -91,8 +91,10 @@ N_FREQ_BINS = N_FREQ_BINS_A  # Stream A bins (for backward compatibility)
 N_OUTPUT_BINS = N_TOTAL_FEATURES  # 257 total output bins
 
 # SNR range for synthetic mixing (in dB)
-SNR_MIN = -5.0
-SNR_MAX = 10.0
+# Higher SNR = less aggressive model (preserves more vocal)
+# Lower SNR = more aggressive model (cuts more bleed, but may damage vocal)
+SNR_MIN = 3.0    # Was -5.0 - don't train on extreme bleed cases
+SNR_MAX = 15.0   # Was 10.0 - train on "vocal is clearly louder" cases
 
 
 # ============================================================================
@@ -476,9 +478,31 @@ class Trainer:
 
         self.l1_loss = nn.L1Loss()
 
+        # Vocal preservation weight - penalizes over-cutting
+        self.preservation_weight = 0.3
+
     def spectral_convergence_loss(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Spectral convergence loss for better perceptual quality."""
         return torch.norm(target - pred, p='fro') / (torch.norm(target, p='fro') + 1e-8)
+
+    def vocal_preservation_loss(self, pred_mask: torch.Tensor, clean_mag: torch.Tensor) -> torch.Tensor:
+        """
+        Penalize over-cutting where clean vocal signal is strong.
+
+        When clean_mag is high, the mask should be close to 1.0 (don't cut).
+        When clean_mag is low, we don't care as much what the mask does.
+
+        This prevents the model from learning to cut everything aggressively.
+        """
+        # Normalize clean magnitude to [0, 1] range for weighting
+        clean_max = clean_mag.max(dim=-1, keepdim=True)[0].max(dim=-2, keepdim=True)[0]
+        clean_weight = clean_mag / (clean_max + 1e-8)
+
+        # Where clean signal is strong, mask should be close to 1.0
+        # Loss = weighted mean of (1 - mask) where weight is clean energy
+        over_cut = (1.0 - pred_mask) * clean_weight
+
+        return over_cut.mean()
 
     def train_epoch(self, epoch: int, total_epochs: int) -> float:
         """Train for one epoch and return average loss."""
@@ -517,8 +541,15 @@ class Trainer:
             mag_loss = self.l1_loss(pred_clean_mag, clean_mag_dual)
             sc_loss = self.spectral_convergence_loss(pred_clean_mag, clean_mag_dual)
 
+            # Vocal preservation loss - penalize over-cutting where vocal is strong
+            pres_loss = self.vocal_preservation_loss(pred_mask, clean_mag_dual)
+
             # Combined loss
-            loss = mask_loss + 0.5 * mag_loss + 0.1 * sc_loss
+            # - mask_loss: match the ideal mask
+            # - mag_loss: reconstructed magnitude matches clean
+            # - sc_loss: spectral convergence for perceptual quality
+            # - pres_loss: don't over-cut where vocal is present
+            loss = mask_loss + 0.5 * mag_loss + 0.1 * sc_loss + self.preservation_weight * pres_loss
 
             # Backward pass
             self.optimizer.zero_grad()

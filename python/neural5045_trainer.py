@@ -618,8 +618,9 @@ def export_to_onnx(model: Neural5045Net, output_path: str, model_name: str = 'ne
     device = next(model.parameters()).device
 
     # Dummy input: 1.5 seconds of audio at 96kHz
+    # Use 3D input [batch, channels, samples] to match C++ plugin expectations
     n_samples = CHUNK_SAMPLES
-    dummy_input = torch.randn(1, n_samples, device=device)
+    dummy_input = torch.randn(1, 1, n_samples, device=device)
 
     onnx_path = os.path.join(output_path, f"{model_name}.onnx")
 
@@ -633,7 +634,7 @@ def export_to_onnx(model: Neural5045Net, output_path: str, model_name: str = 'ne
         input_names=['audio'],
         output_names=['params'],
         dynamic_axes={
-            'audio': {0: 'batch_size', 1: 'samples'},
+            'audio': {0: 'batch_size', 2: 'samples'},
             'params': {0: 'batch_size', 2: 'frames'}
         }
     )
@@ -720,9 +721,9 @@ def parse_args():
                         help='Model file name')
     parser.add_argument('--epochs', type=int, default=100,
                         help='Number of training epochs')
-    parser.add_argument('--batch_size', type=int, default=8,
+    parser.add_argument('--batch_size', type=int, default=16,
                         help='Training batch size')
-    parser.add_argument('--samples_per_epoch', type=int, default=2000,
+    parser.add_argument('--samples_per_epoch', type=int, default=1000,
                         help='Samples per epoch')
     parser.add_argument('--learning_rate', type=float, default=1e-4,
                         help='Learning rate')

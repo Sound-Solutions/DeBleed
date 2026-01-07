@@ -55,16 +55,38 @@ void DifferentiableBiquadChain::prepare(double sampleRate, int maxBlockSize)
         sv.setCurrentAndTargetValue(0.5f);
     }
 
-    inputGainLinear_.reset(sampleRate, SMOOTHING_TIME_MS / 1000.0);
+    // Gain smoothing needs to be slower than coefficient smoothing to avoid pops
+    // Use 200ms minimum for gains (neural predictions can swing wildly)
+    const double gainSmoothingTimeSecs = std::max(smoothingTimeMs_ * 10.0, 200.0) / 1000.0;
+    inputGainLinear_.reset(sampleRate, gainSmoothingTimeSecs);
     inputGainLinear_.setCurrentAndTargetValue(1.0f);
 
-    outputGainLinear_.reset(sampleRate, SMOOTHING_TIME_MS / 1000.0);
+    outputGainLinear_.reset(sampleRate, gainSmoothingTimeSecs);
     outputGainLinear_.setCurrentAndTargetValue(1.0f);
 
     // Initialize coefficients to neutral (bypass-ish)
     for (int i = 0; i < N_FILTERS; ++i)
     {
-        computeCoeffs(i, 1000.0f, 0.0f, 1.0f);
+        FilterType type = getFilterType(i);
+
+        // HPF and LPF are disabled - set to true bypass
+        if (type == FilterType::HighPass || type == FilterType::LowPass)
+        {
+            SVFCoeffs& c = targetCoeffs_[i];
+            c.g = 0.0f;
+            c.k = 1.0f;
+            c.A = 1.0f;
+            c.a1 = 0.0f;
+            c.a2 = 0.0f;
+            c.a3 = 0.0f;
+            c.m0 = 1.0f;  // output = input (bypass)
+            c.m1 = 0.0f;
+            c.m2 = 0.0f;
+        }
+        else
+        {
+            computeCoeffs(i, 1000.0f, 0.0f, 1.0f);
+        }
         currentCoeffs_[i] = targetCoeffs_[i];
     }
 
@@ -121,9 +143,16 @@ void DifferentiableBiquadChain::process(juce::AudioBuffer<float>& buffer)
     int numSamples = buffer.getNumSamples();
     int numChannels = std::min(buffer.getNumChannels(), 2);
 
+    // Coefficient interpolation - use exponential smoothing
+    // Use user-controllable smoothing time (default 50ms from param, scaled up for safety)
+    // Longer = smoother but more latent; shorter = more responsive but can pop
+    const float effectiveSmoothingMs = std::max(smoothingTimeMs_ * 10.0f, 100.0f);  // Min 100ms
+    const float tau = static_cast<float>(sampleRate_) * effectiveSmoothingMs / 1000.0f;
+    const float coeffSmoothingCoeff = 1.0f - std::exp(-1.0f / tau);
+
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        // Update coefficients every FRAME_SIZE samples
+        // Update target coefficients every FRAME_SIZE samples
         if (frameCounter_ == 0)
         {
             // Get Phase 3 overrides
@@ -133,6 +162,11 @@ void DifferentiableBiquadChain::process(juce::AudioBuffer<float>& buffer)
 
             for (int f = 0; f < N_FILTERS; ++f)
             {
+                // Skip HPF and LPF - disabled, user can add their own
+                FilterType type = getFilterType(f);
+                if (type == FilterType::HighPass || type == FilterType::LowPass)
+                    continue;
+
                 int baseIdx = f * N_PARAMS_PER_FILTER;
 
                 // Get smoothed parameter values
@@ -141,37 +175,18 @@ void DifferentiableBiquadChain::process(juce::AudioBuffer<float>& buffer)
                 float qNorm = smoothedParams_[baseIdx + 2].getNextValue();
 
                 // Denormalize based on filter type
-                FilterType type = getFilterType(f);
                 float freqHz, gainDb, q;
 
                 switch (type)
                 {
-                    case FilterType::HighPass:
-                        // Check for user override (hpfOver > 0 means override is active)
-                        if (hpfOver > 0.0f)
-                            freqHz = hpfOver;
-                        else
-                            freqHz = denormalizeFreq(freqNorm, HPF_MIN_FREQ, HPF_MAX_FREQ);
-                        gainDb = 0.0f;  // HPF doesn't use gain
-                        q = denormalizeQ(qNorm);
-                        break;
-
-                    case FilterType::LowPass:
-                        // Check for user override (lpfOver < 20000 means override is active)
-                        if (lpfOver < 20000.0f)
-                            freqHz = lpfOver;
-                        else
-                            freqHz = denormalizeFreq(freqNorm, LPF_MIN_FREQ, LPF_MAX_FREQ);
-                        gainDb = 0.0f;  // LPF doesn't use gain
-                        q = denormalizeQ(qNorm);
-                        break;
-
                     case FilterType::LowShelf:
                     case FilterType::HighShelf:
                         freqHz = denormalizeFreq(freqNorm, SHELF_MIN_FREQ, SHELF_MAX_FREQ);
                         gainDb = denormalizeGain(gainNorm, FILTER_MIN_GAIN, FILTER_MAX_GAIN);
                         // Apply sensitivity: 0 = no EQ (0dB), 1 = full EQ
                         gainDb *= sens;
+                        // Clamp to cuts only, max -12dB to prevent over-muffling
+                        gainDb = std::clamp(gainDb, -12.0f, 0.0f);
                         q = denormalizeQ(qNorm);
                         break;
 
@@ -181,18 +196,36 @@ void DifferentiableBiquadChain::process(juce::AudioBuffer<float>& buffer)
                         gainDb = denormalizeGain(gainNorm, FILTER_MIN_GAIN, FILTER_MAX_GAIN);
                         // Apply sensitivity: 0 = no EQ (0dB), 1 = full EQ
                         gainDb *= sens;
+                        // Clamp to cuts only, max -12dB to prevent over-muffling
+                        gainDb = std::clamp(gainDb, -12.0f, 0.0f);
                         q = denormalizeQ(qNorm);
                         break;
                 }
 
                 computeCoeffs(f, freqHz, gainDb, q);
             }
+        }
 
-            // Interpolate from current to target coefficients
-            for (int f = 0; f < N_FILTERS; ++f)
-            {
-                currentCoeffs_[f] = targetCoeffs_[f];
-            }
+        // Smoothly interpolate coefficients every sample to avoid clicks
+        for (int f = 0; f < N_FILTERS; ++f)
+        {
+            // Skip HPF and LPF - they stay at bypass
+            FilterType type = getFilterType(f);
+            if (type == FilterType::HighPass || type == FilterType::LowPass)
+                continue;
+
+            SVFCoeffs& curr = currentCoeffs_[f];
+            const SVFCoeffs& tgt = targetCoeffs_[f];
+
+            curr.g  += coeffSmoothingCoeff * (tgt.g  - curr.g);
+            curr.k  += coeffSmoothingCoeff * (tgt.k  - curr.k);
+            curr.A  += coeffSmoothingCoeff * (tgt.A  - curr.A);
+            curr.a1 += coeffSmoothingCoeff * (tgt.a1 - curr.a1);
+            curr.a2 += coeffSmoothingCoeff * (tgt.a2 - curr.a2);
+            curr.a3 += coeffSmoothingCoeff * (tgt.a3 - curr.a3);
+            curr.m0 += coeffSmoothingCoeff * (tgt.m0 - curr.m0);
+            curr.m1 += coeffSmoothingCoeff * (tgt.m1 - curr.m1);
+            curr.m2 += coeffSmoothingCoeff * (tgt.m2 - curr.m2);
         }
 
         frameCounter_ = (frameCounter_ + 1) % FRAME_SIZE;
@@ -224,9 +257,11 @@ void DifferentiableBiquadChain::process(juce::AudioBuffer<float>& buffer)
         }
     }
 
-    // Advance smoothers for remaining samples in the frame
-    for (auto& sv : smoothedParams_)
-        sv.skip(numSamples);
+    // NOTE: Do NOT call skip() on smoothedParams_ here!
+    // The smoothers are sampled once per FRAME_SIZE when we call getNextValue(),
+    // and the coefficient interpolation handles per-sample smoothing.
+    // Calling skip() causes the smoothers to advance faster than they're sampled,
+    // resulting in discontinuities (pops) when parameters jump.
 }
 
 float DifferentiableBiquadChain::processSVF(float input, int filterIndex, int channel)
@@ -461,56 +496,147 @@ float DifferentiableBiquadChain::denormalizeQ(float norm) const
 
 float DifferentiableBiquadChain::getFrequencyResponse(float freqHz) const
 {
-    // Compute combined magnitude response of all filters
-    // Using the transfer function evaluated at the given frequency
+    // Compute combined magnitude response of all filters using SVF transfer function
+    // H(s) = m0 + m1 * s / (s^2 + k*s + 1) + m2 / (s^2 + k*s + 1)
 
-    float omega = 2.0f * juce::MathConstants<float>::pi * freqHz / static_cast<float>(sampleRate_);
-    std::complex<float> z = std::polar(1.0f, omega);
+    if (sampleRate_ <= 0.0)
+        return 1.0f;
+
+    // Compute normalized angular frequency
+    float w0 = 2.0f * juce::MathConstants<float>::pi * freqHz / static_cast<float>(sampleRate_);
+
+    // For frequency response, evaluate at s = j*omega using the bilinear transform relationship
+    // z = e^(j*omega), and we need the discrete-time response
+
     std::complex<float> totalResponse(1.0f, 0.0f);
 
     for (int f = 0; f < N_FILTERS; ++f)
     {
         const SVFCoeffs& c = currentCoeffs_[f];
 
-        // Compute SVF frequency response
-        // This is an approximation - for accurate results we'd need the full transfer function
+        // SVF frequency response using the mixing coefficients
+        // The SVF output is: y = m0*input + m1*bandpass + m2*lowpass
+
+        // Use the prewarped frequency response
         float g = c.g;
         float k = c.k;
 
-        std::complex<float> s = (z - 1.0f) / (z + 1.0f);  // Bilinear transform approximation
-        s = s * static_cast<float>(sampleRate_);  // Scale
+        // At frequency w, the SVF responses are:
+        // Lowpass: g^2 / (1 + k*g + g^2)
+        // Bandpass: g / (1 + k*g + g^2)
+        // Highpass: 1 / (1 + k*g + g^2)
 
-        // Simplified response based on filter type
+        // For our frequency of interest, compute the actual g at that frequency
+        float gw = std::tan(w0 / 2.0f);
+
+        // Common denominator for SVF at this frequency
+        float denom = 1.0f + k * gw + gw * gw;
+        if (denom < 1e-10f) denom = 1e-10f;
+
+        float hp_mag = 1.0f / denom;
+        float bp_mag = gw / denom;
+        float lp_mag = gw * gw / denom;
+
+        // Combined response using mixing coefficients: m0*hp + m1*bp + m2*lp
+        // But m0 represents the input feed-through, so it's:
+        // output = m0*input + m1*band + m2*low
+        // For HPF: m0=1, m1=-k, m2=-1 -> response = hp_mag - k*bp_mag - lp_mag
+        // This is complex, but for magnitude we can approximate
+
+        // More accurate: compute complex response
+        // At frequency w, the normalized s is: s = j*tan(w/2) / g_design
+        // where g_design is the g computed for the filter's center frequency
+
+        // Simplified magnitude calculation based on filter type
         FilterType type = getFilterType(f);
-        float gain = 1.0f;
+        float filterResponse = 1.0f;
 
         switch (type)
         {
-            case FilterType::Peak:
-                gain = c.A * c.A;  // Approximate peak gain
+            case FilterType::HighPass:
+            {
+                // HPF response rolls off below cutoff
+                float fc = denormalizeFreq(currentParams_[f * N_PARAMS_PER_FILTER].load(), HPF_MIN_FREQ, HPF_MAX_FREQ);
+                float ratio = freqHz / fc;
+                // Second-order highpass approximation
+                filterResponse = ratio * ratio / std::sqrt(1.0f + ratio * ratio * ratio * ratio);
+                filterResponse = std::min(filterResponse, 1.0f);
                 break;
+            }
+
+            case FilterType::LowPass:
+            {
+                // LPF response rolls off above cutoff
+                float fc = denormalizeFreq(currentParams_[f * N_PARAMS_PER_FILTER].load(), LPF_MIN_FREQ, LPF_MAX_FREQ);
+                float ratio = freqHz / fc;
+                // Second-order lowpass approximation
+                filterResponse = 1.0f / std::sqrt(1.0f + ratio * ratio * ratio * ratio);
+                break;
+            }
+
             case FilterType::LowShelf:
-            case FilterType::HighShelf:
-                gain = c.A * c.A;
+            {
+                float fc = denormalizeFreq(currentParams_[f * N_PARAMS_PER_FILTER].load(), SHELF_MIN_FREQ, SHELF_MAX_FREQ);
+                float gainDb = denormalizeGain(currentParams_[f * N_PARAMS_PER_FILTER + 1].load(), FILTER_MIN_GAIN, FILTER_MAX_GAIN);
+                gainDb *= sensitivity_.load();
+                gainDb = std::clamp(gainDb, -12.0f, 0.0f);  // Cuts only, max -12dB
+                float A = std::pow(10.0f, gainDb / 20.0f);
+
+                // Low shelf transition
+                float ratio = freqHz / fc;
+                float t = ratio * ratio;
+                filterResponse = std::sqrt((A * A + t) / (1.0f + t));
+                if (freqHz < fc)
+                    filterResponse = std::sqrt(A * A * (1.0f + 1.0f / t) / (A * A / t + 1.0f));
                 break;
+            }
+
+            case FilterType::HighShelf:
+            {
+                float fc = denormalizeFreq(currentParams_[f * N_PARAMS_PER_FILTER].load(), SHELF_MIN_FREQ, SHELF_MAX_FREQ);
+                float gainDb = denormalizeGain(currentParams_[f * N_PARAMS_PER_FILTER + 1].load(), FILTER_MIN_GAIN, FILTER_MAX_GAIN);
+                gainDb *= sensitivity_.load();
+                gainDb = std::clamp(gainDb, -12.0f, 0.0f);  // Cuts only, max -12dB
+                float A = std::pow(10.0f, gainDb / 20.0f);
+
+                // High shelf transition
+                float ratio = freqHz / fc;
+                float t = ratio * ratio;
+                filterResponse = std::sqrt((1.0f + A * A * t) / (1.0f + t));
+                break;
+            }
+
+            case FilterType::Peak:
+            {
+                float fc = denormalizeFreq(currentParams_[f * N_PARAMS_PER_FILTER].load(), PEAK_MIN_FREQ, PEAK_MAX_FREQ);
+                float gainDb = denormalizeGain(currentParams_[f * N_PARAMS_PER_FILTER + 1].load(), FILTER_MIN_GAIN, FILTER_MAX_GAIN);
+                gainDb *= sensitivity_.load();
+                gainDb = std::clamp(gainDb, -12.0f, 0.0f);  // Cuts only, max -12dB
+                float q = denormalizeQ(currentParams_[f * N_PARAMS_PER_FILTER + 2].load());
+
+                float A = std::pow(10.0f, gainDb / 20.0f);
+                float ratio = freqHz / fc;
+                float bw = 1.0f / q;
+
+                // Peaking EQ response
+                float x = ratio - 1.0f / ratio;
+                float denom = x * x + bw * bw;
+                filterResponse = std::sqrt((A * A * bw * bw + x * x) / denom);
+                if (denom < 1e-10f) filterResponse = A;
+                break;
+            }
+
             default:
+                filterResponse = 1.0f;
                 break;
         }
 
-        totalResponse *= std::complex<float>(gain, 0.0f);
+        totalResponse *= std::complex<float>(filterResponse, 0.0f);
     }
 
-    // Include input/output gains (with safety check for uninitialized state)
-    float inputGain = 1.0f;
-    float outputGain = 1.0f;
-
-    // SmoothedValue might not be initialized yet if prepare() wasn't called
-    // Check if we're in a valid state by checking if sampleRate_ has been set
-    if (sampleRate_ > 0.0)
-    {
-        inputGain = inputGainLinear_.getCurrentValue();
-        outputGain = outputGainLinear_.getCurrentValue();
-    }
+    // Include input/output gains
+    float inputGain = inputGainLinear_.getCurrentValue();
+    float outputGain = outputGainLinear_.getCurrentValue();
 
     return std::abs(totalResponse) * inputGain * outputGain;
 }
@@ -586,8 +712,10 @@ void DifferentiableBiquadChain::setSmoothingTime(float timeMs)
         for (auto& sv : smoothedParams_)
             sv.reset(sampleRate_, rampSecs);
 
-        inputGainLinear_.reset(sampleRate_, rampSecs);
-        outputGainLinear_.reset(sampleRate_, rampSecs);
+        // Gain smoothing uses scaled-up time to prevent pops from large swings
+        float gainRampSecs = std::max(smoothingTimeMs_ * 10.0f, 200.0f) / 1000.0f;
+        inputGainLinear_.reset(sampleRate_, gainRampSecs);
+        outputGainLinear_.reset(sampleRate_, gainRampSecs);
     }
 }
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "Neural5045Engine.h"
 #include "DifferentiableBiquadChain.h"
 #include "TrainerProcess.h"
 #include "SimpleVAD.h"
@@ -10,21 +9,19 @@
 #include "SimpleExpander.h"
 
 /**
- * DeBleedAudioProcessor - Neural 5045: DDSP Source Separation Plugin
+ * DeBleedAudioProcessor - DeBleed V2: Formant-Based Source Enhancer
  *
- * Uses differentiable IIR filter bank for zero-latency source separation.
- * Neural network predicts ~50 filter coefficients per frame.
- * Audio passes through series biquad cascade with no FFT latency.
+ * Zero-latency bleed reduction using spectral voice activity detection
+ * and dynamics processing. Uses hardcoded vocal formant weights.
  *
  * Architecture:
- *   Input → HPF → LowShelf → [12x Peaking] → HighShelf → LPF → BroadbandGain → Output
+ *   Input → SpectralVAD → Expander → Output
  *
  * Processing Flow:
- *   1. Create mono sidechain from input (for neural network analysis)
- *   2. Run Neural5045Engine to predict 50 EQ parameters per frame
- *   3. Apply parameters to DifferentiableBiquadChain (with smoothing)
- *   4. Process audio through the filter cascade (zero latency)
- *   5. Apply dry/wet mix
+ *   1. Create mono sidechain from input
+ *   2. Run SpectralVAD to detect vocal presence (formant-based weights)
+ *   3. Apply VAD-controlled expansion to reduce bleed
+ *   4. Apply dry/wet mix
  */
 class DeBleedAudioProcessor : public juce::AudioProcessor,
                                public juce::AudioProcessorValueTreeState::Listener
@@ -63,13 +60,7 @@ public:
     // Parameter listener
     void parameterChanged(const juce::String& parameterID, float newValue) override;
 
-    // Model management
-    bool loadModel(const juce::String& modelPath);
-    void unloadModel();
-    bool isModelLoaded() const { return neural5045Engine_.isModelLoaded(); }
-    juce::String getModelPath() const { return neural5045Engine_.getModelPath(); }
-
-    // Get biquad chain for visualization
+    // Get biquad chain for visualization (legacy, may be removed)
     const DifferentiableBiquadChain& getBiquadChain() const { return biquadChain_; }
 
     // Training interface
@@ -134,8 +125,7 @@ private:
     std::atomic<float> expRange{-40.0f};      // dB
     std::atomic<bool> useV2{true};            // Use v2 architecture
 
-    // V1: Neural 5045 DSP components (legacy)
-    Neural5045Engine neural5045Engine_;      // ONNX inference for EQ parameters
+    // Biquad chain (legacy, may be removed)
     DifferentiableBiquadChain biquadChain_;  // SVF TPT filter cascade
 
     // V2: Zero-latency vocal-preservation architecture

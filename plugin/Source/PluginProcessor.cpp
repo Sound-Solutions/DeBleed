@@ -303,8 +303,7 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     currentSampleRate_ = sampleRate;
     currentBlockSize_ = samplesPerBlock;
 
-    // V1: Prepare Neural5045 engine for inference
-    neural5045Engine_.prepare(sampleRate, samplesPerBlock);
+    // Prepare biquad chain (legacy, may be removed)
     biquadChain_.prepare(sampleRate, samplesPerBlock);
 
     // V2: Prepare zero-latency components
@@ -470,31 +469,6 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     outputLevelDb_.store(std::max(-60.0f, levelDb));
 }
 
-bool DeBleedAudioProcessor::loadModel(const juce::String& modelPath)
-{
-    // Reset biquad chain when loading new model
-    biquadChain_.reset();
-
-    // Load the Neural5045 ONNX model
-    bool success = neural5045Engine_.loadModel(modelPath);
-
-    if (success)
-    {
-        DBG("Neural5045 model loaded: " << modelPath);
-    }
-    else
-    {
-        DBG("Failed to load Neural5045 model: " << neural5045Engine_.getLastError());
-    }
-
-    return success;
-}
-
-void DeBleedAudioProcessor::unloadModel()
-{
-    neural5045Engine_.unloadModel();
-    biquadChain_.reset();
-}
 
 bool DeBleedAudioProcessor::loadV2Params(const juce::String& jsonPath)
 {
@@ -582,10 +556,6 @@ juce::AudioProcessorEditor* DeBleedAudioProcessor::createEditor()
 void DeBleedAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = parameters.copyState();
-
-    // Add model path to state
-    state.setProperty("modelPath", neural5045Engine_.getModelPath(), nullptr);
-
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
     copyXmlToBinary(*xml, destData);
 }
@@ -599,13 +569,6 @@ void DeBleedAudioProcessor::setStateInformation(const void* data, int sizeInByte
         if (xmlState->hasTagName(parameters.state.getType()))
         {
             parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
-
-            // Restore model
-            juce::String modelPath = parameters.state.getProperty("modelPath", "").toString();
-            if (modelPath.isNotEmpty())
-            {
-                loadModel(modelPath);
-            }
         }
     }
 }
