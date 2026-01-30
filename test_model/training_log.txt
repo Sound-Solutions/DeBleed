@@ -1,0 +1,50 @@
+STATUS:Neural 5045 Trainer starting...
+STATUS:Sample rate: 96000Hz
+STATUS:Parameters per frame: 50
+STATUS:Using device: cpu
+STATUS:Collecting audio files...
+STATUS:Found 294 clean, 2 noise files
+STATUS:Split: 265 train, 29 val clean files
+STATUS:Loading 267 audio files into memory...
+STATUS:Loading audio files into memory...
+STATUS:Loaded 10/265 clean files
+STATUS:Loaded 20/265 clean files
+STATUS:Loaded 30/265 clean files
+STATUS:Loaded 40/265 clean files
+STATUS:Loaded 50/265 clean files
+STATUS:Loaded 60/265 clean files
+STATUS:Loaded 70/265 clean files
+STATUS:Loaded 80/265 clean files
+STATUS:Loaded 90/265 clean files
+STATUS:Loaded 100/265 clean files
+STATUS:Loaded 110/265 clean files
+STATUS:Loaded 120/265 clean files
+STATUS:Loaded 130/265 clean files
+STATUS:Loaded 140/265 clean files
+STATUS:Loaded 150/265 clean files
+STATUS:Loaded 160/265 clean files
+STATUS:Loaded 170/265 clean files
+STATUS:Loaded 180/265 clean files
+STATUS:Loaded 190/265 clean files
+STATUS:Loaded 200/265 clean files
+STATUS:Loaded 210/265 clean files
+STATUS:Loaded 220/265 clean files
+STATUS:Loaded 230/265 clean files
+STATUS:Loaded 240/265 clean files
+STATUS:Loaded 250/265 clean files
+STATUS:Loaded 260/265 clean files
+STATUS:Loaded 264 clean files and 2 noise files
+STATUS:Loading 29 validation files...
+STATUS:Loading audio files into memory...
+STATUS:Loaded 10/29 clean files
+STATUS:Loaded 20/29 clean files
+STATUS:Loaded 29 clean files and 2 noise files
+STATUS:Creating Neural 5045 model...
+STATUS:Model has 327,474 parameters
+STATUS:Training 1 epochs x 8 batches
+STATUS:Pro quality training - this may take 1-2+ hours...
+STATUS:Training from epoch 1 to 1...
+STATUS:Epoch 1/1
+STATUS:Epoch 1/1 - Train: 4.8116, Val: 121913.9492
+STATUS:Training complete! Exporting model...
+STATUS:complete

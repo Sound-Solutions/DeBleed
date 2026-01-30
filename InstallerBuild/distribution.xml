@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>DeBleed 2.0</title>
+    <organization>com.soundsolutionsllc</organization>
+    <domains enable_localSystem="true"/>
+    <options customize="never" require-scripts="false" rootVolumeOnly="true"/>
+
+    <welcome file="welcome.html"/>
+    <license file="license.html"/>
+    <conclusion file="conclusion.html"/>
+
+    <choices-outline>
+        <line choice="au"/>
+        <line choice="vst3"/>
+    </choices-outline>
+
+    <choice id="au" visible="true" enabled="true" title="Audio Unit Plugin" description="Installs DeBleed.component to /Library/Audio/Plug-Ins/Components">
+        <pkg-ref id="com.soundsolutionsllc.debleed.au"/>
+    </choice>
+
+    <choice id="vst3" visible="true" enabled="true" title="VST3 Plugin" description="Installs DeBleed.vst3 to /Library/Audio/Plug-Ins/VST3">
+        <pkg-ref id="com.soundsolutionsllc.debleed.vst3"/>
+    </choice>
+
+    <pkg-ref id="com.soundsolutionsllc.debleed.au" version="2.0.0" onConclusion="none">DeBleed-AU.pkg</pkg-ref>
+    <pkg-ref id="com.soundsolutionsllc.debleed.vst3" version="2.0.0" onConclusion="none">DeBleed-VST3.pkg</pkg-ref>
+</installer-gui-script>
