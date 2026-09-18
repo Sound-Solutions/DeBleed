@@ -51,3 +51,6 @@ python/test_*/
 # Local ONNX Runtime (user downloads separately)
 # onnxruntime is in ~/onnxruntime, not in repo
 debug.txt
+
+# Visualizer mockups
+.superpowers/

@@ -1,0 +1,283 @@
+<h2>A · Rack, collapsible</h2>
+<p class="subtitle">A chevron in the meter section's bottom-right corner folds the knobs away. Expanded 860 × 268, collapsed 268 × 268. The chevron and the power button never move. It slides closed and open.</p>
+
+<style>
+  .dirs { display: flex; flex-direction: column; gap: 28px; }
+  .dir { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; }
+  .dir:hover { border-color: var(--accent); }
+  .dir.selected { border-color: var(--accent); border-width: 2px; padding: 13px; }
+  .dir h3 { margin: 0 0 4px 0; }
+  .dir p { color: var(--text-secondary); font-size: 0.85rem; margin: 0 0 10px 0; }
+  .dir .frame { overflow-x: auto; }
+  .dir svg { display: block; font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  svg .kv { font-size: 11px; fill: #EDEDED; text-anchor: middle; font-weight: 500; }
+  svg .kvb { font-size: 14px; fill: #EDEDED; text-anchor: middle; font-weight: 500; }
+  svg .kl { font-size: 8px; fill: #8A8A8A; text-anchor: middle; letter-spacing: 1.2px; font-weight: 600; }
+  svg .ku { font-size: 7px; fill: #5E5E5E; letter-spacing: .4px; font-weight: 500; }
+  svg .edge { font-size: 9px; fill: #5E5E5E; text-anchor: middle; letter-spacing: 2.2px; font-weight: 600; }
+  svg .mlbl { font-size: 8px; font-weight: 600; letter-spacing: 1.2px; }
+  svg .big { font-size: 30px; font-weight: 500; fill: #EDEDED; text-anchor: middle; }
+  svg .db { font-size: 8px; fill: #5E5E5E; text-anchor: middle; letter-spacing: 1.2px; font-weight: 600; }
+  svg .title { font-size: 10px; font-weight: 700; fill: #8A8A8A; text-anchor: start; letter-spacing: 2.6px; }
+</style>
+
+<div class="dirs">
+  <div class="dir" data-choice="A-expanded" onclick="toggleSelect(this)">
+    <h3>Expanded</h3>
+    <p>860 × 268. Meter left, EXPANDER across the top with THRESH big, VOCAL and OUTPUT below on one shared baseline. No margins, no background showing.</p>
+    <div class="frame" id="A"></div>
+  </div>
+  <div class="dir" data-choice="A-collapsed" onclick="toggleSelect(this)">
+    <h3>Collapsed</h3>
+    <p>268 × 268. Just the meter, name, power and the chevron to open it back up.</p>
+    <div class="frame" id="Acol"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const C = { bg:'#0F0F0F', body:'#171717', panel:'#111111', line:'#232323', track:'#282828', track2:'#3A3A3A',
+              text:'#EDEDED', dim:'#8A8A8A', dim2:'#5E5E5E', cyan:'#00D4FF', orange:'#FF9500', green:'#39FF14' };
+  const meters = [];
+  const R_STD = 28, R_BIG = 40, R_BTN = 10;
+  function polar(cx, cy, r, deg) { const a = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+  function arcPath(cx, cy, r, a0, a1) {
+    const [x0, y0] = polar(cx, cy, r, a0), [x1, y1] = polar(cx, cy, r, a1);
+    const large = Math.abs(a1 - a0) > 180 ? 1 : 0, sweep = a1 > a0 ? 1 : 0;
+    return `M${x0} ${y0}A${r} ${r} 0 ${large} ${sweep} ${x1} ${y1}`;
+  }
+
+  // knob at a centre; label on a given baseline
+  function knob(cx, cy, r, color, v, valueText) {
+    const a0 = -135, av = a0 + v * 270;
+    const sw = r > 32 ? 2.5 : 2;
+    let s = `<path d="${arcPath(cx, cy, r, a0, 135)}" stroke="${C.track}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
+    if (v > 0.002) {
+      s += `<path d="${arcPath(cx, cy, r, a0, av)}" stroke="${color}" stroke-width="${sw + 1}" fill="none" stroke-linecap="round" filter="url(#glow)" opacity=".7"/>`;
+      s += `<path d="${arcPath(cx, cy, r, a0, av)}" stroke="${color}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
+    }
+    const kr = r - 6;
+    s += `<circle cx="${cx}" cy="${cy}" r="${kr + 1}" fill="#0A0A0A"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${kr}" fill="url(#kb)"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${kr - 0.5}" fill="none" stroke="#FFFFFF" stroke-opacity=".05"/>`;
+    const [tx0, ty0] = polar(cx, cy, kr - 5, av), [tx1, ty1] = polar(cx, cy, kr - 1.5, av);
+    s += `<line x1="${tx0}" y1="${ty0}" x2="${tx1}" y2="${ty1}" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>`;
+    s += `<text x="${cx}" y="${cy + (r > 32 ? 5 : 4)}" class="${r > 32 ? 'kvb' : 'kv'}">${valueText}</text>`;
+    return s;
+  }
+  function label(cx, baseline, text, unit, anchor) {
+    const st = anchor === 'start' ? ' style="text-anchor:start"' : '';
+    return `<text x="${cx}" y="${baseline}" class="kl"${st}>${text}${unit ? `<tspan class="ku"> ${unit}</tspan>` : ''}</text>`;
+  }
+  function knobL(cx, cy, r, color, v, text, unit, valueText, baseline) {
+    return knob(cx, cy, r, color, v, valueText) + label(cx, baseline, text, unit);
+  }
+  function ringBtn(cx, cy, color, on) {
+    const r = R_BTN;
+    let s = '';
+    if (on) s += `<circle cx="${cx}" cy="${cy}" r="${r + 1}" fill="none" stroke="${color}" stroke-width="3" filter="url(#glow)" opacity=".8"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#kb)" stroke="#0A0A0A"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${on ? color : C.track2}" stroke-width="1.8"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r * 0.5}" fill="url(#dome)"/>`;
+    return s;
+  }
+  function btnL(cx, cy, color, on, text, unit, baseline) {
+    return ringBtn(cx, cy, color, on) + label(cx, baseline, text, unit);
+  }
+  function chevron(cx, cy, open) {
+    const d = open ? `M${cx + 2.5} ${cy - 4}L${cx - 1.5} ${cy}L${cx + 2.5} ${cy + 4}` : `M${cx - 2.5} ${cy - 4}L${cx + 1.5} ${cy}L${cx - 2.5} ${cy + 4}`;
+    return `<circle cx="${cx}" cy="${cy}" r="9" fill="url(#kb)" stroke="#0A0A0A"/><circle cx="${cx}" cy="${cy}" r="9" fill="none" stroke="${C.track2}" stroke-width="1.4"/><path d="${d}" stroke="#8A8A8A" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  function panel(x, y, w, h, title) {
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${C.panel}"/>`;
+    s += `<text transform="translate(${x + 14} ${y + h / 2}) rotate(-90)" class="edge">${title}</text>`;
+    return s;
+  }
+  // groove: a dark cut with a faint lit edge below/right of it
+  function grooveH(x0, x1, y) { return `<line x1="${x0}" y1="${y + 0.5}" x2="${x1}" y2="${y + 0.5}" stroke="#080808"/><line x1="${x0}" y1="${y + 1.5}" x2="${x1}" y2="${y + 1.5}" stroke="#FFFFFF" stroke-opacity=".05"/>`; }
+  function grooveV(x, y0, y1) { return `<line x1="${x + 0.5}" y1="${y0}" x2="${x + 0.5}" y2="${y1}" stroke="#080808"/><line x1="${x + 1.5}" y1="${y0}" x2="${x + 1.5}" y2="${y1}" stroke="#FFFFFF" stroke-opacity=".05"/>`; }
+  function topBar(w, h) {
+    let s = `<rect x="0" y="0" width="${w}" height="${h}" fill="${C.bg}"/>`;
+    s += `<text x="${w / 2}" y="${h / 2 + 5}" class="title">DEBLEED</text>`;
+    s += ringBtn(w - 26, h / 2, C.orange, true);
+    return s;
+  }
+  function meter(id, x, y, w, h, dy) {
+    const cx = x + w / 2, cy = y + h / 2 + (dy || 0);
+    const R = Math.min(w, h) / 2 - 30;
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#mbg)"/>`;
+    s += `<path d="${arcPath(cx, cy, R, -135, 0)}" stroke="${C.track}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    s += `<path d="${arcPath(cx, cy, R, 0, 135)}" stroke="${C.track}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    s += `<path id="${id}-grg" stroke="${C.orange}" stroke-width="5" fill="none" stroke-linecap="round" filter="url(#glow)" opacity=".7"/>`;
+    s += `<path id="${id}-gr" stroke="${C.orange}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    s += `<path id="${id}-sigg" stroke="${C.cyan}" stroke-width="5" fill="none" stroke-linecap="round" filter="url(#glow)" opacity=".7"/>`;
+    s += `<path id="${id}-sig" stroke="${C.cyan}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${R - 11}" fill="#0A0A0A"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${R - 12}" fill="url(#kb)"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${R - 12.5}" fill="none" stroke="#FFFFFF" stroke-opacity=".05"/>`;
+    // GR / SIGNAL at the arc feet, on one baseline
+    const [lx] = polar(cx, cy, R, -135), [rx] = polar(cx, cy, R, 135), [, fy] = polar(cx, cy, R, 135);
+    s += `<text x="${lx}" y="${fy + 14}" text-anchor="middle" class="mlbl" fill="${C.orange}">GR</text>`;
+    s += `<text x="${rx}" y="${fy + 14}" text-anchor="middle" class="mlbl" fill="${C.cyan}">SIGNAL</text>`;
+    s += `<text id="${id}-txt" x="${cx}" y="${cy + 7}" class="big">0.0</text>`;
+    s += `<text x="${cx}" y="${cy + 24}" class="db">DB</text>`;
+    const [t0x, t0y] = polar(cx, cy, R + 5, 0), [t1x, t1y] = polar(cx, cy, R + 10, 0);
+    s += `<line x1="${t0x}" y1="${t0y}" x2="${t1x}" y2="${t1y}" stroke="#5E5E5E" stroke-width="1.5" stroke-linecap="round"/>`;
+    meters.push({ id, cx, cy, R, gr: 0, grv: 0, lv: 0, lvv: 0 });
+    return s;
+  }
+  const defs = `<defs>
+    <radialGradient id="kb" cx="0.5" cy="0.4" r="0.7"><stop offset="0" stop-color="#2C2C2C"/><stop offset="1" stop-color="#1A1A1A"/></radialGradient>
+    <radialGradient id="dome" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#3A3A3A"/><stop offset="1" stop-color="#141414"/></radialGradient>
+    <radialGradient id="mbg" cx="0.5" cy="0.5" r="0.75"><stop offset="0" stop-color="#141414"/><stop offset="1" stop-color="#0F0F0F"/></radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.2"/></filter>
+  </defs>`;
+  function svgOpen(w, h) { return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${defs}<rect width="${w}" height="${h}" fill="${C.body}"/>`; }
+
+  const EXP = [ ['THRESH', 'dB', .40, '-40.0'], ['RATIO', ':1', .16, '4.0'], ['ATTACK', 'ms', .03, '1.0'], ['RELEASE', 'ms', .48, '100'], ['RANGE', 'dB', .55, '-40.0'] ];
+  // expander row: THRESH big, others standard, all on one centre line and one baseline
+  function expRow(x0, cw, bigW, cy, baseline) {
+    let s = '', x = x0;
+    EXP.forEach((k, i) => {
+      const w = i === 0 ? bigW : cw, cx = x + w / 2;
+      s += knobL(cx, cy, i === 0 ? R_BIG : R_STD, C.orange, k[2], k[0], k[1], k[3], baseline);
+      x += w;
+    });
+    return s;
+  }
+  // vocal group: three buttons + DEPTH, one centre line, one baseline
+  function vocalRow(x0, bw, kw, cy, baseline) {
+    let s = btnL(x0 + bw / 2, cy, C.green, false, 'LOOK', '1 ms', baseline);
+    s += btnL(x0 + bw * 1.5, cy, C.green, false, 'CLARITY', '', baseline);
+    s += btnL(x0 + bw * 2.5, cy, C.green, true, 'HARMONIC', '', baseline);
+    s += knobL(x0 + bw * 3 + kw / 2, cy, R_STD, C.green, .5, 'DEPTH', 'dB', '9.0', baseline);
+    return s;
+  }
+  function outRow(x0, kw, cy, baseline) {
+    return knobL(x0 + kw / 2, cy, R_STD, C.cyan, 1, 'MIX', '%', '100', baseline) +
+           knobL(x0 + kw * 1.5, cy, R_STD, C.cyan, .5, 'OUTPUT', 'dB', '0.0', baseline);
+  }
+
+  // ---------- A · rack  (860 × 296), sections tile the window
+  function rack(collapsed) {
+    const W = collapsed ? 268 : 860, H = 268, T = 0, S = 26, GR = 2;
+    let s = svgOpen(W, H);
+    const top = T;
+    const mW = 268;                                      // meter section 0..268, square
+    s += meter(collapsed ? 'mAc' : 'mA', 0, top, mW, H - top, 10);
+    s += `<text x="16" y="21" class="title">DEBLEED</text>`;
+    s += ringBtn(mW - 22, 18, C.orange, true);
+    s += chevron(mW - 22, H - 18, !collapsed);
+    if (collapsed) return s + '</svg>';
+    const rx = mW + GR, rw = W - rx;                      // 270 .. 860 (590)
+    // row 1: EXPANDER 28..158
+    const r1y = top, r1h = 130;
+    s += panel(rx, r1y, rw, r1h, 'EXPANDER');
+    const cy1 = r1y + 20 + R_BIG, bl1 = r1y + r1h - 16;
+    const bigW = 112, cw = (rw - S - bigW) / 4;
+    s += expRow(rx + S, cw, bigW, cy1, bl1);
+    // row 2: VOCAL + OUTPUT 160..296
+    const r2y = r1y + r1h + GR, r2h = H - r2y;
+    const cy2 = r2y + (r2h - 16 - 10) / 2 + 2, bl2 = r2y + r2h - 16;
+    const bw = 68, kw = 84, vW = S + bw * 3 + kw + 12;
+    s += panel(rx, r2y, vW, r2h, 'VOCAL');
+    s += vocalRow(rx + S + 6, bw, kw, cy2, bl2);
+    const ox = rx + vW + GR, oW = W - ox;
+    s += panel(ox, r2y, oW, r2h, 'OUTPUT');
+    const okw = (oW - S) / 2;
+    s += outRow(ox + S, okw, cy2, bl2);
+    // grooves
+    s += grooveV(mW, top, H);
+    s += grooveH(rx, W, r1y + r1h);
+    s += grooveV(rx + vW, r2y, H);
+    return s + '</svg>';
+  }
+
+  // ---------- B · console strip  (440 × 632)
+  function console_() {
+    const W = 440, H = 632, M = 12, G = 10, T = 28, S = 26;
+    let s = svgOpen(W, H) + topBar(W, T);
+    const pw = W - 2 * M;                                // 416
+    let y = T + M;
+    s += meter('mB', M, y, pw, 230); y += 230 + G;
+    // EXPANDER 116
+    s += panel(M, y, pw, 116, 'EXPANDER');
+    { const cy = y + 12 + R_BIG, bl = y + 116 - 12; const bigW = 96, cw = (pw - S - bigW) / 4; s += expRow(M + S, cw, bigW, cy, bl); }
+    y += 116 + G;
+    // VOCAL 104
+    s += panel(M, y, pw, 104, 'VOCAL');
+    { const cy = y + 12 + R_STD, bl = y + 104 - 12; const bw = 80, kw = 96, cw = bw * 3 + kw; const x0 = M + S + (pw - S - cw) / 2; s += vocalRow(x0, bw, kw, cy, bl); }
+    y += 104 + G;
+    // OUTPUT 104
+    s += panel(M, y, pw, 104, 'OUTPUT');
+    { const cy = y + 12 + R_STD, bl = y + 104 - 12; const kw = 110; const x0 = M + S + (pw - S - kw * 2) / 2; s += outRow(x0, kw, cy, bl); }
+    return s + '</svg>';
+  }
+
+  // ---------- C · meter centre  (640 × 400)
+  function centre() {
+    const W = 640, H = 400, M = 12, G = 10, T = 28, S = 26;
+    let s = svgOpen(W, H) + topBar(W, T);
+    const top = T + M;                                   // 40
+    const mW = 224, mx = (W - mW) / 2;                   // 208 .. 432
+    s += meter('mC', mx, top, mW, mW);
+    const sideW = mx - G - M;                            // 186
+    // VOCAL left: button column with labels beside, DEPTH centred below
+    s += panel(M, top, sideW, mW, 'VOCAL');
+    {
+      const bx = M + S + 16, lx = bx + 20;
+      const rows = [ ['LOOK', '1 ms', false], ['CLARITY', '', false], ['HARMONIC', '', true] ];
+      rows.forEach((r, i) => { const cy = top + 30 + i * 30; s += ringBtn(bx, cy, C.green, r[2]) + label(lx, cy + 3, r[0], r[1], 'start'); });
+      const kcx = M + S + (sideW - S) / 2, kcy = top + mW - 12 - 54;
+      s += knobL(kcx, kcy, R_STD, C.green, .5, 'DEPTH', 'dB', '9.0', kcy + 54);
+    }
+    // OUTPUT right: two knobs stacked, own baselines
+    const ox = mx + mW + G;
+    s += panel(ox, top, sideW, mW, 'OUTPUT');
+    {
+      const kcx = ox + S + (sideW - S) / 2;
+      const c1 = top + 16 + R_STD, c2 = top + mW - 12 - 54;
+      s += knobL(kcx, c1, R_STD, C.cyan, 1, 'MIX', '%', '100', c1 + 54);
+      s += knobL(kcx, c2, R_STD, C.cyan, .5, 'OUTPUT', 'dB', '0.0', c2 + 54);
+    }
+    // EXPANDER bottom
+    const ey = top + mW + G, eh = H - M - ey;            // 274 .. 388 (114)
+    s += panel(M, ey, W - 2 * M, eh, 'EXPANDER');
+    { const cy = ey + 12 + R_BIG, bl = ey + eh - 12; const bigW = 140, cw = (W - 2 * M - S - bigW) / 4; s += expRow(M + S, cw, bigW, cy, bl); }
+    return s + '</svg>';
+  }
+
+  document.getElementById('A').innerHTML = rack(false);
+  document.getElementById('Acol').innerHTML = rack(true);
+  
+  let grTarget = 0, lvTarget = 0.2, nextChange = 0;
+  function spring(m, key, vkey, target, dt) {
+    const acc = 180 * (target - m[key]) - 12 * m[vkey];
+    m[vkey] += acc * dt; m[key] += m[vkey] * dt;
+    m[key] = Math.max(0, Math.min(1, m[key]));
+  }
+  function frame(t) {
+    if (t > nextChange) {
+      const talking = Math.random() < 0.55;
+      grTarget = talking ? Math.random() * 0.12 : 0.3 + Math.random() * 0.45;
+      lvTarget = talking ? 0.55 + Math.random() * 0.35 : 0.1 + Math.random() * 0.25;
+      nextChange = t + 350 + Math.random() * 900;
+    }
+    const dt = 1 / 60;
+    for (const m of meters) {
+      spring(m, 'gr', 'grv', grTarget, dt);
+      spring(m, 'lv', 'lvv', lvTarget, dt);
+      const grd = m.gr > 0.005 ? arcPath(m.cx, m.cy, m.R, 0, -135 * m.gr) : '';
+      const lvd = m.lv > 0.005 ? arcPath(m.cx, m.cy, m.R, 0, 135 * m.lv) : '';
+      document.getElementById(m.id + '-gr').setAttribute('d', grd);
+      document.getElementById(m.id + '-grg').setAttribute('d', grd);
+      document.getElementById(m.id + '-sig').setAttribute('d', lvd);
+      document.getElementById(m.id + '-sigg').setAttribute('d', lvd);
+      const db = -grTarget * 40;
+      document.getElementById(m.id + '-txt').textContent = db > -0.1 ? '0.0' : db.toFixed(1);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
