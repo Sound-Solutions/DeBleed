@@ -132,7 +132,7 @@ private:
     // V2 Expander parameter atomics
     std::atomic<float> expThreshold{-40.0f};  // dB
     std::atomic<float> expRatio{4.0f};        // ratio
-    std::atomic<float> expOpen{1.0f};         // ms
+    std::atomic<float> expOpen{100.0f};       // ms
     std::atomic<float> expClose{100.0f};      // ms
     std::atomic<float> expRange{-40.0f};      // dB
     std::atomic<bool> useV2{true};            // Use v2 architecture

@@ -226,12 +226,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         nullptr
     ));
 
-    // Expander Open (parameter ID stays expOpen so old sessions load)
+    // Expander Open (parameter ID stays expAttack so old sessions load). Default 100 ms:
+    // the feel he liked before v1.3.0, when the open was really timed by the release knob.
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_EXP_ATTACK, 1},
         "Exp Open",
-        juce::NormalisableRange<float>(0.1f, 50.0f, 0.1f, 0.5f),
-        1.0f,
+        juce::NormalisableRange<float>(0.1f, 500.0f, 0.1f, 0.5f),
+        100.0f,
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 1) + " ms"; },

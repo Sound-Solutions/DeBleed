@@ -115,7 +115,7 @@ void SimpleExpander::setRatio(float ratio)
 
 void SimpleExpander::setOpenMs(float openMs)
 {
-    openMs_.store(std::clamp(openMs, 0.01f, 100.0f));
+    openMs_.store(std::clamp(openMs, 0.01f, 2000.0f));
     updateCoefficients();
 }
 
