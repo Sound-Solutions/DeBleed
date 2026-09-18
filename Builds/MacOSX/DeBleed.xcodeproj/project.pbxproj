@@ -41,6 +41,7 @@
 		374C98A8133C0EAD1463EBD0 /* include_juce_audio_processors.mm */ = {isa = PBXBuildFile; fileRef = 2F984601F7E2243A0BAF30DC; };
 		4603A67B45CC8D2AE774C0EB /* VST3 */ = {isa = PBXBuildFile; fileRef = 861F1F5882E6EDD716819666; };
 		473604E816B47F627E10AA0B /* Metal.framework */ = {isa = PBXBuildFile; fileRef = 512B9AFA1DD7C7A5351FCC11; settings = { ATTRIBUTES = (Weak, ); }; };
+		499F51468A0C74F29EFA50F7 /* ClickMonitor.mm */ = {isa = PBXBuildFile; fileRef = 524F485CBD5BA77D6587BFA6; };
 		4A1BC0D955D8E7B76546969F /* TrainerProcess.cpp */ = {isa = PBXBuildFile; fileRef = 46D488FB65667A4C2EF58515; };
 		4A6EDB754CED6A25C65C8C80 /* AudioDropZone.cpp */ = {isa = PBXBuildFile; fileRef = 39AD446504209B10549A5E12; };
 		4B6A8981A8D78D63326BDDCC /* SimpleExpander.cpp */ = {isa = PBXBuildFile; fileRef = 7A3C4A9F829E89619E3C791F; };
@@ -133,7 +134,9 @@
 		4BBFE0446DED162466F788D5 /* include_juce_audio_plugin_client_AU_1.mm */ /* include_juce_audio_plugin_client_AU_1.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_plugin_client_AU_1.mm; path = ../../JuceLibraryCode/include_juce_audio_plugin_client_AU_1.mm; sourceTree = SOURCE_ROOT; };
 		4E736CE9B995441391565472 /* Info-Standalone_Plugin.plist */ /* Info-Standalone_Plugin.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Info-Standalone_Plugin.plist"; path = "Info-Standalone_Plugin.plist"; sourceTree = SOURCE_ROOT; };
 		4E9AB4B1F660B781B2401505 /* EnvelopeFollower.h */ /* EnvelopeFollower.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = EnvelopeFollower.h; path = ../../plugin/Source/EnvelopeFollower.h; sourceTree = SOURCE_ROOT; };
+		4EAE0DDED8AB6525AC42B65E /* ClickMonitor.h */ /* ClickMonitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ClickMonitor.h; path = ../../plugin/Source/ClickMonitor.h; sourceTree = SOURCE_ROOT; };
 		512B9AFA1DD7C7A5351FCC11 /* Metal.framework */ /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		524F485CBD5BA77D6587BFA6 /* ClickMonitor.mm */ /* ClickMonitor.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = ClickMonitor.mm; path = ../../plugin/Source/ClickMonitor.mm; sourceTree = SOURCE_ROOT; };
 		52FCDFE0E0D6A847277859BF /* JucePluginDefines.h */ /* JucePluginDefines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = JucePluginDefines.h; path = ../../JuceLibraryCode/JucePluginDefines.h; sourceTree = SOURCE_ROOT; };
 		54F0BAAB2CD74B271A176DE2 /* include_juce_graphics_Sheenbidi.c */ /* include_juce_graphics_Sheenbidi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_graphics_Sheenbidi.c; path = ../../JuceLibraryCode/include_juce_graphics_Sheenbidi.c; sourceTree = SOURCE_ROOT; };
 		56160FD77F82443BA98B062C /* PluginProcessor.cpp */ /* PluginProcessor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = PluginProcessor.cpp; path = ../../plugin/Source/PluginProcessor.cpp; sourceTree = SOURCE_ROOT; };
@@ -287,6 +290,8 @@
 			children = (
 				56160FD77F82443BA98B062C,
 				286B11C8341536B97D5BF579,
+				4EAE0DDED8AB6525AC42B65E,
+				524F485CBD5BA77D6587BFA6,
 				3F94A2928A3243814CDBE1F5,
 				0B38FFE414AF19EBA37DB191,
 				46D488FB65667A4C2EF58515,
@@ -936,6 +941,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE12F1E44021693841F1F7F2,
+				499F51468A0C74F29EFA50F7,
 				E5A5A25D827E6C22EAEBA600,
 				4A1BC0D955D8E7B76546969F,
 				4A6EDB754CED6A25C65C8C80,
