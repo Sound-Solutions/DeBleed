@@ -108,7 +108,7 @@ VocalSection::VocalSection(juce::AudioProcessorValueTreeState& parameters)
     : Section("VOCAL", DeBleedLookAndFeel::greenAccent, 120.0f)
 {
     look_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_LOOKAHEAD, "LOOK", "1 ms", 66.0f, 57.0f);
-    clarity_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_CONSONANT, "CLARITY", "", 134.0f, 57.0f);
+    clarity_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_CONSONANT, "SPEECH", "", 134.0f, 57.0f);
     harmonic_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_COMB, "HARMONIC", "", 202.0f, 57.0f);
     depth_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_COMB_DEPTH, "DEPTH", "dB", 278.0f, 57.0f);
 }

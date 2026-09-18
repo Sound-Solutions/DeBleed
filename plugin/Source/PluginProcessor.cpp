@@ -265,7 +265,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
     params.push_back(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID{PARAM_LOOKAHEAD, 1}, "Look", false));
     params.push_back(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID{PARAM_CONSONANT, 1}, "Clarity", false));
+        juce::ParameterID{PARAM_CONSONANT, 1}, "Speech", false));
     params.push_back(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID{PARAM_COMB, 1}, "Harmonic", false));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(

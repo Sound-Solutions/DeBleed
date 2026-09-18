@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="DeBleed1" name="DeBleed" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="1.3.0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="1.3.1"
               companyName="Sound Solutions LLC" companyWebsite="" companyEmail=""
               pluginFormats="buildAU,buildStandalone,buildVST3" pluginCharacteristicsValue=""
               pluginName="DeBleed" pluginDesc="Neural Gate - Timbre-Aware Source Enhancer"
