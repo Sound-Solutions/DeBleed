@@ -85,11 +85,11 @@ private:
     float closeCoeff_ = 0.0f;
 
     // Parameters (atomic for thread-safe access)
-    std::atomic<float> thresholdDb_{-40.0f};
+    std::atomic<float> thresholdDb_{-18.0f};
     std::atomic<float> ratio_{4.0f};         // 4:1 expansion
-    std::atomic<float> openMs_{100.0f};
-    std::atomic<float> closeMs_{100.0f};
-    std::atomic<float> rangeDb_{-40.0f};     // Max 40dB reduction
+    std::atomic<float> openMs_{50.0f};
+    std::atomic<float> closeMs_{300.0f};
+    std::atomic<float> rangeDb_{-20.0f};
     std::atomic<bool> vadGating_{true};      // VAD modulates threshold (raises threshold when vocal present)
 
     // For UI meters

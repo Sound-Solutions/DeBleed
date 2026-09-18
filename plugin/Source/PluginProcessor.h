@@ -130,11 +130,11 @@ private:
     std::atomic<float> smoothing{50.0f};    // ms (1 to 200)
 
     // V2 Expander parameter atomics
-    std::atomic<float> expThreshold{-40.0f};  // dB
+    std::atomic<float> expThreshold{-18.0f};  // dB
     std::atomic<float> expRatio{4.0f};        // ratio
-    std::atomic<float> expOpen{100.0f};       // ms
-    std::atomic<float> expClose{100.0f};      // ms
-    std::atomic<float> expRange{-40.0f};      // dB
+    std::atomic<float> expOpen{50.0f};        // ms
+    std::atomic<float> expClose{300.0f};      // ms
+    std::atomic<float> expRange{-20.0f};      // dB
     std::atomic<bool> useV2{true};            // Use v2 architecture
 
     std::atomic<bool> lookahead_{false}, consonant_{false}, comb_{false};
