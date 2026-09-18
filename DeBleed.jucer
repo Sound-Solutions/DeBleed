@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="DeBleed1" name="DeBleed" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="1.1.0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="1.2.0"
               companyName="Sound Solutions LLC" companyWebsite="" companyEmail=""
               pluginFormats="buildAU,buildStandalone,buildVST3" pluginCharacteristicsValue=""
               pluginName="DeBleed" pluginDesc="Neural Gate - Timbre-Aware Source Enhancer"
@@ -46,10 +46,10 @@
             file="plugin/Source/EQCurveDisplay.cpp"/>
       <FILE id="EQCurveDisplay_h" name="EQCurveDisplay.h" compile="0" resource="0"
             file="plugin/Source/EQCurveDisplay.h"/>
-      <FILE id="ControlPanel_cpp" name="ControlPanel.cpp" compile="1" resource="0"
-            file="plugin/Source/ControlPanel.cpp"/>
-      <FILE id="ControlPanel_h" name="ControlPanel.h" compile="0" resource="0"
-            file="plugin/Source/ControlPanel.h"/>
+      <FILE id="Section_cpp" name="Section.cpp" compile="1" resource="0"
+            file="plugin/Source/Section.cpp"/>
+      <FILE id="Section_h" name="Section.h" compile="0" resource="0"
+            file="plugin/Source/Section.h"/>
       <FILE id="SimpleVAD_cpp" name="SimpleVAD.cpp" compile="1" resource="0"
             file="plugin/Source/SimpleVAD.cpp"/>
       <FILE id="SimpleVAD_h" name="SimpleVAD.h" compile="0" resource="0"

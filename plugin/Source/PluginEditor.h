@@ -3,17 +3,9 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "DeBleedLookAndFeel.h"
-#include "ControlPanel.h"
+#include "Section.h"
 #include "ArcMeter.h"
 
-/**
- * DeBleedAudioProcessorEditor - Clean, minimal expander UI.
- *
- * Layout:
- * - Header: Title and power button
- * - Center: Arc meter showing gain reduction + VAD
- * - Bottom: Control panel with 7 knobs
- */
 class DeBleedAudioProcessorEditor : public juce::AudioProcessorEditor,
                                      public juce::Timer
 {
@@ -28,23 +20,23 @@ public:
 private:
     DeBleedAudioProcessor& audioProcessor;
     DeBleedLookAndFeel customLookAndFeel;
-
-    // Header components
-    juce::Label titleLabel;
-    juce::ToggleButton bypassButton;
-
-    // Arc meter for GR visualization
     ArcMeter arcMeter_;
+    ExpanderSection expanderSection_;
+    VocalSection vocalSection_;
+    OutputSection outputSection_;
+    juce::ToggleButton powerButton_, chevronButton_;
+    std::unique_ptr<juce::ParameterAttachment> bypassAttachment_;
 
-    // Bottom control panel
-    ControlPanel controlPanel_;
+    static constexpr int expandedWidth = 860;
+    static constexpr int collapsedWidth = 268;
+    static constexpr int editorHeight = 268;
+    static constexpr double slideDurationMs = 180.0;
+    bool collapsed_ = false;
+    bool sliding_ = false;
+    int slideStartWidth_ = expandedWidth;
+    double slideStartTime_ = 0.0;
 
-    // Parameter attachments for header controls
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
-
-    // Layout constants
-    static constexpr int headerHeight = 36;
-    static constexpr int controlPanelHeight = 292;  // Three rows of 92 px (rows 1-2 unchanged)
+    void toggleCollapsed();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessorEditor)
 };

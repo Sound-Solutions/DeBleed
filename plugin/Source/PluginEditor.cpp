@@ -7,40 +7,49 @@
 DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& p)
     : AudioProcessorEditor(&p),
       audioProcessor(p),
-      controlPanel_(p)
+      expanderSection_(p.getParameters()),
+      vocalSection_(p.getParameters()),
+      outputSection_(p.getParameters())
 {
     setLookAndFeel(&customLookAndFeel);
+    setOpaque(true);
+    setResizable(false, false);
 
-    // Title
-    titleLabel.setText("DeBleed", juce::dontSendNotification);
-    titleLabel.setFont(juce::Font(18.0f, juce::Font::bold));
-    titleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    titleLabel.setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(titleLabel);
-
-    // Bypass button (power button in header)
-    bypassButton.setButtonText("");
-    bypassButton.getProperties().set("invertColors", true);
-    addAndMakeVisible(bypassButton);
-
-    // Parameter attachment
-    bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.getParameters(), DeBleedAudioProcessor::PARAM_BYPASS, bypassButton);
-
-    // Arc meter for GR visualization
     addAndMakeVisible(arcMeter_);
-
-    // Set the range to match expander
     arcMeter_.setRange(-80.0f);
+    addAndMakeVisible(expanderSection_);
+    addAndMakeVisible(vocalSection_);
+    addAndMakeVisible(outputSection_);
 
-    // Control panel (always visible at bottom)
-    addAndMakeVisible(controlPanel_);
+    powerButton_.setTitle("Power");
+    powerButton_.getProperties().set("ringStyle", true);
+    powerButton_.getProperties().set("ringColour", static_cast<juce::int64>(DeBleedLookAndFeel::orangeAccent));
+    addAndMakeVisible(powerButton_);
 
-    // Start timer for UI updates
-    startTimer(50);
+    // Power is on when the existing bypass parameter is off, including host automation.
+    auto& parameters = audioProcessor.getParameters();
+    bypassAttachment_ = std::make_unique<juce::ParameterAttachment>(
+        *parameters.getParameter(DeBleedAudioProcessor::PARAM_BYPASS),
+        [this](float bypass)
+        {
+            powerButton_.setToggleState(bypass < 0.5f, juce::dontSendNotification);
+        }, parameters.undoManager);
+    powerButton_.onClick = [this]
+    {
+        bypassAttachment_->setValueAsCompleteGesture(powerButton_.getToggleState() ? 0.0f : 1.0f);
+    };
+    bypassAttachment_->sendInitialUpdate();
 
-    // Set window size - narrower and compact
-    setSize(440, 552);
+    collapsed_ = static_cast<bool>(parameters.state.getProperty("editorCollapsed", false));
+    chevronButton_.setTitle("Collapse controls");
+    chevronButton_.getProperties().set("chevron", true);
+    chevronButton_.getProperties().set("pointsLeft", !collapsed_);
+    chevronButton_.setToggleState(collapsed_, juce::dontSendNotification);
+    chevronButton_.onClick = [this] { toggleCollapsed(); };
+    addAndMakeVisible(chevronButton_);
+
+    setSize(collapsed_ ? collapsedWidth : expandedWidth, editorHeight);
+    startTimer(16);
 }
 
 DeBleedAudioProcessorEditor::~DeBleedAudioProcessorEditor()
@@ -51,67 +60,78 @@ DeBleedAudioProcessorEditor::~DeBleedAudioProcessorEditor()
 
 void DeBleedAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // Dark background
-    g.fillAll(juce::Colour::fromRGB(26, 26, 26));
+    g.fillAll(juce::Colour(DeBleedLookAndFeel::bodyBackground));
+    g.setGradientFill(juce::ColourGradient(juce::Colour(DeBleedLookAndFeel::meterBackground), 134.0f, 134.0f,
+                                         juce::Colour(DeBleedLookAndFeel::mainBackground), 335.0f, 134.0f, true));
+    g.fillRect(0, 0, collapsedWidth, editorHeight);
 
-    // Header background
-    auto headerBounds = getLocalBounds().removeFromTop(headerHeight);
-    g.setColour(juce::Colours::black.withAlpha(0.4f));
-    g.fillRect(headerBounds);
+    g.setColour(juce::Colour(DeBleedLookAndFeel::groove));
+    g.fillRect(268, 0, 1, 268);
+    g.fillRect(270, 130, 590, 1);
+    g.fillRect(596, 132, 1, 136);
+    g.setColour(juce::Colours::white.withAlpha(0.05f));
+    g.fillRect(269, 0, 1, 268);
+    g.fillRect(270, 131, 590, 1);
+    g.fillRect(597, 132, 1, 136);
 
-    // Header bottom line
-    g.setColour(juce::Colours::white.withAlpha(0.1f));
-    g.drawHorizontalLine(headerHeight - 1, 0, static_cast<float>(getWidth()));
-
-    // Subtle gradient on main area
-    auto mainArea = getLocalBounds();
-    mainArea.removeFromTop(headerHeight);
-    mainArea.removeFromBottom(controlPanelHeight);
-
-    juce::ColourGradient gradient(
-        juce::Colour::fromRGB(30, 30, 32), 0.0f, static_cast<float>(mainArea.getY()),
-        juce::Colour::fromRGB(20, 20, 22), 0.0f, static_cast<float>(mainArea.getBottom()),
-        false);
-    g.setGradientFill(gradient);
-    g.fillRect(mainArea);
+    g.setColour(juce::Colour(DeBleedLookAndFeel::labelText));
+    const auto titleFont = juce::Font(juce::FontOptions(10.0f, juce::Font::bold))
+                               .withExtraKerningFactor(2.6f / 10.0f);
+    DeBleedLookAndFeel::drawTextAtBaseline(g, "DEBLEED", titleFont, 16.0f, 21.0f, false);
 
 #if DEBUG || JUCE_DEBUG
-    // Draw timestamp in corner
-    g.setColour(juce::Colours::white.withAlpha(0.3f));
-    g.setFont(9.0f);
-    g.drawText("Build: " BUILD_TIMESTAMP,
-               getWidth() - 150, getHeight() - 14, 145, 12,
-               juce::Justification::centredRight);
+    g.setColour(juce::Colour(DeBleedLookAndFeel::inactiveRing));
+    DeBleedLookAndFeel::drawTextAtBaseline(g, "Build: " BUILD_TIMESTAMP,
+                                          juce::Font(juce::FontOptions(8.0f)), 16.0f, 260.0f, false);
 #endif
 }
 
 void DeBleedAudioProcessorEditor::resized()
 {
-    auto bounds = getLocalBounds();
+    // Fixed expanded coordinates: resizing the window reveals or covers the controls.
+    arcMeter_.setBounds(0, 0, 268, 268);
+    powerButton_.setBounds(232, 4, 28, 28);
+    chevronButton_.setBounds(232, 236, 28, 28);
+    expanderSection_.setBounds(270, 0, 590, 130);
+    vocalSection_.setBounds(270, 132, 326, 136);
+    outputSection_.setBounds(598, 132, 262, 136);
+}
 
-    // Header - 40px
-    auto header = bounds.removeFromTop(headerHeight).reduced(12, 8);
-
-    // Title on left
-    titleLabel.setBounds(header.removeFromLeft(100));
-
-    // Bypass button on right
-    bypassButton.setBounds(header.removeFromRight(28).withSizeKeepingCentre(28, 28));
-
-    // Control panel at bottom
-    controlPanel_.setBounds(bounds.removeFromBottom(controlPanelHeight));
-
-    // Arc meter in center (remaining space)
-    arcMeter_.setBounds(bounds.reduced(20));
+void DeBleedAudioProcessorEditor::toggleCollapsed()
+{
+    collapsed_ = chevronButton_.getToggleState();
+    audioProcessor.getParameters().state.setProperty("editorCollapsed", collapsed_, nullptr);
+    chevronButton_.getProperties().set("pointsLeft", !collapsed_);
+    chevronButton_.repaint();
+    slideStartWidth_ = getWidth();
+    slideStartTime_ = juce::Time::getMillisecondCounterHiRes();
+    sliding_ = true;
 }
 
 void DeBleedAudioProcessorEditor::timerCallback()
 {
-    // Safety check - don't update if component is being destroyed
+    // Finish the slide even if the host hides the window during the animation.
+    if (sliding_)
+    {
+        const int targetWidth = collapsed_ ? collapsedWidth : expandedWidth;
+        const double progress = juce::jlimit(0.0, 1.0,
+            (juce::Time::getMillisecondCounterHiRes() - slideStartTime_) / slideDurationMs);
+        if (progress >= 1.0)
+        {
+            setSize(targetWidth, editorHeight);
+            sliding_ = false;
+        }
+        else
+        {
+            const double remaining = 1.0 - progress;
+            const double eased = 1.0 - remaining * remaining * remaining;
+            setSize(juce::roundToInt(slideStartWidth_ + (targetWidth - slideStartWidth_) * eased), editorHeight);
+        }
+    }
+
     if (!isShowing())
         return;
 
-    // Update arc meter with current GR, output level, and VAD values
     float gr = audioProcessor.getExpander().getGainReduction();
     float level = audioProcessor.getOutputLevelDb();
     float vad = audioProcessor.getVADConfidence();

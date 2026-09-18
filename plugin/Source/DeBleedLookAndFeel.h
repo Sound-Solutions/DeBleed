@@ -1,11 +1,5 @@
-/*
-  ==============================================================================
-    DeBleedLookAndFeel.h
-    Style: FabFilter-inspired (Vector Knobs, Amber Power, Dark Theme)
-    Based on KineticsLookAndFeel
-  ==============================================================================
-*/
 #pragma once
+
 #include <JuceHeader.h>
 
 class DeBleedLookAndFeel : public juce::LookAndFeel_V4
@@ -13,38 +7,30 @@ class DeBleedLookAndFeel : public juce::LookAndFeel_V4
 public:
     DeBleedLookAndFeel();
 
-    // Button rendering
-    void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour&, bool, bool) override;
-    void drawButtonText(juce::Graphics& g, juce::TextButton& button,
-                        bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
-
-    // Rotary knob with arc
-    void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
+    void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height,
                           float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
-                          juce::Slider& slider) override;
+                          juce::Slider&) override;
+    void drawToggleButton(juce::Graphics&, juce::ToggleButton&, bool, bool) override;
 
-    // Amber power toggle button
-    void drawToggleButton(juce::Graphics& g, juce::ToggleButton& btn,
-                          bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+    static void drawBody(juce::Graphics&, juce::Point<float> centre, float radius,
+                         bool innerRing);
+    static void drawTextAtBaseline(juce::Graphics&, const juce::String&, const juce::Font&,
+                                   float x, float baseline, bool centred = true);
 
-    // Progress bar styling
-    void drawProgressBar(juce::Graphics& g, juce::ProgressBar& bar,
-                         int width, int height, double progress,
-                         const juce::String& textToShow) override;
-
-    // Tab button styling
-    void drawTabButton(juce::Graphics& g, juce::Rectangle<int> bounds,
-                       const juce::String& text, bool isActive, bool isHovered);
-
-    // Color constants
-    static constexpr juce::uint32 mainBackground = 0xff0a0b0d;      // RGB(10, 11, 13)
-    static constexpr juce::uint32 visualizerBackground = 0xff0c0c0e; // RGB(12, 12, 14)
-    static constexpr juce::uint32 panelBackground = 0xff141618;      // RGB(20, 22, 24)
-    static constexpr juce::uint32 popupBackground = 0xff191b1e;      // RGB(25, 27, 30)
-
-    static constexpr juce::uint32 arcBackgroundColor = 0xff2d3034;   // RGB(45, 48, 52)
-    static constexpr juce::uint32 cyanAccent = 0xff00ffff;           // RGB(0, 255, 255) - pure cyan
-    static constexpr juce::uint32 orangeAccent = 0xffffa500;         // Orange
-    static constexpr juce::uint32 yellowAccent = 0xffffff00;         // Yellow
-    static constexpr juce::uint32 purpleAccent = 0xff800080;         // Purple
+    static constexpr juce::uint32 groove = 0xff080808;
+    static constexpr juce::uint32 rim = 0xff0a0a0a;
+    static constexpr juce::uint32 mainBackground = 0xff0f0f0f;
+    static constexpr juce::uint32 panelBackground = 0xff111111;
+    static constexpr juce::uint32 bodyBackground = 0xff171717;
+    static constexpr juce::uint32 meterBackground = 0xff141414;
+    static constexpr juce::uint32 bodyEdge = 0xff1a1a1a;
+    static constexpr juce::uint32 arcBackground = 0xff282828;
+    static constexpr juce::uint32 bodyCentre = 0xff2c2c2c;
+    static constexpr juce::uint32 inactiveRing = 0xff3a3a3a;
+    static constexpr juce::uint32 valueText = 0xffededed;
+    static constexpr juce::uint32 labelText = 0xff8a8a8a;
+    static constexpr juce::uint32 dimText = 0xff5e5e5e;
+    static constexpr juce::uint32 orangeAccent = 0xffff9500;
+    static constexpr juce::uint32 greenAccent = 0xff39ff14;
+    static constexpr juce::uint32 cyanAccent = 0xff00d4ff;
 };

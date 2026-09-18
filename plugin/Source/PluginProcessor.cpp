@@ -263,13 +263,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
     ));
 
     params.push_back(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID{PARAM_LOOKAHEAD, 1}, "Lookahead", false));
+        juce::ParameterID{PARAM_LOOKAHEAD, 1}, "Look", false));
     params.push_back(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID{PARAM_CONSONANT, 1}, "Consonant", false));
+        juce::ParameterID{PARAM_CONSONANT, 1}, "Clarity", false));
     params.push_back(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID{PARAM_COMB, 1}, "Comb", false));
+        juce::ParameterID{PARAM_COMB, 1}, "Harmonic", false));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{PARAM_COMB_DEPTH, 1}, "Comb Depth",
+        juce::ParameterID{PARAM_COMB_DEPTH, 1}, "Harmonic Depth",
         juce::NormalisableRange<float>(6.0f, 12.0f, 0.1f), 9.0f,
         juce::String(), juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 1) + " dB"; }, nullptr));

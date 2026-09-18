@@ -1,360 +1,138 @@
-/*
-  ==============================================================================
-    DeBleedLookAndFeel.cpp
-    Style: FabFilter-inspired (Vector Knobs, Amber Power, Dark Theme)
-  ==============================================================================
-*/
 #include "DeBleedLookAndFeel.h"
 
 DeBleedLookAndFeel::DeBleedLookAndFeel()
 {
-    // Global Text Colors
-    setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.7f));
-    setColour(juce::Slider::textBoxTextColourId, juce::Colours::white.withAlpha(0.9f));
+    // JUCE's macOS default sans is Lucida Grande, which has no Medium face and is not the mock's typeface.
+    setDefaultSansSerifTypefaceName("Helvetica Neue");
+    setColour(juce::Label::textColourId, juce::Colour(labelText));
+    setColour(juce::Slider::textBoxTextColourId, juce::Colour(valueText));
     setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-
-    // ComboBox Colors
     setColour(juce::ComboBox::backgroundColourId, juce::Colour(panelBackground));
-    setColour(juce::ComboBox::outlineColourId, juce::Colour::fromRGB(60, 60, 60));
-    setColour(juce::ComboBox::arrowColourId, juce::Colours::white.withAlpha(0.6f));
-    setColour(juce::ComboBox::textColourId, juce::Colours::white.withAlpha(0.9f));
-
-    // Popup Menu Colors
-    setColour(juce::PopupMenu::backgroundColourId, juce::Colour(popupBackground));
-    setColour(juce::PopupMenu::textColourId, juce::Colours::white.withAlpha(0.9f));
-    setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colours::white.withAlpha(0.1f));
-    setColour(juce::PopupMenu::highlightedTextColourId, juce::Colours::white);
-
-    // TextEditor Colors
+    setColour(juce::ComboBox::outlineColourId, juce::Colour(inactiveRing));
+    setColour(juce::ComboBox::arrowColourId, juce::Colour(labelText));
+    setColour(juce::ComboBox::textColourId, juce::Colour(valueText));
+    setColour(juce::PopupMenu::backgroundColourId, juce::Colour(mainBackground));
+    setColour(juce::PopupMenu::textColourId, juce::Colour(valueText));
+    setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(arcBackground));
+    setColour(juce::PopupMenu::highlightedTextColourId, juce::Colour(valueText));
     setColour(juce::TextEditor::backgroundColourId, juce::Colour(panelBackground));
-    setColour(juce::TextEditor::textColourId, juce::Colours::white.withAlpha(0.8f));
+    setColour(juce::TextEditor::textColourId, juce::Colour(valueText));
     setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
 }
 
-void DeBleedLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
-                                               const juce::Colour& backgroundColour,
-                                               bool shouldDrawButtonAsHighlighted,
-                                               bool shouldDrawButtonAsDown)
+void DeBleedLookAndFeel::drawBody(juce::Graphics& g, juce::Point<float> centre,
+                                 float radius, bool innerRing)
 {
-    auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
-
-    // Check if this is a tab button
-    if (button.getProperties().contains("isTabButton"))
+    const auto disc = juce::Rectangle<float>(radius * 2.0f, radius * 2.0f).withCentre(centre);
+    g.setColour(juce::Colour(rim));
+    g.fillEllipse(disc.expanded(1.0f));
+    g.setGradientFill(juce::ColourGradient(juce::Colour(bodyCentre), centre.x, centre.y - radius * 0.2f,
+                                         juce::Colour(bodyEdge), centre.x, centre.y + radius, true));
+    g.fillEllipse(disc);
+    if (innerRing)
     {
-        bool isActive = button.getToggleState();
-
-        if (isActive)
-        {
-            g.setColour(juce::Colours::white.withAlpha(0.12f));
-            g.fillRoundedRectangle(bounds, 4.0f);
-            g.setColour(juce::Colours::white.withAlpha(0.3f));
-            g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
-        }
-        else if (shouldDrawButtonAsHighlighted)
-        {
-            g.setColour(juce::Colours::white.withAlpha(0.08f));
-            g.fillRoundedRectangle(bounds, 4.0f);
-        }
-        else
-        {
-            g.setColour(juce::Colours::white.withAlpha(0.04f));
-            g.fillRoundedRectangle(bounds, 4.0f);
-        }
-        return;
+        g.setColour(juce::Colours::white.withAlpha(0.05f));
+        g.drawEllipse(disc.reduced(0.5f), 1.0f);
     }
-
-    // Standard button style
-    if (!button.isEnabled())
-    {
-        g.setColour(juce::Colour(panelBackground).withAlpha(0.5f));
-        g.fillRoundedRectangle(bounds, 4.0f);
-        g.setColour(juce::Colours::white.withAlpha(0.08f));
-        g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
-        return;
-    }
-
-    if (shouldDrawButtonAsDown)
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.15f));
-    }
-    else if (shouldDrawButtonAsHighlighted)
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.1f));
-    }
-    else
-    {
-        g.setColour(juce::Colour(panelBackground));
-    }
-
-    g.fillRoundedRectangle(bounds, 4.0f);
-    g.setColour(juce::Colours::white.withAlpha(0.2f));
-    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
 }
 
-void DeBleedLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button,
-                                         bool shouldDrawButtonAsHighlighted,
-                                         bool shouldDrawButtonAsDown)
+void DeBleedLookAndFeel::drawTextAtBaseline(juce::Graphics& g, const juce::String& text,
+                                           const juce::Font& font, float x, float baseline,
+                                           bool centred)
 {
-    g.setFont(juce::FontOptions(13.0f, juce::Font::bold));
-
-    if (!button.isEnabled())
-        g.setColour(juce::Colours::white.withAlpha(0.25f));  // Clearly disabled
-    else if (button.getToggleState() || shouldDrawButtonAsDown || shouldDrawButtonAsHighlighted)
-        g.setColour(juce::Colours::white);
-    else
-        g.setColour(juce::Colours::white.withAlpha(0.6f));
-
-    g.drawText(button.getButtonText(), button.getLocalBounds(), juce::Justification::centred);
+    juce::GlyphArrangement glyphs;
+    glyphs.addLineOfText(font, text, 0.0f, 0.0f);
+    const auto bounds = glyphs.getBoundingBox(0, glyphs.getNumGlyphs(), true);
+    glyphs.draw(g, juce::AffineTransform::translation(
+        x - (centred ? bounds.getCentreX() : bounds.getX()), baseline));
 }
 
 void DeBleedLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
-                                           float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
-                                           juce::Slider& slider)
+                                        float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
+                                        juce::Slider& slider)
 {
-    auto bounds = juce::Rectangle<float>(x, y, width, height).reduced(2.0f);
-    auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
-    auto toAngle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
-    auto center = bounds.getCentre();
-
-    // A. Background Track
-    g.setColour(juce::Colour(arcBackgroundColor));
-    juce::Path bgPath;
-    bgPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, rotaryStartAngle, rotaryEndAngle, true);
-    g.strokePath(bgPath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-
-    // B. Value Arc
-    // Calculate center angle (12 o'clock position)
-    float centerAngle = (rotaryStartAngle + rotaryEndAngle) * 0.5f;
-
-    // Check for bias knob (center-based arc)
-    bool isBiasKnob = slider.getProperties().contains("isBiasKnob");
-
-    if (isBiasKnob)
+    const auto centre = juce::Rectangle<float>(static_cast<float>(x), static_cast<float>(y),
+                                              static_cast<float>(width), static_cast<float>(height)).getCentre();
+    const bool big = static_cast<bool>(slider.getProperties()["bigKnob"]);
+    const float radius = big ? 40.0f : 28.0f;
+    const float stroke = big ? 2.5f : 2.0f;
+    const float angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+    const auto colour = juce::Colour(static_cast<juce::uint32>(static_cast<juce::int64>(
+        slider.getProperties().getWithDefault("knobColor", static_cast<juce::int64>(cyanAccent)))));
+    const auto roundStroke = [](float thickness)
     {
-        // BIAS KNOB: Center-based arc with gradient from Orange (top) to Cyan (bottom)
-        juce::Path valPath;
+        return juce::PathStrokeType(thickness, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
+    };
 
-        if (toAngle > centerAngle) {
-            valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, centerAngle, toAngle, true);
-        } else if (toAngle < centerAngle) {
-            valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, toAngle, centerAngle, true);
-        }
+    juce::Path track;
+    track.addCentredArc(centre.x, centre.y, radius, radius, 0.0f,
+                       rotaryStartAngle, rotaryEndAngle, true);
+    g.setColour(juce::Colour(arcBackground));
+    g.strokePath(track, roundStroke(stroke));
 
-        // Color based on direction from center
-        juce::Colour arcColor;
-        if (toAngle > centerAngle) {
-            float intensity = (toAngle - centerAngle) / (rotaryEndAngle - centerAngle);
-            arcColor = juce::Colours::cyan.interpolatedWith(juce::Colours::orange, intensity);
-        } else {
-            float intensity = (centerAngle - toAngle) / (centerAngle - rotaryStartAngle);
-            arcColor = juce::Colours::orange.interpolatedWith(juce::Colours::cyan, intensity);
-        }
-
-        g.setColour(arcColor.withAlpha(0.9f));
-        g.strokePath(valPath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-
-        // Draw center tick mark
-        g.setColour(juce::Colours::white.withAlpha(0.4f));
-        float tickInner = radius - 6.0f;
-        float tickOuter = radius + 2.0f;
-        float tickX1 = center.x + tickInner * std::sin(centerAngle);
-        float tickY1 = center.y - tickInner * std::cos(centerAngle);
-        float tickX2 = center.x + tickOuter * std::sin(centerAngle);
-        float tickY2 = center.y - tickOuter * std::cos(centerAngle);
-        g.drawLine(tickX1, tickY1, tickX2, tickY2, 1.5f);
+    if (sliderPos > 0.002f)
+    {
+        juce::Path valueArc;
+        valueArc.addCentredArc(centre.x, centre.y, radius, radius, 0.0f, rotaryStartAngle, angle, true);
+        g.setColour(colour.withAlpha(0.35f));
+        g.strokePath(valueArc, roundStroke(stroke + 1.0f));
+        g.setColour(colour);
+        g.strokePath(valueArc, roundStroke(stroke));
     }
-    else if (slider.getProperties().contains("isDualColor"))
+
+    drawBody(g, centre, radius - 6.0f, true);
+    juce::Path pointer;
+    pointer.startNewSubPath(centre.x + (radius - 11.0f) * std::sin(angle),
+                            centre.y - (radius - 11.0f) * std::cos(angle));
+    pointer.lineTo(centre.x + (radius - 7.5f) * std::sin(angle),
+                   centre.y - (radius - 7.5f) * std::cos(angle));
+    g.setColour(colour);
+    g.strokePath(pointer, roundStroke(1.6f));
+
+    const auto number = slider.getTextFromValue(slider.getValue()).trimStart()
+                             .initialSectionContainingOnly("+-0123456789.")
+                             .trimCharactersAtStart("+");
+    g.setColour(juce::Colour(valueText));
+    drawTextAtBaseline(g, number, juce::Font(juce::FontOptions(big ? 14.0f : 11.0f).withStyle("Medium")),
+                       centre.x, centre.y + (big ? 5.0f : 4.0f));
+}
+
+void DeBleedLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
+                                        bool highlighted, bool down)
+{
+    const auto centre = button.getLocalBounds().toFloat().getCentre();
+    if (static_cast<bool>(button.getProperties()["chevron"]))
     {
-        // GRADIENT: Orange (start) -> Cyan (end)
-        juce::Path valPath;
-        valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, rotaryStartAngle, toAngle, true);
-
-        juce::Point<float> startPt(center.x + radius * std::sin(rotaryStartAngle),
-                                   center.y - radius * std::cos(rotaryStartAngle));
-        juce::Point<float> endPt(center.x + radius * std::sin(toAngle),
-                                 center.y - radius * std::cos(toAngle));
-
-        juce::ColourGradient grad(juce::Colours::orange, startPt,
-                                  juce::Colours::cyan, endPt, false);
-
-        g.setGradientFill(grad);
-        g.strokePath(valPath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        const float direction = static_cast<bool>(button.getProperties()["pointsLeft"]) ? 1.0f : -1.0f;
+        juce::Path chevron;
+        chevron.startNewSubPath(centre.x + direction * 2.5f, centre.y - 4.0f);
+        chevron.lineTo(centre.x - direction * 1.5f, centre.y);
+        chevron.lineTo(centre.x + direction * 2.5f, centre.y + 4.0f);
+        g.setColour(juce::Colour(orangeAccent));
+        g.strokePath(chevron, juce::PathStrokeType(1.6f, juce::PathStrokeType::curved,
+                                                 juce::PathStrokeType::rounded));
+        return;
     }
-    else
+
+    if (static_cast<bool>(button.getProperties()["ringStyle"]))
     {
-        // Standard single-color arc
-        juce::Path valPath;
-
-        // Check if arc should be inverted (fill from current to end instead of start to current)
-        bool invertArc = slider.getProperties().contains("invertArc") &&
-                         static_cast<bool>(slider.getProperties()["invertArc"]);
-
-        if (invertArc)
-            valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, toAngle, rotaryEndAngle, true);
-        else
-            valPath.addCentredArc(center.x, center.y, radius, radius, 0.0f, rotaryStartAngle, toAngle, true);
-
-        // Get knob color from properties, default to cyan
-        juce::Colour arcColor = juce::Colour::fromRGB(0, 255, 255);  // Pure cyan
-        if (slider.getProperties().contains("knobColor"))
+        const auto colour = juce::Colour(static_cast<juce::uint32>(static_cast<juce::int64>(
+            button.getProperties()["ringColour"])));
+        const auto ring = juce::Rectangle<float>(20.0f, 20.0f).withCentre(centre);
+        const bool on = button.getToggleState();
+        if (on)
         {
-            juce::int64 colorVal = static_cast<juce::int64>(slider.getProperties()["knobColor"]);
-            arcColor = juce::Colour(static_cast<juce::uint32>(colorVal));
+            g.setColour(colour.withAlpha(0.8f));
+            g.drawEllipse(ring.expanded(1.0f), 3.0f);
         }
-
-        g.setColour(arcColor);
-        g.strokePath(valPath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-    }
-
-    // C. Knob Body
-    auto knobRadius = radius - 5.0f;
-    juce::ColourGradient knobGrad(juce::Colour::fromRGB(60, 65, 70), center.x, center.y - knobRadius,
-                                  juce::Colour::fromRGB(25, 28, 30), center.x, center.y + knobRadius, false);
-    g.setGradientFill(knobGrad);
-    g.fillEllipse(center.x - knobRadius, center.y - knobRadius, knobRadius * 2.0f, knobRadius * 2.0f);
-
-    // D. Pointer
-    juce::Path p;
-    p.addRectangle(-1.5f, -knobRadius + 2.0f, 3.0f, 5.0f);
-    p.applyTransform(juce::AffineTransform::rotation(toAngle).translated(center));
-    g.setColour(juce::Colours::white.withAlpha(0.9f));
-    g.fillPath(p);
-}
-
-void DeBleedLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& btn,
-                                           bool shouldDrawButtonAsHighlighted,
-                                           bool shouldDrawButtonAsDown)
-{
-    if (static_cast<bool>(btn.getProperties()["switchStyle"]))
-    {
-        const auto track = btn.getLocalBounds().toFloat().withSizeKeepingCentre(36.0f, 18.0f);
-        const bool on = btn.getToggleState();
-        g.setColour(juce::Colour(on ? 0xff39ff14 : 0xff3a3a3a));
-        g.fillRoundedRectangle(track, 9.0f);
-        g.setColour(juce::Colours::white);
-        g.fillEllipse(on ? track.getRight() - 16.0f : track.getX() + 2.0f,
-                      track.getY() + 2.0f, 14.0f, 14.0f);
+        drawBody(g, centre, 10.0f, false);
+        g.setColour(on ? colour : juce::Colour(inactiveRing));
+        g.drawEllipse(ring, 1.8f);
+        g.setGradientFill(juce::ColourGradient(juce::Colour(inactiveRing), centre.x - 1.0f, centre.y - 1.5f,
+                                             juce::Colour(meterBackground), centre.x, centre.y + 5.0f, true));
+        g.fillEllipse(juce::Rectangle<float>(10.0f, 10.0f).withCentre(centre));
         return;
     }
 
-    auto bounds = btn.getLocalBounds().toFloat().reduced(2.0f);
-
-    // For larger toggle buttons, use default rendering (with text)
-    if (bounds.getWidth() > 40)
-    {
-        LookAndFeel_V4::drawToggleButton(g, btn, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
-        return;
-    }
-
-    // Small power button style
-    bool on = btn.getToggleState();
-
-    // Check for inverted colors (for bypass button: orange when OFF = active)
-    bool invertColors = btn.getProperties().contains("invertColors") &&
-                        static_cast<bool>(btn.getProperties()["invertColors"]);
-    if (invertColors)
-        on = !on;  // Invert: show orange when bypass is OFF (active)
-
-    auto center = bounds.getCentre();
-    float r = std::min(bounds.getWidth(), bounds.getHeight()) / 2.0f;
-
-    if (on)
-    {
-        juce::ColourGradient onGrad(juce::Colour::fromRGB(255, 215, 150), bounds.getX(), bounds.getY(),
-                                    juce::Colour::fromRGB(200, 100, 20), bounds.getX(), bounds.getBottom(), false);
-        g.setGradientFill(onGrad);
-    }
-    else
-    {
-        g.setColour(juce::Colour::fromRGB(40, 40, 40));
-    }
-
-    g.fillRoundedRectangle(bounds, 4.0f);
-
-    g.setColour(juce::Colours::black.withAlpha(on ? 0.4f : 0.6f));
-    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
-
-    // Power icon (matching Kinetics style - gap at top for the power line)
-    juce::Path icon;
-    float iconR = r * 0.55f;
-    icon.addCentredArc(center.x, center.y, iconR, iconR, 0.0f, 0.64f, 5.64f, true);
-    icon.startNewSubPath(center.x, center.y - iconR + 1.0f);
-    icon.lineTo(center.x, center.y);
-
-    if (on)
-        g.setColour(juce::Colours::white.withAlpha(0.95f));
-    else
-        g.setColour(juce::Colours::white.withAlpha(0.4f));
-
-    g.strokePath(icon, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-
-    // Highlight on top when ON
-    if (on)
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.2f));
-        g.fillRoundedRectangle(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight() * 0.4f, 4.0f);
-    }
-}
-
-void DeBleedLookAndFeel::drawProgressBar(juce::Graphics& g, juce::ProgressBar& bar,
-                                          int width, int height, double progress,
-                                          const juce::String& textToShow)
-{
-    auto bounds = juce::Rectangle<float>(0, 0, width, height);
-
-    // Background
-    g.setColour(juce::Colour(panelBackground));
-    g.fillRoundedRectangle(bounds, 4.0f);
-
-    // Border
-    g.setColour(juce::Colours::white.withAlpha(0.1f));
-    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
-
-    // Progress fill
-    if (progress > 0.0)
-    {
-        auto progressBounds = bounds.reduced(2.0f);
-        progressBounds.setWidth(progressBounds.getWidth() * static_cast<float>(progress));
-
-        juce::ColourGradient grad(juce::Colour(cyanAccent).withAlpha(0.8f), progressBounds.getX(), progressBounds.getY(),
-                                  juce::Colour(cyanAccent).withAlpha(0.5f), progressBounds.getRight(), progressBounds.getY(), false);
-        g.setGradientFill(grad);
-        g.fillRoundedRectangle(progressBounds, 3.0f);
-    }
-
-    // Text
-    if (textToShow.isNotEmpty())
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.8f));
-        g.setFont(juce::FontOptions(11.0f));
-        g.drawText(textToShow, bounds, juce::Justification::centred);
-    }
-}
-
-void DeBleedLookAndFeel::drawTabButton(juce::Graphics& g, juce::Rectangle<int> bounds,
-                                        const juce::String& text, bool isActive, bool isHovered)
-{
-    auto boundsF = bounds.toFloat();
-
-    if (isActive)
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.12f));
-        g.fillRoundedRectangle(boundsF, 4.0f);
-        g.setColour(juce::Colours::white.withAlpha(0.3f));
-        g.drawRoundedRectangle(boundsF, 4.0f, 1.0f);
-    }
-    else if (isHovered)
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.08f));
-        g.fillRoundedRectangle(boundsF, 4.0f);
-    }
-    else
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.04f));
-        g.fillRoundedRectangle(boundsF, 4.0f);
-    }
-
-    g.setFont(juce::FontOptions(13.0f, juce::Font::bold));
-    g.setColour(isActive ? juce::Colours::white : juce::Colours::white.withAlpha(0.6f));
-    g.drawText(text, bounds, juce::Justification::centred);
+    LookAndFeel_V4::drawToggleButton(g, button, highlighted, down);
 }
