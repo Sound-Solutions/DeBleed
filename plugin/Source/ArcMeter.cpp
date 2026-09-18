@@ -71,7 +71,7 @@ void ArcMeter::paint(juce::Graphics& g)
 
     const float footY = centre.y - radius * std::cos(sweepRad);
     const float footOffset = radius * std::sin(sweepRad);
-    const auto labelFont = juce::Font(juce::FontOptions(8.0f, juce::Font::bold))
+    const auto labelFont = DeBleedLookAndFeel::font(8.0f, "Bold")
                                .withExtraKerningFactor(1.2f / 8.0f);
     g.setColour(grColour);
     DeBleedLookAndFeel::drawTextAtBaseline(g, "GR", labelFont, centre.x - footOffset, footY + 14.0f);
@@ -85,7 +85,7 @@ void ArcMeter::paint(juce::Graphics& g)
         grText = juce::String(gainReductionDb_, 1);
 
     g.setColour(juce::Colour(DeBleedLookAndFeel::valueText));
-    DeBleedLookAndFeel::drawTextAtBaseline(g, grText, juce::Font(juce::FontOptions(30.0f).withStyle("Medium")),
+    DeBleedLookAndFeel::drawTextAtBaseline(g, grText, DeBleedLookAndFeel::font(30.0f, "Medium"),
                                           centre.x, centre.y + 7.0f);
     g.setColour(juce::Colour(DeBleedLookAndFeel::dimText));
     DeBleedLookAndFeel::drawTextAtBaseline(g, "DB", labelFont, centre.x, centre.y + 24.0f);

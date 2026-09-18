@@ -2,8 +2,6 @@
 
 DeBleedLookAndFeel::DeBleedLookAndFeel()
 {
-    // JUCE's macOS default sans is Lucida Grande, which has no Medium face and is not the mock's typeface.
-    setDefaultSansSerifTypefaceName("Helvetica Neue");
     setColour(juce::Label::textColourId, juce::Colour(labelText));
     setColour(juce::Slider::textBoxTextColourId, juce::Colour(valueText));
     setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
@@ -18,6 +16,11 @@ DeBleedLookAndFeel::DeBleedLookAndFeel()
     setColour(juce::TextEditor::backgroundColourId, juce::Colour(panelBackground));
     setColour(juce::TextEditor::textColourId, juce::Colour(valueText));
     setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
+}
+
+juce::Font DeBleedLookAndFeel::font(float height, const juce::String& style)
+{
+    return juce::Font(juce::FontOptions("Helvetica Neue", height, juce::Font::plain).withStyle(style));
 }
 
 void DeBleedLookAndFeel::drawBody(juce::Graphics& g, juce::Point<float> centre,
@@ -93,7 +96,7 @@ void DeBleedLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
                              .initialSectionContainingOnly("+-0123456789.")
                              .trimCharactersAtStart("+");
     g.setColour(juce::Colour(valueText));
-    drawTextAtBaseline(g, number, juce::Font(juce::FontOptions(big ? 14.0f : 11.0f).withStyle("Medium")),
+    drawTextAtBaseline(g, number, font(big ? 14.0f : 11.0f, "Medium"),
                        centre.x, centre.y + (big ? 5.0f : 4.0f));
 }
 

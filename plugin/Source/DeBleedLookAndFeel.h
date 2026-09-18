@@ -14,6 +14,10 @@ public:
 
     static void drawBody(juce::Graphics&, juce::Point<float> centre, float radius,
                          bool innerRing);
+    // Every font goes through here so the typeface is explicit: JUCE resolves default-named
+    // fonts through the Desktop's LookAndFeel, not the editor's, and its macOS default is
+    // Lucida Grande (no Medium face).
+    static juce::Font font(float height, const juce::String& style);
     static void drawTextAtBaseline(juce::Graphics&, const juce::String&, const juce::Font&,
                                    float x, float baseline, bool centred = true);
 

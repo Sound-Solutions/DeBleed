@@ -48,12 +48,14 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     chevronButton_.onClick = [this] { toggleCollapsed(); };
     addAndMakeVisible(chevronButton_);
 
+    slideTimer_.onTick = [this] { slideFrame(); };
     setSize(collapsed_ ? collapsedWidth : expandedWidth, editorHeight);
-    startTimer(16);
+    startTimer(50);  // meter feed, unchanged from v1.1.0 so the spring moves exactly as before
 }
 
 DeBleedAudioProcessorEditor::~DeBleedAudioProcessorEditor()
 {
+    slideTimer_.stopTimer();
     stopTimer();
     setLookAndFeel(nullptr);
 }
@@ -75,14 +77,14 @@ void DeBleedAudioProcessorEditor::paint(juce::Graphics& g)
     g.fillRect(597, 132, 1, 136);
 
     g.setColour(juce::Colour(DeBleedLookAndFeel::labelText));
-    const auto titleFont = juce::Font(juce::FontOptions(10.0f, juce::Font::bold))
+    const auto titleFont = DeBleedLookAndFeel::font(10.0f, "Bold")
                                .withExtraKerningFactor(2.6f / 10.0f);
     DeBleedLookAndFeel::drawTextAtBaseline(g, "DEBLEED", titleFont, 16.0f, 21.0f, false);
 
 #if DEBUG || JUCE_DEBUG
     g.setColour(juce::Colour(DeBleedLookAndFeel::inactiveRing));
     DeBleedLookAndFeel::drawTextAtBaseline(g, "Build: " BUILD_TIMESTAMP,
-                                          juce::Font(juce::FontOptions(8.0f)), 16.0f, 260.0f, false);
+                                          DeBleedLookAndFeel::font(8.0f, "Regular"), 16.0f, 260.0f, false);
 #endif
 }
 
@@ -106,29 +108,36 @@ void DeBleedAudioProcessorEditor::toggleCollapsed()
     slideStartWidth_ = getWidth();
     slideStartTime_ = juce::Time::getMillisecondCounterHiRes();
     sliding_ = true;
+    slideTimer_.startTimer(16);
+}
+
+void DeBleedAudioProcessorEditor::slideFrame()
+{
+    // Finish the slide even if the host hides the window during the animation.
+    if (!sliding_)
+    {
+        slideTimer_.stopTimer();
+        return;
+    }
+    const int targetWidth = collapsed_ ? collapsedWidth : expandedWidth;
+    const double progress = juce::jlimit(0.0, 1.0,
+        (juce::Time::getMillisecondCounterHiRes() - slideStartTime_) / slideDurationMs);
+    if (progress >= 1.0)
+    {
+        setSize(targetWidth, editorHeight);
+        sliding_ = false;
+        slideTimer_.stopTimer();
+    }
+    else
+    {
+        const double remaining = 1.0 - progress;
+        const double eased = 1.0 - remaining * remaining * remaining;
+        setSize(juce::roundToInt(slideStartWidth_ + (targetWidth - slideStartWidth_) * eased), editorHeight);
+    }
 }
 
 void DeBleedAudioProcessorEditor::timerCallback()
 {
-    // Finish the slide even if the host hides the window during the animation.
-    if (sliding_)
-    {
-        const int targetWidth = collapsed_ ? collapsedWidth : expandedWidth;
-        const double progress = juce::jlimit(0.0, 1.0,
-            (juce::Time::getMillisecondCounterHiRes() - slideStartTime_) / slideDurationMs);
-        if (progress >= 1.0)
-        {
-            setSize(targetWidth, editorHeight);
-            sliding_ = false;
-        }
-        else
-        {
-            const double remaining = 1.0 - progress;
-            const double eased = 1.0 - remaining * remaining * remaining;
-            setSize(juce::roundToInt(slideStartWidth_ + (targetWidth - slideStartWidth_) * eased), editorHeight);
-        }
-    }
-
     if (!isShowing())
         return;
 

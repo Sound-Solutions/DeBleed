@@ -29,6 +29,9 @@ void Section::Knob::setup(Section& parent, juce::AudioProcessorValueTreeState& p
 {
     slider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    // -135..+135 degrees from 12 o'clock, as the mock draws; JUCE's default is +-144.
+    slider.setRotaryParameters(juce::MathConstants<float>::pi * 1.25f,
+                               juce::MathConstants<float>::pi * 2.75f, true);
     slider.setTitle(name);
     slider.getProperties().set("knobColor", static_cast<juce::int64>(parent.colour_));
     slider.getProperties().set("bigKnob", big);
@@ -62,14 +65,14 @@ void Section::paint(juce::Graphics& g)
         g.addTransform(juce::AffineTransform::rotation(-juce::MathConstants<float>::halfPi)
                            .translated(14.0f, static_cast<float>(getHeight()) * 0.5f));
         g.setColour(juce::Colour(DeBleedLookAndFeel::dimText));
-        const auto titleFont = juce::Font(juce::FontOptions(9.0f, juce::Font::bold))
+        const auto titleFont = DeBleedLookAndFeel::font(9.0f, "Bold")
                                    .withExtraKerningFactor(2.2f / 9.0f);
         DeBleedLookAndFeel::drawTextAtBaseline(g, title_, titleFont, 0.0f, 0.0f);
     }
 
-    const auto nameFont = juce::Font(juce::FontOptions(8.0f, juce::Font::bold))
+    const auto nameFont = DeBleedLookAndFeel::font(8.0f, "Bold")
                               .withExtraKerningFactor(1.2f / 8.0f);
-    const auto unitFont = juce::Font(juce::FontOptions(7.0f).withStyle("Medium"))
+    const auto unitFont = DeBleedLookAndFeel::font(7.0f, "Medium")
                               .withExtraKerningFactor(0.4f / 7.0f);
     for (const auto& label : labels_)
     {

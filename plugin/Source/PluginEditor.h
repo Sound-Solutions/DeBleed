@@ -36,7 +36,15 @@ private:
     int slideStartWidth_ = expandedWidth;
     double slideStartTime_ = 0.0;
 
+    // The slide runs on its own 16 ms timer; the editor's timer stays at 50 ms for the meter.
+    struct SlideTimer : juce::Timer
+    {
+        std::function<void()> onTick;
+        void timerCallback() override { onTick(); }
+    } slideTimer_;
+
     void toggleCollapsed();
+    void slideFrame();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessorEditor)
 };
