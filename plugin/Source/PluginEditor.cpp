@@ -1,23 +1,8 @@
 #include "PluginEditor.h"
-#include "ClickMonitor.h"
 
 #if DEBUG || JUCE_DEBUG
 #include "BuildTimestamp.h"
 #endif
-
-namespace
-{
-// Debug-only click log, mirror of SpectralGate's probe for the collapsed-chevron comparison (2026-09-18).
-void debugLog (const juce::String& line)
-{
-   #if JUCE_DEBUG
-    juce::File ("/Users/ksellarsm4lt/Code/DeBleed/debug.txt")
-        .appendText (juce::Time::getCurrentTime().toString (false, true, true, true) + "  " + line + "\n");
-   #else
-    juce::ignoreUnused (line);
-   #endif
-}
-}
 
 DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& p)
     : AudioProcessorEditor(&p),
@@ -60,12 +45,7 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     chevronButton_.getProperties().set("chevron", true);
     chevronButton_.getProperties().set("pointsLeft", !collapsed_);
     chevronButton_.setToggleState(collapsed_, juce::dontSendNotification);
-    chevronButton_.onClick = [this]
-    {
-        debugLog ("chevron onClick toggle=" + juce::String ((int) chevronButton_.getToggleState()) + " editor " + getLocalBounds().toString());
-        toggleCollapsed();
-    };
-    installClickMonitor ([] (const juce::String& line) { debugLog (line); });
+    chevronButton_.onClick = [this] { toggleCollapsed(); };
     addAndMakeVisible(chevronButton_);
 
     slideTimer_.onTick = [this] { slideFrame(); };
@@ -110,7 +90,6 @@ void DeBleedAudioProcessorEditor::paint(juce::Graphics& g)
 
 void DeBleedAudioProcessorEditor::resized()
 {
-    debugLog ("resized to " + getLocalBounds().toString() + " screen " + getScreenBounds().toString());
     // Fixed expanded coordinates: resizing the window reveals or covers the controls.
     arcMeter_.setBounds(0, 0, 268, 268);
     powerButton_.setBounds(228, 0, 36, 36);      // centre (246, 18), room for the glow

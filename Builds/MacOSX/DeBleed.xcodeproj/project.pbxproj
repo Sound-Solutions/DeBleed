@@ -11,8 +11,6 @@
 			isa = PBXAggregateTarget;
 			buildConfigurationList = 5110775B2C30ABE3BCAFD0A8;
 			buildPhases = (
-				C2FF8E2B6FF51E02032F57B0,
-				FD9CB2F9AAA0A7B2C79379EF,
 			);
 			dependencies = (
 				F4374AA001CD3DF39369798E,
@@ -27,75 +25,130 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		0C20A8DDEFE5F2FFEF9CFFB3 /* AudioToolbox.framework */ = {isa = PBXBuildFile; fileRef = C0ABAC711AE6CDFF81606936; };
-		12837D0FF3C02782EECF9F90 /* WebKit.framework */ = {isa = PBXBuildFile; fileRef = 5F099C0333A65FD6D32D76B1; };
+		0317EE5DDA48DE707BC99FA9 /* MetalKit.framework */ = {isa = PBXBuildFile; fileRef = 43584A890F6EC408893D49A6; settings = { ATTRIBUTES = (Weak, ); }; };
+		08D41792389C7A697A46F8AC /* CoreAudio.framework */ = {isa = PBXBuildFile; fileRef = EC6EFD59F927AC0A8EA35B8E; };
+		09D30A0D7660704894C90F84 /* include_juce_audio_formats_flac_1.c */ = {isa = PBXBuildFile; fileRef = E2A9478536CE61BBAEB12137; };
+		09F23F558E1DE973E8EE2151 /* CoreAudio.framework */ = {isa = PBXBuildFile; fileRef = EC6EFD59F927AC0A8EA35B8E; };
+		0A1ACABA81609D599FFD09F7 /* DiscRecording.framework */ = {isa = PBXBuildFile; fileRef = 2A3C276CD42A72E7693CD967; };
+		0BE235C6178FDEE63B112ACF /* Accelerate.framework */ = {isa = PBXBuildFile; fileRef = 5EACDA8ED1DD70AE6F9E8C61; };
+		0BF7465991952E7A9041808A /* CoreAudioKit.framework */ = {isa = PBXBuildFile; fileRef = B58D87DAD7C6085FAD9060ED; };
+		0EF87544D6A64B359DEF29C9 /* Accelerate.framework */ = {isa = PBXBuildFile; fileRef = 5EACDA8ED1DD70AE6F9E8C61; };
+		10B7323E3CACA11D4214576E /* IOKit.framework */ = {isa = PBXBuildFile; fileRef = 8659B69DE467F1313300D71C; };
+		156EEA211136A27645008C7F /* include_juce_gui_basics_4.cpp */ = {isa = PBXBuildFile; fileRef = 2502286F14CED17FD17B23B9; };
 		167FA7EF3EF53C2A6A7F29FF /* include_juce_audio_devices.mm */ = {isa = PBXBuildFile; fileRef = FC5B056E054431F3C07F24D7; };
-		1A79869DB719BCE6C32BD579 /* Cocoa.framework */ = {isa = PBXBuildFile; fileRef = 4016C83B7B115CA807D605C6; };
+		17AD5BA67FA46B0ECFAA31A0 /* MetalKit.framework */ = {isa = PBXBuildFile; fileRef = 43584A890F6EC408893D49A6; settings = { ATTRIBUTES = (Weak, ); }; };
+		1CC3F434886CE2E16A067A72 /* Cocoa.framework */ = {isa = PBXBuildFile; fileRef = 4016C83B7B115CA807D605C6; };
+		1CE3440C1F735CF83ED72DF4 /* Foundation.framework */ = {isa = PBXBuildFile; fileRef = B60EEA5148633A1B8B42DF60; };
+		1D48B369E962D879E322ADC1 /* DiscRecording.framework */ = {isa = PBXBuildFile; fileRef = 2A3C276CD42A72E7693CD967; };
 		20A217C58F32DBCEFF1F69A4 /* ArcMeter.cpp */ = {isa = PBXBuildFile; fileRef = F817FED0CF8346AACE2A7CBD; };
 		2256CD49C1040480FCD61BBC /* RecentFilesMenuTemplate.nib */ = {isa = PBXBuildFile; fileRef = ABC39D5F7ECB212834055D20; };
+		22C2630513360275226AE916 /* Security.framework */ = {isa = PBXBuildFile; fileRef = 0EDD3B772972F23E76878F1C; };
+		264F03893039AA78BD3EF099 /* include_juce_gui_basics_2.cpp */ = {isa = PBXBuildFile; fileRef = 849C3A3630E16C2C0F02E5D7; };
+		28D92F99669A4C473CA138F4 /* CoreMIDI.framework */ = {isa = PBXBuildFile; fileRef = 35422E9B98FD851E1F5F860B; };
+		2BB80029EAEC70384A6A7AA5 /* include_juce_core_zlib.c */ = {isa = PBXBuildFile; fileRef = 3C310D9420067504D3C369D5; };
+		2E1104E54B9C78F0199AD87F /* DiscRecording.framework */ = {isa = PBXBuildFile; fileRef = 2A3C276CD42A72E7693CD967; };
+		2E345F9906BC636131FD62A0 /* CoreAudioKit.framework */ = {isa = PBXBuildFile; fileRef = B58D87DAD7C6085FAD9060ED; };
 		30B74DED3D819251C3D2D7D4 /* include_juce_audio_processors_headless.mm */ = {isa = PBXBuildFile; fileRef = 39D78C2B8AC7678D50809FF5; };
 		30F6BCE4607C48BD93FBDF9E /* include_juce_graphics_Sheenbidi.c */ = {isa = PBXBuildFile; fileRef = 54F0BAAB2CD74B271A176DE2; };
+		329AE85EAC7C3D739954D50D /* Metal.framework */ = {isa = PBXBuildFile; fileRef = 512B9AFA1DD7C7A5351FCC11; settings = { ATTRIBUTES = (Weak, ); }; };
 		3328BD0693BE143F6DEC0E62 /* EnvelopeFollower.cpp */ = {isa = PBXBuildFile; fileRef = FE50B61FE7A301DE2738819C; };
 		3562DD5F2A0CB0125C742CF3 /* SpectralVAD.cpp */ = {isa = PBXBuildFile; fileRef = C39DA42226F6C776893E9FDF; };
 		360F1B28013C204EDDC3BEDA /* include_juce_gui_extra.mm */ = {isa = PBXBuildFile; fileRef = 8B1EBEC42934E98443113F7F; };
 		374C98A8133C0EAD1463EBD0 /* include_juce_audio_processors.mm */ = {isa = PBXBuildFile; fileRef = 2F984601F7E2243A0BAF30DC; };
+		38FA9194D8AA109A8DDC513E /* QuartzCore.framework */ = {isa = PBXBuildFile; fileRef = 9F53C5636E461FE71AE1786C; };
+		4142D4CF866F05A84225F725 /* Security.framework */ = {isa = PBXBuildFile; fileRef = 0EDD3B772972F23E76878F1C; };
+		42043531F96B07F46997752E /* CoreAudioKit.framework */ = {isa = PBXBuildFile; fileRef = B58D87DAD7C6085FAD9060ED; };
+		44881EEB88DE69284D91A9CF /* QuartzCore.framework */ = {isa = PBXBuildFile; fileRef = 9F53C5636E461FE71AE1786C; };
 		4603A67B45CC8D2AE774C0EB /* VST3 */ = {isa = PBXBuildFile; fileRef = 861F1F5882E6EDD716819666; };
-		473604E816B47F627E10AA0B /* Metal.framework */ = {isa = PBXBuildFile; fileRef = 512B9AFA1DD7C7A5351FCC11; settings = { ATTRIBUTES = (Weak, ); }; };
-		499F51468A0C74F29EFA50F7 /* ClickMonitor.mm */ = {isa = PBXBuildFile; fileRef = 524F485CBD5BA77D6587BFA6; };
+		46DF18DC4A27AFF9B438FEB8 /* AudioToolbox.framework */ = {isa = PBXBuildFile; fileRef = C0ABAC711AE6CDFF81606936; };
 		4A1BC0D955D8E7B76546969F /* TrainerProcess.cpp */ = {isa = PBXBuildFile; fileRef = 46D488FB65667A4C2EF58515; };
 		4A6EDB754CED6A25C65C8C80 /* AudioDropZone.cpp */ = {isa = PBXBuildFile; fileRef = 39AD446504209B10549A5E12; };
 		4B6A8981A8D78D63326BDDCC /* SimpleExpander.cpp */ = {isa = PBXBuildFile; fileRef = 7A3C4A9F829E89619E3C791F; };
-		4BCDE0A0B0A800E04972D116 /* AudioUnit.framework */ = {isa = PBXBuildFile; fileRef = 0A04EC362B79DF91EAE2EC33; };
 		4F568324CBC5CB33878EB75C /* include_juce_gui_basics.mm */ = {isa = PBXBuildFile; fileRef = 2421776D6D34E6E6762DFBF3; };
-		553F0ADACC531A6727CD8343 /* CoreAudioKit.framework */ = {isa = PBXBuildFile; fileRef = B58D87DAD7C6085FAD9060ED; };
+		53628E617A06ADCF7BAE8823 /* AudioToolbox.framework */ = {isa = PBXBuildFile; fileRef = C0ABAC711AE6CDFF81606936; };
+		53EA65CF80C72E0044AF4808 /* CoreAudio.framework */ = {isa = PBXBuildFile; fileRef = EC6EFD59F927AC0A8EA35B8E; };
+		54AE74233E40E608303650C8 /* WebKit.framework */ = {isa = PBXBuildFile; fileRef = 5F099C0333A65FD6D32D76B1; };
+		5AFC1B1E7B87E649A9250AC8 /* MetalKit.framework */ = {isa = PBXBuildFile; fileRef = 43584A890F6EC408893D49A6; settings = { ATTRIBUTES = (Weak, ); }; };
 		5BAFA48C64B9142C1F7AFEFE /* include_juce_audio_plugin_client_VST3.mm */ = {isa = PBXBuildFile; fileRef = BBC1FA9AC725AD89CC49168F; };
+		5FCE3B22658C3BED901CEE07 /* IOKit.framework */ = {isa = PBXBuildFile; fileRef = 8659B69DE467F1313300D71C; };
 		604DFDF1CE739CB0704100C3 /* include_juce_audio_plugin_client_ARA.cpp */ = {isa = PBXBuildFile; fileRef = 3C5CC8E102F0569139264739; };
+		653E3CA02FC5A0B715507598 /* AudioToolbox.framework */ = {isa = PBXBuildFile; fileRef = C0ABAC711AE6CDFF81606936; };
 		686E872DD1F0102F8FA81565 /* DifferentiableBiquadChain.cpp */ = {isa = PBXBuildFile; fileRef = F999BAC8EE4E8705B2A301B1; };
+		6AB33E0B548A564864AECEDA /* Cocoa.framework */ = {isa = PBXBuildFile; fileRef = 4016C83B7B115CA807D605C6; };
 		6C95C60B9BF6704F52965ECC /* include_juce_audio_utils.mm */ = {isa = PBXBuildFile; fileRef = AB5C59DF26AF5D56B3EA2D31; };
 		6CAC70885ED0C636C18B7158 /* LinkwitzRiley4.cpp */ = {isa = PBXBuildFile; fileRef = 256E7671635481AA6D8D54E9; };
-		6E8D6BD4B0D36C1BABBF472D /* QuartzCore.framework */ = {isa = PBXBuildFile; fileRef = 9F53C5636E461FE71AE1786C; };
+		6D968C9E148BF8B37A0526BD /* include_juce_graphics_libjpg_3.c */ = {isa = PBXBuildFile; fileRef = 05A8E5369268CA762537F219; };
 		70CD921459D6D15FD1A094F1 /* include_juce_audio_plugin_client_AU_2.mm */ = {isa = PBXBuildFile; fileRef = 4049A9F17BDB88AA21BABB79; };
-		775B2192690E363406BBAEC0 /* CoreMIDI.framework */ = {isa = PBXBuildFile; fileRef = 35422E9B98FD851E1F5F860B; };
+		71B1EE21920AAECFF5284681 /* MetalKit.framework */ = {isa = PBXBuildFile; fileRef = 43584A890F6EC408893D49A6; settings = { ATTRIBUTES = (Weak, ); }; };
+		72D3D3C9C8D545E6AB7F3A5B /* CoreAudioKit.framework */ = {isa = PBXBuildFile; fileRef = B58D87DAD7C6085FAD9060ED; };
+		76571009CFC8A95DD080D62B /* CoreMIDI.framework */ = {isa = PBXBuildFile; fileRef = 35422E9B98FD851E1F5F860B; };
 		7B152768E8DE361B6FE6E447 /* include_juce_core.mm */ = {isa = PBXBuildFile; fileRef = AEA3FBCA947F05C14D1B5283; };
+		7BE810C4488E38E1F7AA4D24 /* Foundation.framework */ = {isa = PBXBuildFile; fileRef = B60EEA5148633A1B8B42DF60; };
+		7CE4C080726C1B025FDFFD07 /* CoreMIDI.framework */ = {isa = PBXBuildFile; fileRef = 35422E9B98FD851E1F5F860B; };
+		8161D7817F8FAE61CFF06436 /* DiscRecording.framework */ = {isa = PBXBuildFile; fileRef = 2A3C276CD42A72E7693CD967; };
 		822126B06578DA7849DF7BEB /* include_juce_dsp.mm */ = {isa = PBXBuildFile; fileRef = B43986E392E7C2925113B7E5; };
-		8296B7CBE40854277F794AD6 /* IOKit.framework */ = {isa = PBXBuildFile; fileRef = 8659B69DE467F1313300D71C; };
 		83244953AF9FF90354A4AAFA /* include_juce_audio_basics.mm */ = {isa = PBXBuildFile; fileRef = 7A6DD4C1995D0554912CF6DF; };
+		866196B3FB771896660A23DF /* Metal.framework */ = {isa = PBXBuildFile; fileRef = 512B9AFA1DD7C7A5351FCC11; settings = { ATTRIBUTES = (Weak, ); }; };
+		870CA23E8E0A6FEE66970D99 /* Cocoa.framework */ = {isa = PBXBuildFile; fileRef = 4016C83B7B115CA807D605C6; };
+		8EF44EE802A9A8466E680376 /* CoreAudio.framework */ = {isa = PBXBuildFile; fileRef = EC6EFD59F927AC0A8EA35B8E; };
+		8F063D0E32815E800CDED8C7 /* Metal.framework */ = {isa = PBXBuildFile; fileRef = 512B9AFA1DD7C7A5351FCC11; settings = { ATTRIBUTES = (Weak, ); }; };
 		8F4C580E36C44F847410F154 /* SimpleVAD.cpp */ = {isa = PBXBuildFile; fileRef = 214797AECE2D45C2522ABB1D; };
-		9126B7CB35A62DC5E8E892C1 /* DiscRecording.framework */ = {isa = PBXBuildFile; fileRef = 2A3C276CD42A72E7693CD967; };
-		A2E84910233FFA855277B881 /* Security.framework */ = {isa = PBXBuildFile; fileRef = 0EDD3B772972F23E76878F1C; };
+		9AF448FD333250D76C678CC4 /* include_juce_audio_formats_flac_2.c */ = {isa = PBXBuildFile; fileRef = 06141D23A13DF9D8664747FB; };
+		9CF8311395767CBCEB36CECA /* WebKit.framework */ = {isa = PBXBuildFile; fileRef = 5F099C0333A65FD6D32D76B1; };
+		9EFFC47D03D47DEF78E2A6A7 /* Security.framework */ = {isa = PBXBuildFile; fileRef = 0EDD3B772972F23E76878F1C; };
+		A516129621D327680F030795 /* Foundation.framework */ = {isa = PBXBuildFile; fileRef = B60EEA5148633A1B8B42DF60; };
+		A777BF4C1F1D3D57F1300C35 /* juce_VST3ManifestHelper.cpp */ = {isa = PBXBuildFile; fileRef = 9B8978AB32B9CB3798460A38; settings = { COMPILER_FLAGS = "-w -DJUCE_SKIP_PRECOMPILED_HEADER"; }; };
 		A96DDECA2351612CB5A5A1FC /* include_juce_core_CompilationTime.cpp */ = {isa = PBXBuildFile; fileRef = 7D4F26E98BDAB010607C4CF8; };
 		A9E98947E827D0F492F418D4 /* Section.cpp */ = {isa = PBXBuildFile; fileRef = 0083AA343E3DE50530CAEF30; };
 		AC36B91F5C356FFBBAD462E9 /* AU */ = {isa = PBXBuildFile; fileRef = 81DD2684868E054497F44CA4; };
+		AD110E4BFFC0A853A6A481DB /* AudioUnit.framework */ = {isa = PBXBuildFile; fileRef = 0A04EC362B79DF91EAE2EC33; };
 		B14798572C43EAA5E6B98276 /* DynamicEQ.cpp */ = {isa = PBXBuildFile; fileRef = 599DD0585D3AE92BED9745DA; };
+		B563F1CF1E1EC1F0B635EB41 /* QuartzCore.framework */ = {isa = PBXBuildFile; fileRef = 9F53C5636E461FE71AE1786C; };
 		B6AB2E9624A0B25B9BDD4F1B /* EQCurveDisplay.cpp */ = {isa = PBXBuildFile; fileRef = B98AB16790F4916F6FEE774B; };
+		B75AD2750E7366F1A644C310 /* CoreMIDI.framework */ = {isa = PBXBuildFile; fileRef = 35422E9B98FD851E1F5F860B; };
+		B8714F2032384CFDC129111B /* Accelerate.framework */ = {isa = PBXBuildFile; fileRef = 5EACDA8ED1DD70AE6F9E8C61; };
 		B9479005A4A2AA5192DD5837 /* Standalone Plugin */ = {isa = PBXBuildFile; fileRef = 88755AAFDAE2D55A011D3018; };
 		B9BF0814B9BD5C9095039B4A /* include_juce_audio_plugin_client_AU_1.mm */ = {isa = PBXBuildFile; fileRef = 4BBFE0446DED162466F788D5; };
 		BE12F1E44021693841F1F7F2 /* PluginProcessor.cpp */ = {isa = PBXBuildFile; fileRef = 56160FD77F82443BA98B062C; };
 		C7A87105A26B7016B6DBE44D /* include_juce_audio_formats.mm */ = {isa = PBXBuildFile; fileRef = 2591E04250531A631C72761C; };
-		CDE8C4CEF9C9E14AB6FBB2CD /* Accelerate.framework */ = {isa = PBXBuildFile; fileRef = 5EACDA8ED1DD70AE6F9E8C61; };
+		C93F118D752241B2135DC17B /* include_juce_graphics_libpng.c */ = {isa = PBXBuildFile; fileRef = E6ACEF118FB831267944B976; };
+		C944889591E77A871D14648F /* include_juce_graphics_libjpg_2.c */ = {isa = PBXBuildFile; fileRef = 4DFAEAD961CA40B8A845857E; };
+		CB7CBD78648C736EF43BEBA1 /* Accelerate.framework */ = {isa = PBXBuildFile; fileRef = 5EACDA8ED1DD70AE6F9E8C61; };
+		CD4649491B4C6119B3DF8C89 /* include_juce_gui_basics_5.cpp */ = {isa = PBXBuildFile; fileRef = 3C85A920880811597C2ED93F; };
+		CEA7120944189B48E0931DC9 /* include_juce_gui_basics_3.cpp */ = {isa = PBXBuildFile; fileRef = 2172F5B5CD3FFABB7A06F405; };
+		D05CB97961907C976C5DAA84 /* include_juce_graphics_libjpg_1.c */ = {isa = PBXBuildFile; fileRef = 4FBFEC0BCA73C3D6443BE321; };
 		D0AB68ED9821CF10BEC8D508 /* include_juce_graphics.mm */ = {isa = PBXBuildFile; fileRef = 04DD322A74BF6B1098F2DDD5; };
 		D0E2AB97F70D5EA6AD324691 /* DeBleedLookAndFeel.cpp */ = {isa = PBXBuildFile; fileRef = A90D017B38C32682CCB2620A; };
 		D183B5EA3290A309E274B45F /* include_juce_data_structures.mm */ = {isa = PBXBuildFile; fileRef = 2D43E19F9178E8264892CBEC; };
 		D2A1E161EF0C9B052C5EA3D3 /* VST3 Manifest Helper */ = {isa = PBXBuildFile; fileRef = C0876A495A640BE585632EA5; };
+		D50BC597E3786C27C47D2A70 /* Metal.framework */ = {isa = PBXBuildFile; fileRef = 512B9AFA1DD7C7A5351FCC11; settings = { ATTRIBUTES = (Weak, ); }; };
 		D8D0374B614EA3D01EE76B0D /* include_juce_audio_plugin_client_Standalone.cpp */ = {isa = PBXBuildFile; fileRef = 5DE04145E36774807CE8C6B3; };
-		D9B14F0652A21FC1A3154425 /* juce_VST3ManifestHelper.mm */ = {isa = PBXBuildFile; fileRef = BDDF38B7CE70616CEF796FA8; settings = { COMPILER_FLAGS = "-w -DJUCE_SKIP_PRECOMPILED_HEADER"; }; };
 		DB305342C0009719F03C592A /* PitchTracker.cpp */ = {isa = PBXBuildFile; fileRef = DDC278C7023C9A7D2DD82131; };
-		E2FA0F2DCB8F5A8DA82FC8C0 /* CoreAudio.framework */ = {isa = PBXBuildFile; fileRef = EC6EFD59F927AC0A8EA35B8E; };
+		DC4A4768CB2B47E5AAF97B89 /* IOKit.framework */ = {isa = PBXBuildFile; fileRef = 8659B69DE467F1313300D71C; };
+		DDDC1D0943A5988ED52C2247 /* Cocoa.framework */ = {isa = PBXBuildFile; fileRef = 4016C83B7B115CA807D605C6; };
+		E03B363A54B7A4459CDBC200 /* IOKit.framework */ = {isa = PBXBuildFile; fileRef = 8659B69DE467F1313300D71C; };
+		E20A66EA3DCC17F55D4FF915 /* QuartzCore.framework */ = {isa = PBXBuildFile; fileRef = 9F53C5636E461FE71AE1786C; };
+		E41574714DE877488BD2EEB3 /* WebKit.framework */ = {isa = PBXBuildFile; fileRef = 5F099C0333A65FD6D32D76B1; };
 		E5A5A25D827E6C22EAEBA600 /* PluginEditor.cpp */ = {isa = PBXBuildFile; fileRef = 3F94A2928A3243814CDBE1F5; };
-		E684CCC992AAF440518D6958 /* MetalKit.framework */ = {isa = PBXBuildFile; fileRef = 43584A890F6EC408893D49A6; settings = { ATTRIBUTES = (Weak, ); }; };
+		E5ACD10F82F9A28307B6ABE2 /* Security.framework */ = {isa = PBXBuildFile; fileRef = 0EDD3B772972F23E76878F1C; };
 		E777D260999751240B965040 /* include_juce_graphics_Harfbuzz.cpp */ = {isa = PBXBuildFile; fileRef = 86CDF7502B9E65F64C524B71; };
-		E88D47BD8D59B117F82C6706 /* Foundation.framework */ = {isa = PBXBuildFile; fileRef = B60EEA5148633A1B8B42DF60; };
+		E85D3F34BBC15758F1901DC9 /* WebKit.framework */ = {isa = PBXBuildFile; fileRef = 5F099C0333A65FD6D32D76B1; };
 		EF3B3C10181B027AB1C335D4 /* include_juce_audio_processors_headless_ara.cpp */ = {isa = PBXBuildFile; fileRef = B20D9A9D790861F932BB246F; };
+		EFAE818167994378BDE893CC /* AudioToolbox.framework */ = {isa = PBXBuildFile; fileRef = C0ABAC711AE6CDFF81606936; };
 		F1AEAEB186C2E002C8C58A5F /* include_juce_events.mm */ = {isa = PBXBuildFile; fileRef = 815519D33DBF12FE4A260685; };
 		F4A3E110C7D60DA2A8AE5EE4 /* include_juce_audio_processors_headless_lv2_libs.cpp */ = {isa = PBXBuildFile; fileRef = 2A8C58D50F32F5916D720F8D; };
 		F608EB5E66C4BAFE3AEF9904 /* Shared Code */ = {isa = PBXBuildFile; fileRef = 684AD16462281DFB513C5ACC; };
+		F758607A6142DCB2E35F684A /* Foundation.framework */ = {isa = PBXBuildFile; fileRef = B60EEA5148633A1B8B42DF60; };
 		FDBB33FC13589C78B4E5B520 /* HarmonicComb.cpp */ = {isa = PBXBuildFile; fileRef = 16EB94581FFF47217FEF7B63; };
+		FF71865572E32496E8301872 /* include_juce_graphics_lunasvg.c */ = {isa = PBXBuildFile; fileRef = 487EC4ED7DA8459396924B7A; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0083AA343E3DE50530CAEF30 /* Section.cpp */ /* Section.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Section.cpp; path = ../../plugin/Source/Section.cpp; sourceTree = SOURCE_ROOT; };
 		00A08769AEBA81BE1CB478AB /* SimpleVAD.h */ /* SimpleVAD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SimpleVAD.h; path = ../../plugin/Source/SimpleVAD.h; sourceTree = SOURCE_ROOT; };
 		04DD322A74BF6B1098F2DDD5 /* include_juce_graphics.mm */ /* include_juce_graphics.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_graphics.mm; path = ../../JuceLibraryCode/include_juce_graphics.mm; sourceTree = SOURCE_ROOT; };
+		05A8E5369268CA762537F219 /* include_juce_graphics_libjpg_3.c */ /* include_juce_graphics_libjpg_3.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_graphics_libjpg_3.c; path = ../../JuceLibraryCode/include_juce_graphics_libjpg_3.c; sourceTree = SOURCE_ROOT; };
+		06141D23A13DF9D8664747FB /* include_juce_audio_formats_flac_2.c */ /* include_juce_audio_formats_flac_2.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_audio_formats_flac_2.c; path = ../../JuceLibraryCode/include_juce_audio_formats_flac_2.c; sourceTree = SOURCE_ROOT; };
 		077C5AA03598F95C7CD13142 /* juce_data_structures */ /* juce_data_structures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_data_structures; path = /Applications/JUCE/modules/juce_data_structures; sourceTree = "<absolute>"; };
 		09BD77B0FC43F0D9C746E8E5 /* JuceHeader.h */ /* JuceHeader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = JuceHeader.h; path = ../../JuceLibraryCode/JuceHeader.h; sourceTree = SOURCE_ROOT; };
 		0A04EC362B79DF91EAE2EC33 /* AudioUnit.framework */ /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
@@ -105,8 +158,10 @@
 		118EEC5A82507D23525CC8B0 /* DynamicEQ.h */ /* DynamicEQ.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DynamicEQ.h; path = ../../plugin/Source/DynamicEQ.h; sourceTree = SOURCE_ROOT; };
 		16EB94581FFF47217FEF7B63 /* HarmonicComb.cpp */ /* HarmonicComb.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = HarmonicComb.cpp; path = ../../plugin/Source/HarmonicComb.cpp; sourceTree = SOURCE_ROOT; };
 		214797AECE2D45C2522ABB1D /* SimpleVAD.cpp */ /* SimpleVAD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SimpleVAD.cpp; path = ../../plugin/Source/SimpleVAD.cpp; sourceTree = SOURCE_ROOT; };
+		2172F5B5CD3FFABB7A06F405 /* include_juce_gui_basics_3.cpp */ /* include_juce_gui_basics_3.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_gui_basics_3.cpp; path = ../../JuceLibraryCode/include_juce_gui_basics_3.cpp; sourceTree = SOURCE_ROOT; };
 		21C4F5962CC4C5EE2F0FCA3E /* PitchTracker.h */ /* PitchTracker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PitchTracker.h; path = ../../plugin/Source/PitchTracker.h; sourceTree = SOURCE_ROOT; };
 		2421776D6D34E6E6762DFBF3 /* include_juce_gui_basics.mm */ /* include_juce_gui_basics.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_gui_basics.mm; path = ../../JuceLibraryCode/include_juce_gui_basics.mm; sourceTree = SOURCE_ROOT; };
+		2502286F14CED17FD17B23B9 /* include_juce_gui_basics_4.cpp */ /* include_juce_gui_basics_4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_gui_basics_4.cpp; path = ../../JuceLibraryCode/include_juce_gui_basics_4.cpp; sourceTree = SOURCE_ROOT; };
 		256E7671635481AA6D8D54E9 /* LinkwitzRiley4.cpp */ /* LinkwitzRiley4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LinkwitzRiley4.cpp; path = ../../plugin/Source/LinkwitzRiley4.cpp; sourceTree = SOURCE_ROOT; };
 		2591E04250531A631C72761C /* include_juce_audio_formats.mm */ /* include_juce_audio_formats.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_formats.mm; path = ../../JuceLibraryCode/include_juce_audio_formats.mm; sourceTree = SOURCE_ROOT; };
 		26C4494383D5417E91EFED5D /* juce_audio_devices */ /* juce_audio_devices */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_devices; path = /Applications/JUCE/modules/juce_audio_devices; sourceTree = "<absolute>"; };
@@ -122,7 +177,9 @@
 		3701A9F98B832F514FD6E37A /* LinkwitzRiley4.h */ /* LinkwitzRiley4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LinkwitzRiley4.h; path = ../../plugin/Source/LinkwitzRiley4.h; sourceTree = SOURCE_ROOT; };
 		39AD446504209B10549A5E12 /* AudioDropZone.cpp */ /* AudioDropZone.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AudioDropZone.cpp; path = ../../plugin/Source/AudioDropZone.cpp; sourceTree = SOURCE_ROOT; };
 		39D78C2B8AC7678D50809FF5 /* include_juce_audio_processors_headless.mm */ /* include_juce_audio_processors_headless.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_processors_headless.mm; path = ../../JuceLibraryCode/include_juce_audio_processors_headless.mm; sourceTree = SOURCE_ROOT; };
+		3C310D9420067504D3C369D5 /* include_juce_core_zlib.c */ /* include_juce_core_zlib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_core_zlib.c; path = ../../JuceLibraryCode/include_juce_core_zlib.c; sourceTree = SOURCE_ROOT; };
 		3C5CC8E102F0569139264739 /* include_juce_audio_plugin_client_ARA.cpp */ /* include_juce_audio_plugin_client_ARA.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_audio_plugin_client_ARA.cpp; path = ../../JuceLibraryCode/include_juce_audio_plugin_client_ARA.cpp; sourceTree = SOURCE_ROOT; };
+		3C85A920880811597C2ED93F /* include_juce_gui_basics_5.cpp */ /* include_juce_gui_basics_5.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_gui_basics_5.cpp; path = ../../JuceLibraryCode/include_juce_gui_basics_5.cpp; sourceTree = SOURCE_ROOT; };
 		3F94A2928A3243814CDBE1F5 /* PluginEditor.cpp */ /* PluginEditor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = PluginEditor.cpp; path = ../../plugin/Source/PluginEditor.cpp; sourceTree = SOURCE_ROOT; };
 		3FE3B300477852383C2208DD /* SpectralVAD.h */ /* SpectralVAD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SpectralVAD.h; path = ../../plugin/Source/SpectralVAD.h; sourceTree = SOURCE_ROOT; };
 		4016C83B7B115CA807D605C6 /* Cocoa.framework */ /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
@@ -131,12 +188,13 @@
 		43584A890F6EC408893D49A6 /* MetalKit.framework */ /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		468E898A9D7F7B971E0D9388 /* SimpleExpander.h */ /* SimpleExpander.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SimpleExpander.h; path = ../../plugin/Source/SimpleExpander.h; sourceTree = SOURCE_ROOT; };
 		46D488FB65667A4C2EF58515 /* TrainerProcess.cpp */ /* TrainerProcess.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = TrainerProcess.cpp; path = ../../plugin/Source/TrainerProcess.cpp; sourceTree = SOURCE_ROOT; };
+		487EC4ED7DA8459396924B7A /* include_juce_graphics_lunasvg.c */ /* include_juce_graphics_lunasvg.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_graphics_lunasvg.c; path = ../../JuceLibraryCode/include_juce_graphics_lunasvg.c; sourceTree = SOURCE_ROOT; };
 		4BBFE0446DED162466F788D5 /* include_juce_audio_plugin_client_AU_1.mm */ /* include_juce_audio_plugin_client_AU_1.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_plugin_client_AU_1.mm; path = ../../JuceLibraryCode/include_juce_audio_plugin_client_AU_1.mm; sourceTree = SOURCE_ROOT; };
+		4DFAEAD961CA40B8A845857E /* include_juce_graphics_libjpg_2.c */ /* include_juce_graphics_libjpg_2.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_graphics_libjpg_2.c; path = ../../JuceLibraryCode/include_juce_graphics_libjpg_2.c; sourceTree = SOURCE_ROOT; };
 		4E736CE9B995441391565472 /* Info-Standalone_Plugin.plist */ /* Info-Standalone_Plugin.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Info-Standalone_Plugin.plist"; path = "Info-Standalone_Plugin.plist"; sourceTree = SOURCE_ROOT; };
 		4E9AB4B1F660B781B2401505 /* EnvelopeFollower.h */ /* EnvelopeFollower.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = EnvelopeFollower.h; path = ../../plugin/Source/EnvelopeFollower.h; sourceTree = SOURCE_ROOT; };
-		4EAE0DDED8AB6525AC42B65E /* ClickMonitor.h */ /* ClickMonitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ClickMonitor.h; path = ../../plugin/Source/ClickMonitor.h; sourceTree = SOURCE_ROOT; };
+		4FBFEC0BCA73C3D6443BE321 /* include_juce_graphics_libjpg_1.c */ /* include_juce_graphics_libjpg_1.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_graphics_libjpg_1.c; path = ../../JuceLibraryCode/include_juce_graphics_libjpg_1.c; sourceTree = SOURCE_ROOT; };
 		512B9AFA1DD7C7A5351FCC11 /* Metal.framework */ /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
-		524F485CBD5BA77D6587BFA6 /* ClickMonitor.mm */ /* ClickMonitor.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = ClickMonitor.mm; path = ../../plugin/Source/ClickMonitor.mm; sourceTree = SOURCE_ROOT; };
 		52FCDFE0E0D6A847277859BF /* JucePluginDefines.h */ /* JucePluginDefines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = JucePluginDefines.h; path = ../../JuceLibraryCode/JucePluginDefines.h; sourceTree = SOURCE_ROOT; };
 		54F0BAAB2CD74B271A176DE2 /* include_juce_graphics_Sheenbidi.c */ /* include_juce_graphics_Sheenbidi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_graphics_Sheenbidi.c; path = ../../JuceLibraryCode/include_juce_graphics_Sheenbidi.c; sourceTree = SOURCE_ROOT; };
 		56160FD77F82443BA98B062C /* PluginProcessor.cpp */ /* PluginProcessor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = PluginProcessor.cpp; path = ../../plugin/Source/PluginProcessor.cpp; sourceTree = SOURCE_ROOT; };
@@ -157,6 +215,7 @@
 		7FCA3113A867CECA286013AC /* Info-AU.plist */ /* Info-AU.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Info-AU.plist"; path = "Info-AU.plist"; sourceTree = SOURCE_ROOT; };
 		815519D33DBF12FE4A260685 /* include_juce_events.mm */ /* include_juce_events.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_events.mm; path = ../../JuceLibraryCode/include_juce_events.mm; sourceTree = SOURCE_ROOT; };
 		81DD2684868E054497F44CA4 /* AU */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeBleed.component; sourceTree = BUILT_PRODUCTS_DIR; };
+		849C3A3630E16C2C0F02E5D7 /* include_juce_gui_basics_2.cpp */ /* include_juce_gui_basics_2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_gui_basics_2.cpp; path = ../../JuceLibraryCode/include_juce_gui_basics_2.cpp; sourceTree = SOURCE_ROOT; };
 		861F1F5882E6EDD716819666 /* VST3 */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeBleed.vst3; sourceTree = BUILT_PRODUCTS_DIR; };
 		8639CAADE2A55E378F0A9E2E /* juce_dsp */ /* juce_dsp */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_dsp; path = /Applications/JUCE/modules/juce_dsp; sourceTree = "<absolute>"; };
 		8659B69DE467F1313300D71C /* IOKit.framework */ /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
@@ -168,6 +227,7 @@
 		8BB1CFFB9EDAC3C705FADA89 /* juce_audio_utils */ /* juce_audio_utils */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_utils; path = /Applications/JUCE/modules/juce_audio_utils; sourceTree = "<absolute>"; };
 		8CDC22C517DA6F4AC8C1F540 /* juce_gui_basics */ /* juce_gui_basics */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_gui_basics; path = /Applications/JUCE/modules/juce_gui_basics; sourceTree = "<absolute>"; };
 		98333E61762E6C7695E6F9CB /* juce_audio_processors */ /* juce_audio_processors */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_processors; path = /Applications/JUCE/modules/juce_audio_processors; sourceTree = "<absolute>"; };
+		9B8978AB32B9CB3798460A38 /* juce_VST3ManifestHelper.cpp */ /* juce_VST3ManifestHelper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = juce_VST3ManifestHelper.cpp; path = /Applications/JUCE/modules/juce_audio_plugin_client/VST3/juce_VST3ManifestHelper.cpp; sourceTree = "<absolute>"; };
 		9E5F8423AE7CFDDAA4A93548 /* juce_audio_formats */ /* juce_audio_formats */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_formats; path = /Applications/JUCE/modules/juce_audio_formats; sourceTree = "<absolute>"; };
 		9F53C5636E461FE71AE1786C /* QuartzCore.framework */ /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		A90D017B38C32682CCB2620A /* DeBleedLookAndFeel.cpp */ /* DeBleedLookAndFeel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = DeBleedLookAndFeel.cpp; path = ../../plugin/Source/DeBleedLookAndFeel.cpp; sourceTree = SOURCE_ROOT; };
@@ -181,13 +241,14 @@
 		B60EEA5148633A1B8B42DF60 /* Foundation.framework */ /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		B98AB16790F4916F6FEE774B /* EQCurveDisplay.cpp */ /* EQCurveDisplay.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = EQCurveDisplay.cpp; path = ../../plugin/Source/EQCurveDisplay.cpp; sourceTree = SOURCE_ROOT; };
 		BBC1FA9AC725AD89CC49168F /* include_juce_audio_plugin_client_VST3.mm */ /* include_juce_audio_plugin_client_VST3.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_plugin_client_VST3.mm; path = ../../JuceLibraryCode/include_juce_audio_plugin_client_VST3.mm; sourceTree = SOURCE_ROOT; };
-		BDDF38B7CE70616CEF796FA8 /* juce_VST3ManifestHelper.mm */ /* juce_VST3ManifestHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = juce_VST3ManifestHelper.mm; path = /Applications/JUCE/modules/juce_audio_plugin_client/VST3/juce_VST3ManifestHelper.mm; sourceTree = "<absolute>"; };
 		C0876A495A640BE585632EA5 /* VST3 Manifest Helper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = juce_vst3_helper; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0ABAC711AE6CDFF81606936 /* AudioToolbox.framework */ /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		C1C3302681ED944C8DD7F683 /* juce_core */ /* juce_core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_core; path = /Applications/JUCE/modules/juce_core; sourceTree = "<absolute>"; };
 		C39DA42226F6C776893E9FDF /* SpectralVAD.cpp */ /* SpectralVAD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SpectralVAD.cpp; path = ../../plugin/Source/SpectralVAD.cpp; sourceTree = SOURCE_ROOT; };
 		D2242C35E5359BDA92CDB83C /* juce_events */ /* juce_events */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_events; path = /Applications/JUCE/modules/juce_events; sourceTree = "<absolute>"; };
 		DDC278C7023C9A7D2DD82131 /* PitchTracker.cpp */ /* PitchTracker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = PitchTracker.cpp; path = ../../plugin/Source/PitchTracker.cpp; sourceTree = SOURCE_ROOT; };
+		E2A9478536CE61BBAEB12137 /* include_juce_audio_formats_flac_1.c */ /* include_juce_audio_formats_flac_1.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_audio_formats_flac_1.c; path = ../../JuceLibraryCode/include_juce_audio_formats_flac_1.c; sourceTree = SOURCE_ROOT; };
+		E6ACEF118FB831267944B976 /* include_juce_graphics_libpng.c */ /* include_juce_graphics_libpng.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = include_juce_graphics_libpng.c; path = ../../JuceLibraryCode/include_juce_graphics_libpng.c; sourceTree = SOURCE_ROOT; };
 		EC6EFD59F927AC0A8EA35B8E /* CoreAudio.framework */ /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		F817FED0CF8346AACE2A7CBD /* ArcMeter.cpp */ /* ArcMeter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ArcMeter.cpp; path = ../../plugin/Source/ArcMeter.cpp; sourceTree = SOURCE_ROOT; };
 		F999BAC8EE4E8705B2A301B1 /* DifferentiableBiquadChain.cpp */ /* DifferentiableBiquadChain.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = DifferentiableBiquadChain.cpp; path = ../../plugin/Source/DifferentiableBiquadChain.cpp; sourceTree = SOURCE_ROOT; };
@@ -201,20 +262,20 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CDE8C4CEF9C9E14AB6FBB2CD,
-				0C20A8DDEFE5F2FFEF9CFFB3,
-				1A79869DB719BCE6C32BD579,
-				E2FA0F2DCB8F5A8DA82FC8C0,
-				553F0ADACC531A6727CD8343,
-				775B2192690E363406BBAEC0,
-				9126B7CB35A62DC5E8E892C1,
-				E88D47BD8D59B117F82C6706,
-				8296B7CBE40854277F794AD6,
-				6E8D6BD4B0D36C1BABBF472D,
-				A2E84910233FFA855277B881,
-				12837D0FF3C02782EECF9F90,
-				473604E816B47F627E10AA0B,
-				E684CCC992AAF440518D6958,
+				CB7CBD78648C736EF43BEBA1,
+				46DF18DC4A27AFF9B438FEB8,
+				6AB33E0B548A564864AECEDA,
+				08D41792389C7A697A46F8AC,
+				72D3D3C9C8D545E6AB7F3A5B,
+				B75AD2750E7366F1A644C310,
+				2E1104E54B9C78F0199AD87F,
+				F758607A6142DCB2E35F684A,
+				E03B363A54B7A4459CDBC200,
+				44881EEB88DE69284D91A9CF,
+				22C2630513360275226AE916,
+				54AE74233E40E608303650C8,
+				D50BC597E3786C27C47D2A70,
+				5AFC1B1E7B87E649A9250AC8,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -222,20 +283,20 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CDE8C4CEF9C9E14AB6FBB2CD,
-				0C20A8DDEFE5F2FFEF9CFFB3,
-				1A79869DB719BCE6C32BD579,
-				E2FA0F2DCB8F5A8DA82FC8C0,
-				553F0ADACC531A6727CD8343,
-				775B2192690E363406BBAEC0,
-				9126B7CB35A62DC5E8E892C1,
-				E88D47BD8D59B117F82C6706,
-				8296B7CBE40854277F794AD6,
-				6E8D6BD4B0D36C1BABBF472D,
-				A2E84910233FFA855277B881,
-				12837D0FF3C02782EECF9F90,
-				473604E816B47F627E10AA0B,
-				E684CCC992AAF440518D6958,
+				0BE235C6178FDEE63B112ACF,
+				53628E617A06ADCF7BAE8823,
+				DDDC1D0943A5988ED52C2247,
+				09F23F558E1DE973E8EE2151,
+				0BF7465991952E7A9041808A,
+				7CE4C080726C1B025FDFFD07,
+				8161D7817F8FAE61CFF06436,
+				7BE810C4488E38E1F7AA4D24,
+				DC4A4768CB2B47E5AAF97B89,
+				B563F1CF1E1EC1F0B635EB41,
+				E5ACD10F82F9A28307B6ABE2,
+				E85D3F34BBC15758F1901DC9,
+				866196B3FB771896660A23DF,
+				71B1EE21920AAECFF5284681,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -243,21 +304,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4BCDE0A0B0A800E04972D116,
-				CDE8C4CEF9C9E14AB6FBB2CD,
-				0C20A8DDEFE5F2FFEF9CFFB3,
-				1A79869DB719BCE6C32BD579,
-				E2FA0F2DCB8F5A8DA82FC8C0,
-				553F0ADACC531A6727CD8343,
-				775B2192690E363406BBAEC0,
-				9126B7CB35A62DC5E8E892C1,
-				E88D47BD8D59B117F82C6706,
-				8296B7CBE40854277F794AD6,
-				6E8D6BD4B0D36C1BABBF472D,
-				A2E84910233FFA855277B881,
-				12837D0FF3C02782EECF9F90,
-				473604E816B47F627E10AA0B,
-				E684CCC992AAF440518D6958,
+				AD110E4BFFC0A853A6A481DB,
+				B8714F2032384CFDC129111B,
+				653E3CA02FC5A0B715507598,
+				870CA23E8E0A6FEE66970D99,
+				8EF44EE802A9A8466E680376,
+				42043531F96B07F46997752E,
+				28D92F99669A4C473CA138F4,
+				0A1ACABA81609D599FFD09F7,
+				A516129621D327680F030795,
+				5FCE3B22658C3BED901CEE07,
+				38FA9194D8AA109A8DDC513E,
+				9EFFC47D03D47DEF78E2A6A7,
+				9CF8311395767CBCEB36CECA,
+				8F063D0E32815E800CDED8C7,
+				17AD5BA67FA46B0ECFAA31A0,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -265,20 +326,20 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CDE8C4CEF9C9E14AB6FBB2CD,
-				0C20A8DDEFE5F2FFEF9CFFB3,
-				1A79869DB719BCE6C32BD579,
-				E2FA0F2DCB8F5A8DA82FC8C0,
-				553F0ADACC531A6727CD8343,
-				775B2192690E363406BBAEC0,
-				9126B7CB35A62DC5E8E892C1,
-				E88D47BD8D59B117F82C6706,
-				8296B7CBE40854277F794AD6,
-				6E8D6BD4B0D36C1BABBF472D,
-				A2E84910233FFA855277B881,
-				12837D0FF3C02782EECF9F90,
-				473604E816B47F627E10AA0B,
-				E684CCC992AAF440518D6958,
+				0EF87544D6A64B359DEF29C9,
+				EFAE818167994378BDE893CC,
+				1CC3F434886CE2E16A067A72,
+				53EA65CF80C72E0044AF4808,
+				2E345F9906BC636131FD62A0,
+				76571009CFC8A95DD080D62B,
+				1D48B369E962D879E322ADC1,
+				1CE3440C1F735CF83ED72DF4,
+				10B7323E3CACA11D4214576E,
+				E20A66EA3DCC17F55D4FF915,
+				4142D4CF866F05A84225F725,
+				E41574714DE877488BD2EEB3,
+				329AE85EAC7C3D739954D50D,
+				0317EE5DDA48DE707BC99FA9,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -290,8 +351,6 @@
 			children = (
 				56160FD77F82443BA98B062C,
 				286B11C8341536B97D5BF579,
-				4EAE0DDED8AB6525AC42B65E,
-				524F485CBD5BA77D6587BFA6,
 				3F94A2928A3243814CDBE1F5,
 				0B38FFE414AF19EBA37DB191,
 				46D488FB65667A4C2EF58515,
@@ -334,6 +393,8 @@
 				7A6DD4C1995D0554912CF6DF,
 				FC5B056E054431F3C07F24D7,
 				2591E04250531A631C72761C,
+				E2A9478536CE61BBAEB12137,
+				06141D23A13DF9D8664747FB,
 				3C5CC8E102F0569139264739,
 				4BBFE0446DED162466F788D5,
 				4049A9F17BDB88AA21BABB79,
@@ -346,13 +407,23 @@
 				AB5C59DF26AF5D56B3EA2D31,
 				AEA3FBCA947F05C14D1B5283,
 				7D4F26E98BDAB010607C4CF8,
+				3C310D9420067504D3C369D5,
 				2D43E19F9178E8264892CBEC,
 				B43986E392E7C2925113B7E5,
 				815519D33DBF12FE4A260685,
 				04DD322A74BF6B1098F2DDD5,
 				86CDF7502B9E65F64C524B71,
+				4FBFEC0BCA73C3D6443BE321,
+				4DFAEAD961CA40B8A845857E,
+				05A8E5369268CA762537F219,
+				E6ACEF118FB831267944B976,
+				487EC4ED7DA8459396924B7A,
 				54F0BAAB2CD74B271A176DE2,
 				2421776D6D34E6E6762DFBF3,
+				849C3A3630E16C2C0F02E5D7,
+				2172F5B5CD3FFABB7A06F405,
+				2502286F14CED17FD17B23B9,
+				3C85A920880811597C2ED93F,
 				8B1EBEC42934E98443113F7F,
 				09BD77B0FC43F0D9C746E8E5,
 				52FCDFE0E0D6A847277859BF,
@@ -455,10 +526,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3B953670E3F3F39527B04B40;
 			buildPhases = (
-				6BFF9E96B4CDC2741ABD10FE,
 				F38FD079F705F8760AE426C7,
 				78426B8E26BCC12B49B2770B,
-				103C5BE6DD765F1292061B19,
+				6BFF9E96B4CDC2741ABD10FE,
 			);
 			buildRules = (
 			);
@@ -495,6 +565,7 @@
 				3C911662B83B8FB77304432A,
 				B7473EE7F0ED39920B30743D,
 				C257BC49D3BF27C22BD04627,
+				CE270BAC796767AD1D308C66,
 			);
 			buildRules = (
 			);
@@ -516,6 +587,7 @@
 				C4BDAC8AE2CF1B7F9BEA30B3,
 				76CB379CC49ECCBE52F8BE7C,
 				A0A25CDE47084091A156D84A,
+				671FC4FD20E8294657C562FF,
 			);
 			buildRules = (
 			);
@@ -538,6 +610,7 @@
 				8A872D5DC933781ADE7204E3,
 				F07F7BC1997C5BB3BBDA2442,
 				911AF82C8942091150306EE7,
+				6A51D5C13625966957DC9902,
 			);
 			buildRules = (
 			);
@@ -743,167 +816,167 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		103C5BE6DD765F1292061B19 /* Post-build script */ = {
+		12ECBE15582C4DD9BB9D115D /* Run Pre-Build Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Post-build script";
-			alwaysOutOfDate = 1;
-			shellPath = /bin/sh;
-			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
-		};
-		12ECBE15582C4DD9BB9D115D /* Pre-build script */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			name = "Pre-build script";
+			name = "Run Pre-Build Script";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
 		};
-		5F644904FC510AD6E0F9004B /* Pre-build script */ = {
+		5F644904FC510AD6E0F9004B /* Run Pre-Build Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Pre-build script";
+			name = "Run Pre-Build Script";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
 		};
-		6BFF9E96B4CDC2741ABD10FE /* Pre-build script */ = {
+		671FC4FD20E8294657C562FF /* Install Target */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Pre-build script";
+			name = "Install Target";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
-			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
+			shellScript = "set -euo pipefail\n\nif [[ \"${CONFIGURATION}\" == \"Debug\" ]]; then\n  destinationPath=\"${HOME}/Library/Audio/Plug-Ins/Components/$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME:-${EXECUTABLE_NAME}}\")\"\nfi\n\nif [[ \"${CONFIGURATION}\" == \"Release\" ]]; then\n  destinationPath=\"${HOME}/Library/Audio/Plug-Ins/Components/$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME:-${EXECUTABLE_NAME}}\")\"\nfi\n\nif [[ -n \"${destinationPath-}\" ]]; then\n  echo Running rm -rf \\\"${destinationPath}\\\"\n  rm -rf \"${destinationPath}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME:-${EXECUTABLE_NAME}}\\\" \\\"${destinationPath}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME:-${EXECUTABLE_NAME}}\" \"${destinationPath}\"\nfi\n";
 		};
-		76CB379CC49ECCBE52F8BE7C /* Post-build script */ = {
+		6A51D5C13625966957DC9902 /* Install Target */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Post-build script";
+			name = "Install Target";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\n\nif [[ \"${CONFIGURATION}\" == \"Debug\" ]]; then\n  destinationPath=\"${HOME}/Library/Audio/Plug-Ins/VST3/$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME:-${EXECUTABLE_NAME}}\")\"\nfi\n\nif [[ \"${CONFIGURATION}\" == \"Release\" ]]; then\n  destinationPath=\"${HOME}/Library/Audio/Plug-Ins/VST3/$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME:-${EXECUTABLE_NAME}}\")\"\nfi\n\nif [[ -n \"${destinationPath-}\" ]]; then\n  echo Running rm -rf \\\"${destinationPath}\\\"\n  rm -rf \"${destinationPath}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME:-${EXECUTABLE_NAME}}\\\" \\\"${destinationPath}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME:-${EXECUTABLE_NAME}}\" \"${destinationPath}\"\nfi\n";
+		};
+		6BFF9E96B4CDC2741ABD10FE /* Sign Target */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Sign Target";
+			alwaysOutOfDate = 1;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\n\necho Signing Identity:	${EXPANDED_CODE_SIGN_IDENTITY_NAME:-${CODE_SIGN_IDENTITY}}\n\nentitlementsFile=\"${TARGET_TEMP_DIR}/${FULL_PRODUCT_NAME}.xcent\"\n\nif [[ ! -f \"${entitlementsFile}\" ]]; then\n  entitlementsFile=\"\"\nfi\n\necho Entitlements File:	${entitlementsFile:-None}\necho\necho Running codesign --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY}}\\\" --verbose=4 --timestamp  ${entitlementsFile:+--entitlements \\\"${entitlementsFile}\\\"} --generate-entitlement-der \\\"${CODESIGNING_FOLDER_PATH}\\\"\ncodesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY}}\" --verbose=4 --timestamp  ${entitlementsFile:+--entitlements \"${entitlementsFile}\"} --generate-entitlement-der \"${CODESIGNING_FOLDER_PATH}\"\necho\necho Running codesign --verify --deep --verbose=4 \\\"${CODESIGNING_FOLDER_PATH}\\\"\ncodesign --verify --deep --verbose=4 \"${CODESIGNING_FOLDER_PATH}\"\n";
+		};
+		76CB379CC49ECCBE52F8BE7C /* Run Post-Build Script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Run Post-Build Script";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
 		};
-		814E93DC881F80B5ED908EA7 /* Post-build script */ = {
+		814E93DC881F80B5ED908EA7 /* Run Post-Build Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Post-build script";
+			name = "Run Post-Build Script";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
 		};
-		8A872D5DC933781ADE7204E3 /* Update manifest */ = {
+		8A872D5DC933781ADE7204E3 /* Create VST3 Manifest */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Update manifest";
+			name = "Create VST3 Manifest";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\n\necho Running \\\"${CONFIGURATION_BUILD_DIR}/juce_vst3_helper\\\" \\> \\\"${CONFIGURATION_BUILD_DIR}/${WRAPPER_NAME}/Contents/Resources/moduleinfo.json\\\"\n\"${CONFIGURATION_BUILD_DIR}/juce_vst3_helper\" > \"${CONFIGURATION_BUILD_DIR}/${WRAPPER_NAME}/Contents/Resources/moduleinfo.json\"\n";
 		};
-		911AF82C8942091150306EE7 /* Plugin Copy Step */ = {
+		911AF82C8942091150306EE7 /* Sign Target */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Plugin Copy Step";
+			name = "Sign Target";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nif [[ \"${CONFIGURATION}\" == \"Debug\" ]]; then\n  destinationPlugin=\"${HOME}/Library/Audio/Plug-Ins/VST3//$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\")\"\n  echo Running rm -rf \\\"${destinationPlugin}\\\"\n  rm -rf \"${destinationPlugin}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\\\" \\\"${destinationPlugin}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\" \"${destinationPlugin}\"\n\n  if [[ -n \"${EXPANDED_CODE_SIGN_IDENTITY-}\" ]]; then\n    if [[ -n \"${CODE_SIGN_ENTITLEMENTS-}\" ]]; then\n      entitlementsArg=(--entitlements \"${CODE_SIGN_ENTITLEMENTS}\")\n    fi\n\n    echo Signing Identity: \\\"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\\\"\n    echo Running codesign --verbose=4 --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY}\\\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \\\"${HOME}/Library/Audio/Plug-Ins/VST3//${WRAPPER_NAME}\\\"\n    codesign --verbose=4 --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \"${HOME}/Library/Audio/Plug-Ins/VST3//${WRAPPER_NAME}\"\n  fi\nfi\n\nif [[ \"${CONFIGURATION}\" == \"Release\" ]]; then\n  destinationPlugin=\"${HOME}/Library/Audio/Plug-Ins/VST3//$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\")\"\n  echo Running rm -rf \\\"${destinationPlugin}\\\"\n  rm -rf \"${destinationPlugin}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\\\" \\\"${destinationPlugin}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\" \"${destinationPlugin}\"\n\n  if [[ -n \"${EXPANDED_CODE_SIGN_IDENTITY-}\" ]]; then\n    if [[ -n \"${CODE_SIGN_ENTITLEMENTS-}\" ]]; then\n      entitlementsArg=(--entitlements \"${CODE_SIGN_ENTITLEMENTS}\")\n    fi\n\n    echo Signing Identity: \\\"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\\\"\n    echo Running codesign --verbose=4 --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY}\\\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \\\"${HOME}/Library/Audio/Plug-Ins/VST3//${WRAPPER_NAME}\\\"\n    codesign --verbose=4 --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \"${HOME}/Library/Audio/Plug-Ins/VST3//${WRAPPER_NAME}\"\n  fi\nfi\n";
+			shellScript = "set -euo pipefail\n\necho Signing Identity:	${EXPANDED_CODE_SIGN_IDENTITY_NAME:-${CODE_SIGN_IDENTITY}}\n\nentitlementsFile=\"${TARGET_TEMP_DIR}/${FULL_PRODUCT_NAME}.xcent\"\n\nif [[ ! -f \"${entitlementsFile}\" ]]; then\n  entitlementsFile=\"\"\nfi\n\necho Entitlements File:	${entitlementsFile:-None}\necho\necho Running codesign --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY}}\\\" --verbose=4 --timestamp  ${entitlementsFile:+--entitlements \\\"${entitlementsFile}\\\"} --generate-entitlement-der \\\"${CODESIGNING_FOLDER_PATH}\\\"\ncodesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY}}\" --verbose=4 --timestamp  ${entitlementsFile:+--entitlements \"${entitlementsFile}\"} --generate-entitlement-der \"${CODESIGNING_FOLDER_PATH}\"\necho\necho Running codesign --verify --deep --verbose=4 \\\"${CODESIGNING_FOLDER_PATH}\\\"\ncodesign --verify --deep --verbose=4 \"${CODESIGNING_FOLDER_PATH}\"\n";
 		};
-		A0A25CDE47084091A156D84A /* Plugin Copy Step */ = {
+		A0A25CDE47084091A156D84A /* Sign Target */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Plugin Copy Step";
+			name = "Sign Target";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nif [[ \"${CONFIGURATION}\" == \"Debug\" ]]; then\n  destinationPlugin=\"${HOME}/Library/Audio/Plug-Ins/Components//$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\")\"\n  echo Running rm -rf \\\"${destinationPlugin}\\\"\n  rm -rf \"${destinationPlugin}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\\\" \\\"${destinationPlugin}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\" \"${destinationPlugin}\"\n\n  if [[ -n \"${EXPANDED_CODE_SIGN_IDENTITY-}\" ]]; then\n    if [[ -n \"${CODE_SIGN_ENTITLEMENTS-}\" ]]; then\n      entitlementsArg=(--entitlements \"${CODE_SIGN_ENTITLEMENTS}\")\n    fi\n\n    echo Signing Identity: \\\"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\\\"\n    echo Running codesign --verbose=4 --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY}\\\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \\\"${HOME}/Library/Audio/Plug-Ins/Components//${WRAPPER_NAME}\\\"\n    codesign --verbose=4 --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \"${HOME}/Library/Audio/Plug-Ins/Components//${WRAPPER_NAME}\"\n  fi\nfi\n\nif [[ \"${CONFIGURATION}\" == \"Release\" ]]; then\n  destinationPlugin=\"${HOME}/Library/Audio/Plug-Ins/Components//$(basename \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\")\"\n  echo Running rm -rf \\\"${destinationPlugin}\\\"\n  rm -rf \"${destinationPlugin}\"\n  echo Running ditto \\\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\\\" \\\"${destinationPlugin}\\\"\n  ditto \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\" \"${destinationPlugin}\"\n\n  if [[ -n \"${EXPANDED_CODE_SIGN_IDENTITY-}\" ]]; then\n    if [[ -n \"${CODE_SIGN_ENTITLEMENTS-}\" ]]; then\n      entitlementsArg=(--entitlements \"${CODE_SIGN_ENTITLEMENTS}\")\n    fi\n\n    echo Signing Identity: \\\"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\\\"\n    echo Running codesign --verbose=4 --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY}\\\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \\\"${HOME}/Library/Audio/Plug-Ins/Components//${WRAPPER_NAME}\\\"\n    codesign --verbose=4 --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" ${entitlementsArg[*]-} ${OTHER_CODE_SIGN_FLAGS-} \"${HOME}/Library/Audio/Plug-Ins/Components//${WRAPPER_NAME}\"\n  fi\nfi\n";
+			shellScript = "set -euo pipefail\n\necho Signing Identity:	${EXPANDED_CODE_SIGN_IDENTITY_NAME:-${CODE_SIGN_IDENTITY}}\n\nentitlementsFile=\"${TARGET_TEMP_DIR}/${FULL_PRODUCT_NAME}.xcent\"\n\nif [[ ! -f \"${entitlementsFile}\" ]]; then\n  entitlementsFile=\"\"\nfi\n\necho Entitlements File:	${entitlementsFile:-None}\necho\necho Running codesign --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY}}\\\" --verbose=4 --timestamp  ${entitlementsFile:+--entitlements \\\"${entitlementsFile}\\\"} --generate-entitlement-der \\\"${CODESIGNING_FOLDER_PATH}\\\"\ncodesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY}}\" --verbose=4 --timestamp  ${entitlementsFile:+--entitlements \"${entitlementsFile}\"} --generate-entitlement-der \"${CODESIGNING_FOLDER_PATH}\"\necho\necho Running codesign --verify --deep --verbose=4 \\\"${CODESIGNING_FOLDER_PATH}\\\"\ncodesign --verify --deep --verbose=4 \"${CODESIGNING_FOLDER_PATH}\"\n";
 		};
-		C257BC49D3BF27C22BD04627 /* Post-build script */ = {
+		C257BC49D3BF27C22BD04627 /* Run Post-Build Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Post-build script";
+			name = "Run Post-Build Script";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
 		};
-		C2FF8E2B6FF51E02032F57B0 /* Pre-build script */ = {
+		CDAC6B62C21CCDD5C36BF6C0 /* Run Pre-Build Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Pre-build script";
+			name = "Run Pre-Build Script";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
 		};
-		CDAC6B62C21CCDD5C36BF6C0 /* Pre-build script */ = {
+		CE270BAC796767AD1D308C66 /* Sign Target */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Pre-build script";
+			name = "Sign Target";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
-			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
+			shellScript = "set -euo pipefail\n\necho Signing Identity:	${EXPANDED_CODE_SIGN_IDENTITY_NAME:-${CODE_SIGN_IDENTITY}}\n\nentitlementsFile=\"${TARGET_TEMP_DIR}/${FULL_PRODUCT_NAME}.xcent\"\n\nif [[ ! -f \"${entitlementsFile}\" ]]; then\n  entitlementsFile=\"\"\nfi\n\necho Entitlements File:	${entitlementsFile:-None}\necho\necho Running codesign --force --sign \\\"${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY}}\\\" --verbose=4 --timestamp  ${entitlementsFile:+--entitlements \\\"${entitlementsFile}\\\"} --generate-entitlement-der \\\"${CODESIGNING_FOLDER_PATH}\\\"\ncodesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY}}\" --verbose=4 --timestamp  ${entitlementsFile:+--entitlements \"${entitlementsFile}\"} --generate-entitlement-der \"${CODESIGNING_FOLDER_PATH}\"\necho\necho Running codesign --verify --deep --verbose=4 \\\"${CODESIGNING_FOLDER_PATH}\\\"\ncodesign --verify --deep --verbose=4 \"${CODESIGNING_FOLDER_PATH}\"\n";
 		};
-		F07F7BC1997C5BB3BBDA2442 /* Post-build script */ = {
+		F07F7BC1997C5BB3BBDA2442 /* Run Post-Build Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Post-build script";
-			alwaysOutOfDate = 1;
-			shellPath = /bin/sh;
-			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
-		};
-		FD9CB2F9AAA0A7B2C79379EF /* Post-build script */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			name = "Post-build script";
+			name = "Run Post-Build Script";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "\"${PROJECT_DIR}/../../scripts/touch_bundles.sh\" \"${PRODUCT_NAME}\" \"${BUILT_PRODUCTS_DIR}\"";
 		};
-		FE4648C2914B545F5A11F3D8 /* Pre-build script */ = {
+		FE4648C2914B545F5A11F3D8 /* Run Pre-Build Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			name = "Pre-build script";
+			name = "Run Pre-Build Script";
 			alwaysOutOfDate = 1;
 			shellPath = /bin/sh;
 			shellScript = "\"${PROJECT_DIR}/../../scripts/update_timestamp.sh\" \"${PROJECT_DIR}/../..\"";
@@ -941,7 +1014,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE12F1E44021693841F1F7F2,
-				499F51468A0C74F29EFA50F7,
 				E5A5A25D827E6C22EAEBA600,
 				4A1BC0D955D8E7B76546969F,
 				4A6EDB754CED6A25C65C8C80,
@@ -961,6 +1033,8 @@
 				83244953AF9FF90354A4AAFA,
 				167FA7EF3EF53C2A6A7F29FF,
 				C7A87105A26B7016B6DBE44D,
+				09D30A0D7660704894C90F84,
+				9AF448FD333250D76C678CC4,
 				604DFDF1CE739CB0704100C3,
 				374C98A8133C0EAD1463EBD0,
 				30B74DED3D819251C3D2D7D4,
@@ -969,13 +1043,23 @@
 				6C95C60B9BF6704F52965ECC,
 				7B152768E8DE361B6FE6E447,
 				A96DDECA2351612CB5A5A1FC,
+				2BB80029EAEC70384A6A7AA5,
 				D183B5EA3290A309E274B45F,
 				822126B06578DA7849DF7BEB,
 				F1AEAEB186C2E002C8C58A5F,
 				D0AB68ED9821CF10BEC8D508,
 				E777D260999751240B965040,
+				D05CB97961907C976C5DAA84,
+				C944889591E77A871D14648F,
+				6D968C9E148BF8B37A0526BD,
+				C93F118D752241B2135DC17B,
+				FF71865572E32496E8301872,
 				30F6BCE4607C48BD93FBDF9E,
 				4F568324CBC5CB33878EB75C,
+				264F03893039AA78BD3EF099,
+				CEA7120944189B48E0931DC9,
+				156EEA211136A27645008C7F,
+				CD4649491B4C6119B3DF8C89,
 				360F1B28013C204EDDC3BEDA,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -984,7 +1068,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D9B14F0652A21FC1A3154425,
+				A777BF4C1F1D3D57F1300C35,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1045,16 +1129,19 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				DEAD_CODE_STRIPPING = YES;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_NDEBUG=1",
 					"NDEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -1069,6 +1156,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -1101,6 +1189,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -1143,15 +1232,18 @@
 				);
 				INFOPLIST_FILE = Info-AU.plist;
 				INFOPLIST_PREPROCESS = NO;
-				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/Components/";
+				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/Components";
 				LIBRARY_STYLE = Bundle;
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-bundle -lDeBleed";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited) -bundle -lDeBleed";
 				OTHER_REZFLAGS = "-d ppc_$ppc -d i386_$i386 -d ppc64_$ppc64 -d x86_64_$x86_64 -d arm64_$arm64 -I /System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Versions/A/Headers -I \"$(DEVELOPER_DIR)/Extras/CoreAudio/AudioUnits/AUPublic/AUBase\" -I \"$(DEVELOPER_DIR)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AudioUnit.framework/Headers\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
 				WRAPPER_EXTENSION = component;
@@ -1165,16 +1257,19 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				COPY_PHASE_STRIP = NO;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_DEBUG=1",
 					"DEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -1189,6 +1284,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -1221,6 +1317,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -1263,14 +1360,17 @@
 				);
 				INFOPLIST_FILE = Info-AU.plist;
 				INFOPLIST_PREPROCESS = NO;
-				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/Components/";
+				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/Components";
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-bundle -lDeBleed";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited) -bundle -lDeBleed";
 				OTHER_REZFLAGS = "-d ppc_$ppc -d i386_$i386 -d ppc64_$ppc64 -d x86_64_$x86_64 -d arm64_$arm64 -I /System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Versions/A/Headers -I \"$(DEVELOPER_DIR)/Extras/CoreAudio/AudioUnits/AUPublic/AUBase\" -I \"$(DEVELOPER_DIR)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AudioUnit.framework/Headers\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
 				WRAPPER_EXTENSION = component;
@@ -1292,16 +1392,19 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				DEAD_CODE_STRIPPING = YES;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_NDEBUG=1",
 					"NDEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -1316,6 +1419,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -1348,6 +1452,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -1392,9 +1497,12 @@
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-lDeBleed";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited) -lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
 			};
@@ -1407,16 +1515,20 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				COPY_PHASE_STRIP = NO;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_DEBUG=1",
 					"DEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -1431,6 +1543,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -1463,6 +1576,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -1506,8 +1620,13 @@
 				INFOPLIST_PREPROCESS = NO;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CODE_SIGN_FLAGS = "";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "juce_vst3_helper";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
 			};
@@ -1520,16 +1639,19 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				DEAD_CODE_STRIPPING = YES;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_NDEBUG=1",
 					"NDEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -1544,6 +1666,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -1576,6 +1699,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -1620,8 +1744,12 @@
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
@@ -1635,16 +1763,20 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				DEAD_CODE_STRIPPING = YES;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_NDEBUG=1",
 					"NDEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -1659,6 +1791,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -1691,6 +1824,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -1735,8 +1869,13 @@
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CODE_SIGN_FLAGS = "";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "juce_vst3_helper";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
 			};
@@ -1749,16 +1888,19 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				COPY_PHASE_STRIP = NO;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_DEBUG=1",
 					"DEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -1773,6 +1915,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -1805,6 +1948,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -1848,8 +1992,12 @@
 				INSTALL_PATH = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
@@ -1863,16 +2011,19 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				COPY_PHASE_STRIP = NO;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_DEBUG=1",
 					"DEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -1887,6 +2038,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -1919,6 +2071,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -1962,9 +2115,12 @@
 				INFOPLIST_PREPROCESS = NO;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-lDeBleed";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited) -lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
 			};
@@ -1992,6 +2148,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = NO;
@@ -2010,7 +2167,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				OTHER_CODE_SIGN_FLAGS = --timestamp;
+				OTHER_CODE_SIGN_FLAGS = "--dryrun";
 				PRODUCT_NAME = "DeBleed";
 				SDKROOT = macosx;
 				WARNING_CFLAGS = "-Wreorder";
@@ -2025,16 +2182,19 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				DEAD_CODE_STRIPPING = YES;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_NDEBUG=1",
 					"NDEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -2049,6 +2209,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -2081,6 +2242,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -2123,14 +2285,17 @@
 				);
 				INFOPLIST_FILE = Info-VST3.plist;
 				INFOPLIST_PREPROCESS = NO;
-				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/VST3/";
+				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/VST3";
 				LIBRARY_STYLE = Bundle;
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-bundle -lDeBleed";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited) -bundle -lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
 				WRAPPER_EXTENSION = vst3;
@@ -2144,16 +2309,19 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)";
 				COPY_PHASE_STRIP = NO;
+				DEPLOYMENT_POSTPROCESSING = NO;
 				EXCLUDED_ARCHS = "i386 arm64e";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_DEBUG=1",
 					"DEBUG=1",
-					"JUCE_PROJUCER_VERSION=0x8000c",
+					"JUCE_PROJUCER_VERSION=0x90002",
 					"JUCE_MODULE_AVAILABLE_juce_audio_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_devices=1",
 					"JUCE_MODULE_AVAILABLE_juce_audio_formats=1",
@@ -2168,6 +2336,7 @@
 					"JUCE_MODULE_AVAILABLE_juce_graphics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_basics=1",
 					"JUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+					"JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\\\"1.0.0\\\"",
 					"JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
 					"JUCE_VST3_CAN_REPLACE_VST2=0",
 					"JUCE_USE_CURL=0",
@@ -2200,6 +2369,7 @@
 					"JucePlugin_VersionString=\\\"1.4.1\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
+					"JucePlugin_LV2PluginClass=Plugin",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
 					"JucePlugin_AUMainType=\\'aufx\\'",
 					"JucePlugin_AUSubType=JucePlugin_PluginCode",
@@ -2242,13 +2412,16 @@
 				);
 				INFOPLIST_FILE = Info-VST3.plist;
 				INFOPLIST_PREPROCESS = NO;
-				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/VST3/";
+				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/VST3";
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
-				OTHER_LDFLAGS = "-bundle -lDeBleed";
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited) -bundle -lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USE_HEADERMAP = NO;
 				VALID_ARCHS = "arm64 x86_64";
 				WRAPPER_EXTENSION = vst3;
@@ -2277,6 +2450,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = NO;
@@ -2295,7 +2469,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				OTHER_CODE_SIGN_FLAGS = --timestamp;
+				OTHER_CODE_SIGN_FLAGS = "--dryrun";
 				PRODUCT_NAME = "DeBleed";
 				SDKROOT = macosx;
 				WARNING_CFLAGS = "-Wreorder";
