@@ -51,7 +51,7 @@ public:
     explicit ExpanderSection(juce::AudioProcessorValueTreeState&);
 
 private:
-    Knob threshold_, ratio_, attack_, release_, range_;
+    Knob threshold_, ratio_, open_, close_, range_;
 };
 
 class VocalSection : public Section

@@ -10,13 +10,14 @@
  * Can be gated by VAD to only expand during silence.
  *
  * User controls:
- * - Threshold (dB): Level below which expansion kicks in
+ * - Threshold (dB): the OPEN threshold; the gate closes 3 dB below it (fixed hysteresis)
  * - Ratio: Expansion ratio (2:1 to infinity:1)
- * - Attack (ms): How fast expansion engages
- * - Release (ms): How slow expansion releases
+ * - Open (ms): how fast the gain comes up when the vocal is back
+ * - Close (ms): how fast the gain goes down once the level has dropped below the close threshold
  * - Range (dB): Maximum gain reduction
  *
- * Zero latency - purely causal envelope following.
+ * The level detector is a fixed fast peak follower; the knobs time the GAIN, not the
+ * detector (the DS201 / LSP Gate shape). Zero latency - purely causal.
  */
 class SimpleExpander
 {
@@ -51,16 +52,16 @@ public:
     // User parameter setters
     void setThresholdDb(float thresholdDb);
     void setRatio(float ratio);
-    void setAttackMs(float attackMs);
-    void setReleaseMs(float releaseMs);
+    void setOpenMs(float openMs);
+    void setCloseMs(float closeMs);
     void setRangeDb(float rangeDb);
     void setVadGating(bool enabled);  // If true, VAD disables expansion during vocal
 
     // Getters for UI
     float getThresholdDb() const { return thresholdDb_.load(); }
     float getRatio() const { return ratio_.load(); }
-    float getAttackMs() const { return attackMs_.load(); }
-    float getReleaseMs() const { return releaseMs_.load(); }
+    float getOpenMs() const { return openMs_.load(); }
+    float getCloseMs() const { return closeMs_.load(); }
     float getRangeDb() const { return rangeDb_.load(); }
     float getGainReduction() const { return gainReductionDb_.load(); }  // For meters
 
@@ -69,21 +70,25 @@ private:
 
     double sampleRate_ = 48000.0;
 
-    // Envelope follower state
+    // Peak detector state and its fixed coefficients (rise 0.1 ms, fall 20 ms)
     float envelope_ = 0.0f;
+    float detectorRiseCoeff_ = 0.0f;
+    float detectorFallCoeff_ = 0.0f;
 
-    // Current gain reduction (linear)
+    // Hysteresis: open at threshold, close 3 dB under it
+    bool open_ = false;
+    static constexpr float hysteresisDb = 3.0f;
+
+    // Current gain (linear, 1 = open) and the smoother coefficients the knobs set
     float gainReduction_ = 1.0f;
-
-    // Attack/release coefficients
-    float attackCoeff_ = 0.0f;
-    float releaseCoeff_ = 0.0f;
+    float openCoeff_ = 0.0f;
+    float closeCoeff_ = 0.0f;
 
     // Parameters (atomic for thread-safe access)
     std::atomic<float> thresholdDb_{-40.0f};
     std::atomic<float> ratio_{4.0f};         // 4:1 expansion
-    std::atomic<float> attackMs_{1.0f};      // Fast attack
-    std::atomic<float> releaseMs_{100.0f};   // Moderate release
+    std::atomic<float> openMs_{1.0f};
+    std::atomic<float> closeMs_{100.0f};
     std::atomic<float> rangeDb_{-40.0f};     // Max 40dB reduction
     std::atomic<bool> vadGating_{true};      // VAD modulates threshold (raises threshold when vocal present)
 

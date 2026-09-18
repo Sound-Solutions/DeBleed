@@ -99,8 +99,8 @@ ExpanderSection::ExpanderSection(juce::AudioProcessorValueTreeState& parameters)
 {
     threshold_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_EXP_THRESHOLD, "THRESH", "dB", 82.0f, 60.0f, true);
     ratio_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_EXP_RATIO, "RATIO", ":1", 194.5f, 60.0f);
-    attack_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_EXP_ATTACK, "ATTACK", "ms", 307.5f, 60.0f);
-    release_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_EXP_RELEASE, "RELEASE", "ms", 420.5f, 60.0f);
+    open_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_EXP_ATTACK, "OPEN", "ms", 307.5f, 60.0f);
+    close_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_EXP_RELEASE, "CLOSE", "ms", 420.5f, 60.0f);
     range_.setup(*this, parameters, DeBleedAudioProcessor::PARAM_EXP_RANGE, "RANGE", "dB", 533.5f, 60.0f);
 }
 

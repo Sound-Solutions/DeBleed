@@ -60,8 +60,8 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     smoothing.store(*parameters.getRawParameterValue(PARAM_SMOOTHING));
     expThreshold.store(*parameters.getRawParameterValue(PARAM_EXP_THRESHOLD));
     expRatio.store(*parameters.getRawParameterValue(PARAM_EXP_RATIO));
-    expAttack.store(*parameters.getRawParameterValue(PARAM_EXP_ATTACK));
-    expRelease.store(*parameters.getRawParameterValue(PARAM_EXP_RELEASE));
+    expOpen.store(*parameters.getRawParameterValue(PARAM_EXP_ATTACK));
+    expClose.store(*parameters.getRawParameterValue(PARAM_EXP_RELEASE));
     expRange.store(*parameters.getRawParameterValue(PARAM_EXP_RANGE));
     useV2.store(*parameters.getRawParameterValue(PARAM_USE_V2) > 0.5f);
     lookahead_.store(*parameters.getRawParameterValue(PARAM_LOOKAHEAD) > 0.5f);
@@ -226,10 +226,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         nullptr
     ));
 
-    // Expander Attack
+    // Expander Open (parameter ID stays expOpen so old sessions load)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_EXP_ATTACK, 1},
-        "Exp Attack",
+        "Exp Open",
         juce::NormalisableRange<float>(0.1f, 50.0f, 0.1f, 0.5f),
         1.0f,
         juce::String(),
@@ -238,10 +238,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         nullptr
     ));
 
-    // Expander Release
+    // Expander Close (parameter ID stays expClose)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{PARAM_EXP_RELEASE, 1},
-        "Exp Release",
+        "Exp Close",
         juce::NormalisableRange<float>(10.0f, 500.0f, 1.0f, 0.5f),
         100.0f,
         juce::String(),
@@ -306,13 +306,13 @@ void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, fl
     }
     else if (parameterID == PARAM_EXP_ATTACK)
     {
-        expAttack.store(newValue);
-        expander_.setAttackMs(newValue);
+        expOpen.store(newValue);
+        expander_.setOpenMs(newValue);
     }
     else if (parameterID == PARAM_EXP_RELEASE)
     {
-        expRelease.store(newValue);
-        expander_.setReleaseMs(newValue);
+        expClose.store(newValue);
+        expander_.setCloseMs(newValue);
     }
     else if (parameterID == PARAM_EXP_RANGE)
     {
@@ -357,8 +357,8 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     // Initialize expander with current parameter values
     expander_.setThresholdDb(expThreshold.load());
     expander_.setRatio(expRatio.load());
-    expander_.setAttackMs(expAttack.load());
-    expander_.setReleaseMs(expRelease.load());
+    expander_.setOpenMs(expOpen.load());
+    expander_.setCloseMs(expClose.load());
     expander_.setRangeDb(expRange.load());
 
     hfExpander_.prepare(sampleRate);
@@ -366,8 +366,8 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     hfExpander_.setThresholdDb(expThreshold.load());
     hfExpander_.setRatio(expRatio.load());
     hfExpander_.setRangeDb(expRange.load());
-    hfExpander_.setAttackMs(0.5f);
-    hfExpander_.setReleaseMs(40.0f);
+    hfExpander_.setOpenMs(0.5f);
+    hfExpander_.setCloseMs(40.0f);
     sidechainCrossover_.prepare(sampleRate, 4000.0);
     pitchTracker_.prepare(sampleRate);
     unvoicedState_ = 0.0f;

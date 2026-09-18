@@ -16,6 +16,7 @@ void SimpleExpander::prepare(double sampleRate)
 void SimpleExpander::reset()
 {
     envelope_ = 0.0f;
+    open_ = false;
     gainReduction_ = 1.0f;
     gainReductionDb_.store(0.0f);
 }
@@ -25,15 +26,14 @@ void SimpleExpander::updateCoefficients()
     if (sampleRate_ <= 0.0)
         return;
 
-    float attackMs = attackMs_.load();
-    float releaseMs = releaseMs_.load();
-
-    // Time constant coefficients
-    float attackTau = attackMs / 1000.0f;
-    float releaseTau = releaseMs / 1000.0f;
-
-    attackCoeff_ = 1.0f - std::exp(-1.0f / (attackTau * static_cast<float>(sampleRate_)));
-    releaseCoeff_ = 1.0f - std::exp(-1.0f / (releaseTau * static_cast<float>(sampleRate_)));
+    const auto coefficientForMs = [this](float ms)
+    {
+        return 1.0f - std::exp(-1.0f / (ms * 0.001f * static_cast<float>(sampleRate_)));
+    };
+    detectorRiseCoeff_ = coefficientForMs(0.1f);
+    detectorFallCoeff_ = coefficientForMs(20.0f);
+    openCoeff_ = coefficientForMs(openMs_.load());
+    closeCoeff_ = coefficientForMs(closeMs_.load());
 }
 
 float SimpleExpander::processSample(float sample, float vadConfidence)
@@ -60,39 +60,32 @@ float SimpleExpander::computeGain(float sidechainSample, float vadConfidence)
         thresholdDb -= thresholdBoost;  // Lower effective threshold = less expansion
     }
 
-    // Compute input level (rectified)
-    float inputLevel = std::abs(sidechainSample);
+    // Fixed fast peak detector; the knobs time the gain, not the level
+    const float inputLevel = std::abs(sidechainSample);
+    const float detectorCoeff = (inputLevel > envelope_) ? detectorRiseCoeff_ : detectorFallCoeff_;
+    envelope_ = detectorCoeff * inputLevel + (1.0f - detectorCoeff) * envelope_;
+    const float envelopeDb = 20.0f * std::log10(envelope_ + 1e-10f);
 
-    // Envelope follower (peak detector with attack/release)
-    float coeff = (inputLevel > envelope_) ? attackCoeff_ : releaseCoeff_;
-    envelope_ = coeff * inputLevel + (1.0f - coeff) * envelope_;
+    // Hysteresis: open at the threshold, close only once the level is 3 dB under it
+    if (open_)
+        open_ = envelopeDb >= thresholdDb - hysteresisDb;
+    else
+        open_ = envelopeDb >= thresholdDb;
 
-    // Convert to dB
-    float envelopeDb = 20.0f * std::log10(envelope_ + 1e-10f);
-
-    // Compute gain reduction
+    // While open the gain sits at unity; closed, expand against the open threshold so the
+    // curve meets 0 dB exactly where the gate opens
     float gainReductionDb = 0.0f;
-
-    if (envelopeDb < thresholdDb)
+    if (!open_ && envelopeDb < thresholdDb)
     {
-        // Below threshold - apply expansion
-        float belowThreshold = thresholdDb - envelopeDb;  // Positive value
-
-        // Expansion: for every 1dB below threshold, reduce by (1 - 1/ratio) dB more
-        // At ratio = 2:1, reduce by 0.5dB per dB below threshold
-        // At ratio = inf:1 (gate), reduce by 1dB per dB below threshold
-        float expansionFactor = 1.0f - (1.0f / ratio);
-        gainReductionDb = -belowThreshold * expansionFactor;
-
-        // Limit to range
-        gainReductionDb = std::max(gainReductionDb, rangeDb);
+        const float belowThreshold = thresholdDb - envelopeDb;
+        const float expansionFactor = 1.0f - (1.0f / ratio);
+        gainReductionDb = std::max(-belowThreshold * expansionFactor, rangeDb);
     }
 
-    // Convert to linear gain
-    float targetGain = std::pow(10.0f, gainReductionDb / 20.0f);
+    const float targetGain = std::pow(10.0f, gainReductionDb / 20.0f);
 
-    // Smooth the gain change (separate from envelope to avoid pumping)
-    float gainCoeff = (targetGain < gainReduction_) ? attackCoeff_ : releaseCoeff_;
+    // OPEN times the gain coming up, CLOSE times it going down
+    const float gainCoeff = (targetGain > gainReduction_) ? openCoeff_ : closeCoeff_;
     gainReduction_ = gainCoeff * targetGain + (1.0f - gainCoeff) * gainReduction_;
 
     // Clamp
@@ -120,15 +113,15 @@ void SimpleExpander::setRatio(float ratio)
     ratio_.store(std::clamp(ratio, 1.0f, 100.0f));  // 100:1 is effectively a gate
 }
 
-void SimpleExpander::setAttackMs(float attackMs)
+void SimpleExpander::setOpenMs(float openMs)
 {
-    attackMs_.store(std::clamp(attackMs, 0.01f, 100.0f));
+    openMs_.store(std::clamp(openMs, 0.01f, 100.0f));
     updateCoefficients();
 }
 
-void SimpleExpander::setReleaseMs(float releaseMs)
+void SimpleExpander::setCloseMs(float closeMs)
 {
-    releaseMs_.store(std::clamp(releaseMs, 1.0f, 2000.0f));
+    closeMs_.store(std::clamp(closeMs, 1.0f, 2000.0f));
     updateCoefficients();
 }
 
