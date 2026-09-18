@@ -35,7 +35,7 @@ void Section::Knob::setup(Section& parent, juce::AudioProcessorValueTreeState& p
     slider.setTitle(name);
     slider.getProperties().set("knobColor", static_cast<juce::int64>(parent.colour_));
     slider.getProperties().set("bigKnob", big);
-    placeControl(slider, centreX, centreY, big ? 84 : 60);
+    placeControl(slider, centreX, centreY, big ? 96 : 72);  // knob + room for the glow
     parent.addAndMakeVisible(slider);
     parent.labels_.push_back({name, unit, centreX});
     attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -49,7 +49,7 @@ void Section::RingButton::setup(Section& parent, juce::AudioProcessorValueTreeSt
     button.setTitle(name);
     button.getProperties().set("ringStyle", true);
     button.getProperties().set("ringColour", static_cast<juce::int64>(parent.colour_));
-    placeControl(button, centreX, centreY, 28);
+    placeControl(button, centreX, centreY, 36);  // ring + room for the glow
     parent.addAndMakeVisible(button);
     parent.labels_.push_back({name, unit, centreX});
     attachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(

@@ -39,6 +39,14 @@ void DeBleedLookAndFeel::drawBody(juce::Graphics& g, juce::Point<float> centre,
     }
 }
 
+void DeBleedLookAndFeel::drawGlow(juce::Graphics& g, const juce::Path& path,
+                                 const juce::PathStrokeType& stroke, juce::Colour colour, float alpha)
+{
+    juce::Path outline;
+    stroke.createStrokedPath(outline, path);
+    juce::DropShadow(colour.withAlpha(alpha), 4, {}).drawForPath(g, outline);
+}
+
 void DeBleedLookAndFeel::drawTextAtBaseline(juce::Graphics& g, const juce::String& text,
                                            const juce::Font& font, float x, float baseline,
                                            bool centred)
@@ -77,8 +85,7 @@ void DeBleedLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
     {
         juce::Path valueArc;
         valueArc.addCentredArc(centre.x, centre.y, radius, radius, 0.0f, rotaryStartAngle, angle, true);
-        g.setColour(colour.withAlpha(0.35f));
-        g.strokePath(valueArc, roundStroke(stroke + 1.0f));
+        drawGlow(g, valueArc, roundStroke(stroke + 1.0f), colour, 0.7f);
         g.setColour(colour);
         g.strokePath(valueArc, roundStroke(stroke));
     }
@@ -111,9 +118,13 @@ void DeBleedLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton&
         chevron.startNewSubPath(centre.x + direction * 2.5f, centre.y - 4.0f);
         chevron.lineTo(centre.x - direction * 1.5f, centre.y);
         chevron.lineTo(centre.x + direction * 2.5f, centre.y + 4.0f);
+        const juce::PathStrokeType stroke(1.6f, juce::PathStrokeType::curved,
+                                          juce::PathStrokeType::rounded);
+        drawGlow(g, chevron, juce::PathStrokeType(2.6f, juce::PathStrokeType::curved,
+                                                 juce::PathStrokeType::rounded),
+                 juce::Colour(orangeAccent), 0.8f);
         g.setColour(juce::Colour(orangeAccent));
-        g.strokePath(chevron, juce::PathStrokeType(1.6f, juce::PathStrokeType::curved,
-                                                 juce::PathStrokeType::rounded));
+        g.strokePath(chevron, stroke);
         return;
     }
 
@@ -125,8 +136,9 @@ void DeBleedLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton&
         const bool on = button.getToggleState();
         if (on)
         {
-            g.setColour(colour.withAlpha(0.8f));
-            g.drawEllipse(ring.expanded(1.0f), 3.0f);
+            juce::Path halo;
+            halo.addEllipse(ring.expanded(1.0f));
+            drawGlow(g, halo, juce::PathStrokeType(3.0f), colour, 0.8f);
         }
         drawBody(g, centre, 10.0f, false);
         g.setColour(on ? colour : juce::Colour(inactiveRing));

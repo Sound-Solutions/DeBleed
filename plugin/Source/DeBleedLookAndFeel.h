@@ -14,6 +14,11 @@ public:
 
     static void drawBody(juce::Graphics&, juce::Point<float> centre, float radius,
                          bool innerRing);
+    // The mock's glow is the stroke blurred (SVG feGaussianBlur, sigma 2.2) under the solid
+    // stroke. JUCE's DropShadow box blur at radius 4 lands on sigma 2.3, so this is the same
+    // halo, not a wider ring. Always paint the solid stroke over it afterwards.
+    static void drawGlow(juce::Graphics&, const juce::Path&, const juce::PathStrokeType&,
+                         juce::Colour, float alpha);
     // Every font goes through here so the typeface is explicit: JUCE resolves default-named
     // fonts through the Desktop's LookAndFeel, not the editor's, and its macOS default is
     // Lucida Grande (no Medium face).

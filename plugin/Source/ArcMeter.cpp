@@ -29,8 +29,9 @@ void ArcMeter::drawArcWithGlow(juce::Graphics& g, juce::Point<float> centre,
 
     juce::Path arc;
     arc.addCentredArc(centre.x, centre.y, radius, radius, 0.0f, startAngle, endAngle, true);
-    g.setColour(colour.withAlpha(0.35f));
-    g.strokePath(arc, juce::PathStrokeType(5.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    DeBleedLookAndFeel::drawGlow(g, arc, juce::PathStrokeType(5.0f, juce::PathStrokeType::curved,
+                                                              juce::PathStrokeType::rounded),
+                                 colour, 0.7f);
     g.setColour(colour);
     g.strokePath(arc, juce::PathStrokeType(3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
