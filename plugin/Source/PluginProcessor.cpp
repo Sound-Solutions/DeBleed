@@ -382,8 +382,6 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     monoSidechain_.resize(currentBlockSize_);
     vadConfidence_.resize(currentBlockSize_);
     mainGain_.resize(currentBlockSize_);
-    hiGain_.resize(currentBlockSize_);
-    unvoiced_.resize(currentBlockSize_);
     hfSidechain_.resize(currentBlockSize_);
     lowBand_.resize(currentBlockSize_);
     highBand_.resize(currentBlockSize_);
@@ -534,7 +532,8 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     const bool useLookahead = lookahead_.load();
     const bool useConsonant = consonant_.load();
     const bool useComb = comb_.load();
-    const bool splitBands = useConsonant || useComb;
+    // SPEECH never splits the audio: it only widens what the detector counts as voice.
+    const bool splitBands = useComb;
     if (resetComb_.exchange(false))
     {
         for (auto& comb : harmonicCombs_)
@@ -575,20 +574,22 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     {
         const float input = monoSidechain_[s];
         vadConfidence_[s] = spectralVAD_.processSample(input);
-        mainGain_[s] = expander_.computeGain(input, vadConfidence_[s]);
-        if (useComb)
-            pitchTracker_.pushSample(input);
-        hiGain_[s] = mainGain_[s];
+        // SPEECH (his ruling 2026-09-18: "never on its own period. I do not want tonal shift"):
+        // a consonant above 4 kHz counts as voice for the ONE wideband gate, so the whole mic
+        // opens for an S the way it opens for a vowel. Nothing is split; the gain is shared.
+        float gateConfidence = vadConfidence_[s];
         if (useConsonant)
         {
             hfSidechain_[s] = sidechainCrossover_.processHigh(input);
-            const float hfGain = hfExpander_.computeGain(hfSidechain_[s], 0.0f);
+            const float hfOpen = hfExpander_.computeGain(hfSidechain_[s], 0.0f);
             const float target = std::clamp((spectralVAD_.getUnvoicedRatio() - 0.55f) / 0.25f, 0.0f, 1.0f);
             const float coefficient = target > unvoicedState_ ? unvoicedRiseCoeff_ : unvoicedFallCoeff_;
             unvoicedState_ += coefficient * (target - unvoicedState_);
-            unvoiced_[s] = unvoicedState_;
-            hiGain_[s] += unvoiced_[s] * std::max(0.0f, hfGain - mainGain_[s]);
+            gateConfidence = std::max(gateConfidence, unvoicedState_ * hfOpen);
         }
+        mainGain_[s] = expander_.computeGain(input, gateConfidence);
+        if (useComb)
+            pitchTracker_.pushSample(input);
     }
     const float period = pitchTracker_.getPeriodSamples();
     const bool pitchConfident = pitchTracker_.getConfidence() >= 0.85f;
@@ -615,12 +616,9 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 if (dry != nullptr)
                     dry[s] = lowBand_[s] + highBand_[s];
                 lowBand_[s] *= mainGain_[s];
-                if (useComb)
-                {
-                    comb.setVocalConfidence(vadConfidence_[s]);
-                    lowBand_[s] = comb.process(lowBand_[s]);
-                }
-                channelData[s] = lowBand_[s] + highBand_[s] * hiGain_[s];
+                comb.setVocalConfidence(vadConfidence_[s]);
+                lowBand_[s] = comb.process(lowBand_[s]);
+                channelData[s] = lowBand_[s] + highBand_[s] * mainGain_[s];
             }
         }
         if (!splitBands)

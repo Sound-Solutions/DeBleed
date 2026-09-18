@@ -163,7 +163,7 @@ private:
     juce::AudioBuffer<float> dryBuffer_;     // Dry signal for wet/dry mix
     std::vector<float> monoSidechain_;       // Mono mix for neural network input
     std::vector<float> vadConfidence_;       // Per-sample VAD confidence for v2
-    std::vector<float> mainGain_, hiGain_, unvoiced_, hfSidechain_, lowBand_, highBand_;
+    std::vector<float> mainGain_, hfSidechain_, lowBand_, highBand_;
 
     // Training process
     TrainerProcess trainerProcess;

@@ -44,7 +44,7 @@ namespace ProjectInfo
 {
     const char* const  projectName    = "DeBleed";
     const char* const  companyName    = "Sound Solutions LLC";
-    const char* const  versionString  = "1.3.2";
-    const int          versionNumber  = 0x10302;
+    const char* const  versionString  = "1.4.0";
+    const int          versionNumber  = 0x10400;
 }
 #endif
