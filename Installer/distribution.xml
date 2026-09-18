@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>DeBleed 1.4.1</title>
+    <organization>com.SoundSolutionsLLC</organization>
+    <welcome file="welcome.html"/>
+    <license file="license.html"/>
+    <options customize="always" require-scripts="false" hostArchitectures="x86_64,arm64"/>
+    <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+    <choices-outline>
+        <line choice="vst3"/>
+        <line choice="au"/>
+    </choices-outline>
+    <choice id="vst3" title="VST3 Plugin" description="Install VST3 to /Library/Audio/Plug-Ins/VST3">
+        <pkg-ref id="com.SoundSolutionsLLC.DeBleed.vst3"/>
+    </choice>
+    <choice id="au" title="Audio Unit Plugin" description="Install AU to /Library/Audio/Plug-Ins/Components">
+        <pkg-ref id="com.SoundSolutionsLLC.DeBleed.component"/>
+    </choice>
+    <pkg-ref id="com.SoundSolutionsLLC.DeBleed.vst3" version="1.4.1">DeBleed-VST3.pkg</pkg-ref>
+    <pkg-ref id="com.SoundSolutionsLLC.DeBleed.component" version="1.4.1">DeBleed-AU.pkg</pkg-ref>
+</installer-gui-script>

@@ -54,3 +54,6 @@ debug.txt
 
 # Visualizer mockups
 .superpowers/
+
+# Built installers stay local (versioned, never overwritten)
+Installer/*.pkg
