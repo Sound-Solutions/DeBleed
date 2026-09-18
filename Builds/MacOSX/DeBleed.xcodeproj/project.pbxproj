@@ -52,6 +52,7 @@
 		622383044DD0416EE644D752 /* ControlPanel.cpp */ = {isa = PBXBuildFile; fileRef = B7B072693FEDEAD430B5AAF4; };
 		686E872DD1F0102F8FA81565 /* DifferentiableBiquadChain.cpp */ = {isa = PBXBuildFile; fileRef = F999BAC8EE4E8705B2A301B1; };
 		6C95C60B9BF6704F52965ECC /* include_juce_audio_utils.mm */ = {isa = PBXBuildFile; fileRef = AB5C59DF26AF5D56B3EA2D31; };
+		6CAC70885ED0C636C18B7158 /* LinkwitzRiley4.cpp */ = {isa = PBXBuildFile; fileRef = 256E7671635481AA6D8D54E9; };
 		6E8D6BD4B0D36C1BABBF472D /* QuartzCore.framework */ = {isa = PBXBuildFile; fileRef = 9F53C5636E461FE71AE1786C; };
 		70CD921459D6D15FD1A094F1 /* include_juce_audio_plugin_client_AU_2.mm */ = {isa = PBXBuildFile; fileRef = 4049A9F17BDB88AA21BABB79; };
 		775B2192690E363406BBAEC0 /* CoreMIDI.framework */ = {isa = PBXBuildFile; fileRef = 35422E9B98FD851E1F5F860B; };
@@ -77,6 +78,7 @@
 		D2A1E161EF0C9B052C5EA3D3 /* VST3 Manifest Helper */ = {isa = PBXBuildFile; fileRef = C0876A495A640BE585632EA5; };
 		D8D0374B614EA3D01EE76B0D /* include_juce_audio_plugin_client_Standalone.cpp */ = {isa = PBXBuildFile; fileRef = 5DE04145E36774807CE8C6B3; };
 		D9B14F0652A21FC1A3154425 /* juce_VST3ManifestHelper.mm */ = {isa = PBXBuildFile; fileRef = BDDF38B7CE70616CEF796FA8; settings = { COMPILER_FLAGS = "-w -DJUCE_SKIP_PRECOMPILED_HEADER"; }; };
+		DB305342C0009719F03C592A /* PitchTracker.cpp */ = {isa = PBXBuildFile; fileRef = DDC278C7023C9A7D2DD82131; };
 		E2FA0F2DCB8F5A8DA82FC8C0 /* CoreAudio.framework */ = {isa = PBXBuildFile; fileRef = EC6EFD59F927AC0A8EA35B8E; };
 		E5A5A25D827E6C22EAEBA600 /* PluginEditor.cpp */ = {isa = PBXBuildFile; fileRef = 3F94A2928A3243814CDBE1F5; };
 		E684CCC992AAF440518D6958 /* MetalKit.framework */ = {isa = PBXBuildFile; fileRef = 43584A890F6EC408893D49A6; settings = { ATTRIBUTES = (Weak, ); }; };
@@ -86,6 +88,7 @@
 		F1AEAEB186C2E002C8C58A5F /* include_juce_events.mm */ = {isa = PBXBuildFile; fileRef = 815519D33DBF12FE4A260685; };
 		F4A3E110C7D60DA2A8AE5EE4 /* include_juce_audio_processors_headless_lv2_libs.cpp */ = {isa = PBXBuildFile; fileRef = 2A8C58D50F32F5916D720F8D; };
 		F608EB5E66C4BAFE3AEF9904 /* Shared Code */ = {isa = PBXBuildFile; fileRef = 684AD16462281DFB513C5ACC; };
+		FDBB33FC13589C78B4E5B520 /* HarmonicComb.cpp */ = {isa = PBXBuildFile; fileRef = 16EB94581FFF47217FEF7B63; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -98,8 +101,11 @@
 		0C9C19260BE072A78EBFC6AB /* juce_audio_plugin_client */ /* juce_audio_plugin_client */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_plugin_client; path = /Applications/JUCE/modules/juce_audio_plugin_client; sourceTree = "<absolute>"; };
 		0EDD3B772972F23E76878F1C /* Security.framework */ /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		118EEC5A82507D23525CC8B0 /* DynamicEQ.h */ /* DynamicEQ.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DynamicEQ.h; path = ../../plugin/Source/DynamicEQ.h; sourceTree = SOURCE_ROOT; };
+		16EB94581FFF47217FEF7B63 /* HarmonicComb.cpp */ /* HarmonicComb.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = HarmonicComb.cpp; path = ../../plugin/Source/HarmonicComb.cpp; sourceTree = SOURCE_ROOT; };
 		214797AECE2D45C2522ABB1D /* SimpleVAD.cpp */ /* SimpleVAD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SimpleVAD.cpp; path = ../../plugin/Source/SimpleVAD.cpp; sourceTree = SOURCE_ROOT; };
+		21C4F5962CC4C5EE2F0FCA3E /* PitchTracker.h */ /* PitchTracker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PitchTracker.h; path = ../../plugin/Source/PitchTracker.h; sourceTree = SOURCE_ROOT; };
 		2421776D6D34E6E6762DFBF3 /* include_juce_gui_basics.mm */ /* include_juce_gui_basics.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_gui_basics.mm; path = ../../JuceLibraryCode/include_juce_gui_basics.mm; sourceTree = SOURCE_ROOT; };
+		256E7671635481AA6D8D54E9 /* LinkwitzRiley4.cpp */ /* LinkwitzRiley4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LinkwitzRiley4.cpp; path = ../../plugin/Source/LinkwitzRiley4.cpp; sourceTree = SOURCE_ROOT; };
 		2591E04250531A631C72761C /* include_juce_audio_formats.mm */ /* include_juce_audio_formats.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_formats.mm; path = ../../JuceLibraryCode/include_juce_audio_formats.mm; sourceTree = SOURCE_ROOT; };
 		26C4494383D5417E91EFED5D /* juce_audio_devices */ /* juce_audio_devices */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_devices; path = /Applications/JUCE/modules/juce_audio_devices; sourceTree = "<absolute>"; };
 		27A2585F486FC9BFB9F1B283 /* juce_graphics */ /* juce_graphics */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_graphics; path = /Applications/JUCE/modules/juce_graphics; sourceTree = "<absolute>"; };
@@ -111,6 +117,7 @@
 		2F984601F7E2243A0BAF30DC /* include_juce_audio_processors.mm */ /* include_juce_audio_processors.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_processors.mm; path = ../../JuceLibraryCode/include_juce_audio_processors.mm; sourceTree = SOURCE_ROOT; };
 		3437B6EE5E0D3EB99AD991EB /* TrainerProcess.h */ /* TrainerProcess.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = TrainerProcess.h; path = ../../plugin/Source/TrainerProcess.h; sourceTree = SOURCE_ROOT; };
 		35422E9B98FD851E1F5F860B /* CoreMIDI.framework */ /* CoreMIDI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMIDI.framework; path = System/Library/Frameworks/CoreMIDI.framework; sourceTree = SDKROOT; };
+		3701A9F98B832F514FD6E37A /* LinkwitzRiley4.h */ /* LinkwitzRiley4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LinkwitzRiley4.h; path = ../../plugin/Source/LinkwitzRiley4.h; sourceTree = SOURCE_ROOT; };
 		39AD446504209B10549A5E12 /* AudioDropZone.cpp */ /* AudioDropZone.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AudioDropZone.cpp; path = ../../plugin/Source/AudioDropZone.cpp; sourceTree = SOURCE_ROOT; };
 		39D78C2B8AC7678D50809FF5 /* include_juce_audio_processors_headless.mm */ /* include_juce_audio_processors_headless.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_processors_headless.mm; path = ../../JuceLibraryCode/include_juce_audio_processors_headless.mm; sourceTree = SOURCE_ROOT; };
 		3C5CC8E102F0569139264739 /* include_juce_audio_plugin_client_ARA.cpp */ /* include_juce_audio_plugin_client_ARA.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_audio_plugin_client_ARA.cpp; path = ../../JuceLibraryCode/include_juce_audio_plugin_client_ARA.cpp; sourceTree = SOURCE_ROOT; };
@@ -163,6 +170,7 @@
 		ABC39D5F7ECB212834055D20 /* RecentFilesMenuTemplate.nib */ /* RecentFilesMenuTemplate.nib */ = {isa = PBXFileReference; lastKnownFileType = file.nib; name = RecentFilesMenuTemplate.nib; path = RecentFilesMenuTemplate.nib; sourceTree = SOURCE_ROOT; };
 		AEA3FBCA947F05C14D1B5283 /* include_juce_core.mm */ /* include_juce_core.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_core.mm; path = ../../JuceLibraryCode/include_juce_core.mm; sourceTree = SOURCE_ROOT; };
 		B20D9A9D790861F932BB246F /* include_juce_audio_processors_headless_ara.cpp */ /* include_juce_audio_processors_headless_ara.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_audio_processors_headless_ara.cpp; path = ../../JuceLibraryCode/include_juce_audio_processors_headless_ara.cpp; sourceTree = SOURCE_ROOT; };
+		B4113F6AA9AB2994A172FDE2 /* HarmonicComb.h */ /* HarmonicComb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = HarmonicComb.h; path = ../../plugin/Source/HarmonicComb.h; sourceTree = SOURCE_ROOT; };
 		B43986E392E7C2925113B7E5 /* include_juce_dsp.mm */ /* include_juce_dsp.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_dsp.mm; path = ../../JuceLibraryCode/include_juce_dsp.mm; sourceTree = SOURCE_ROOT; };
 		B58D87DAD7C6085FAD9060ED /* CoreAudioKit.framework */ /* CoreAudioKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudioKit.framework; path = System/Library/Frameworks/CoreAudioKit.framework; sourceTree = SDKROOT; };
 		B60EEA5148633A1B8B42DF60 /* Foundation.framework */ /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -175,6 +183,7 @@
 		C1C3302681ED944C8DD7F683 /* juce_core */ /* juce_core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_core; path = /Applications/JUCE/modules/juce_core; sourceTree = "<absolute>"; };
 		C39DA42226F6C776893E9FDF /* SpectralVAD.cpp */ /* SpectralVAD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SpectralVAD.cpp; path = ../../plugin/Source/SpectralVAD.cpp; sourceTree = SOURCE_ROOT; };
 		D2242C35E5359BDA92CDB83C /* juce_events */ /* juce_events */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_events; path = /Applications/JUCE/modules/juce_events; sourceTree = "<absolute>"; };
+		DDC278C7023C9A7D2DD82131 /* PitchTracker.cpp */ /* PitchTracker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = PitchTracker.cpp; path = ../../plugin/Source/PitchTracker.cpp; sourceTree = SOURCE_ROOT; };
 		E048D47D4568D22E3677C162 /* ControlPanel.h */ /* ControlPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ControlPanel.h; path = ../../plugin/Source/ControlPanel.h; sourceTree = SOURCE_ROOT; };
 		EC6EFD59F927AC0A8EA35B8E /* CoreAudio.framework */ /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		F817FED0CF8346AACE2A7CBD /* ArcMeter.cpp */ /* ArcMeter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ArcMeter.cpp; path = ../../plugin/Source/ArcMeter.cpp; sourceTree = SOURCE_ROOT; };
@@ -304,6 +313,12 @@
 				3FE3B300477852383C2208DD,
 				F817FED0CF8346AACE2A7CBD,
 				5ACC67D2654F50A7E1D739D6,
+				DDC278C7023C9A7D2DD82131,
+				21C4F5962CC4C5EE2F0FCA3E,
+				16EB94581FFF47217FEF7B63,
+				B4113F6AA9AB2994A172FDE2,
+				256E7671635481AA6D8D54E9,
+				3701A9F98B832F514FD6E37A,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -934,6 +949,9 @@
 				4B6A8981A8D78D63326BDDCC,
 				3562DD5F2A0CB0125C742CF3,
 				20A217C58F32DBCEFF1F69A4,
+				DB305342C0009719F03C592A,
+				FDBB33FC13589C78B4E5B520,
+				6CAC70885ED0C636C18B7158,
 				83244953AF9FF90354A4AAFA,
 				167FA7EF3EF53C2A6A7F29FF,
 				C7A87105A26B7016B6DBE44D,
@@ -1009,7 +1027,7 @@
 		07B1612A07993C6CC802568B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -1072,9 +1090,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -1098,15 +1116,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GENERATE_PKGINFO_FILE = YES;
@@ -1122,7 +1140,7 @@
 				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/Components/";
 				LIBRARY_STYLE = Bundle;
 				LLVM_LTO = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				OTHER_LDFLAGS = "-bundle -lDeBleed";
 				OTHER_REZFLAGS = "-d ppc_$ppc -d i386_$i386 -d ppc64_$ppc64 -d x86_64_$x86_64 -d arm64_$arm64 -I /System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Versions/A/Headers -I \"$(DEVELOPER_DIR)/Extras/CoreAudio/AudioUnits/AUPublic/AUBase\" -I \"$(DEVELOPER_DIR)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AudioUnit.framework/Headers\"";
@@ -1192,9 +1210,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -1218,15 +1236,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GENERATE_PKGINFO_FILE = YES;
@@ -1241,7 +1259,7 @@
 				INFOPLIST_PREPROCESS = NO;
 				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/Components/";
 				LIBRARY_STYLE = Bundle;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				OTHER_LDFLAGS = "-bundle -lDeBleed";
 				OTHER_REZFLAGS = "-d ppc_$ppc -d i386_$i386 -d ppc64_$ppc64 -d x86_64_$x86_64 -d arm64_$arm64 -I /System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Versions/A/Headers -I \"$(DEVELOPER_DIR)/Extras/CoreAudio/AudioUnits/AUPublic/AUBase\" -I \"$(DEVELOPER_DIR)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AudioUnit.framework/Headers\"";
@@ -1256,7 +1274,7 @@
 		26A1DAA99A535F4937643CB2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -1319,9 +1337,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -1345,15 +1363,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = (
@@ -1366,7 +1384,7 @@
 				INFOPLIST_FILE = Info-Standalone_Plugin.plist;
 				INFOPLIST_PREPROCESS = NO;
 				LLVM_LTO = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				OTHER_LDFLAGS = "-lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
@@ -1434,9 +1452,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -1460,15 +1478,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = (
@@ -1480,7 +1498,7 @@
 				);
 				INFOPLIST_FILE = Info-VST3_Manifest_Helper.plist;
 				INFOPLIST_PREPROCESS = NO;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "juce_vst3_helper";
@@ -1547,9 +1565,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -1573,15 +1591,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 					"JUCE_SHARED_CODE=1",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
@@ -1594,7 +1612,7 @@
 				);
 				INSTALL_PATH = "@executable_path/../Frameworks";
 				LLVM_LTO = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
@@ -1662,9 +1680,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -1688,15 +1706,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = (
@@ -1709,7 +1727,7 @@
 				INFOPLIST_FILE = Info-VST3_Manifest_Helper.plist;
 				INFOPLIST_PREPROCESS = NO;
 				LLVM_LTO = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "juce_vst3_helper";
@@ -1776,9 +1794,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -1802,15 +1820,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 					"JUCE_SHARED_CODE=1",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
@@ -1822,7 +1840,7 @@
 					"$(inherited)",
 				);
 				INSTALL_PATH = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
 				PRODUCT_NAME = "DeBleed";
@@ -1890,9 +1908,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -1916,15 +1934,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = (
@@ -1936,7 +1954,7 @@
 				);
 				INFOPLIST_FILE = Info-Standalone_Plugin.plist;
 				INFOPLIST_PREPROCESS = NO;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				OTHER_LDFLAGS = "-lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
@@ -2052,9 +2070,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -2078,15 +2096,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GENERATE_PKGINFO_FILE = YES;
@@ -2102,7 +2120,7 @@
 				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/VST3/";
 				LIBRARY_STYLE = Bundle;
 				LLVM_LTO = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				OTHER_LDFLAGS = "-bundle -lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;
@@ -2171,9 +2189,9 @@
 					"JucePlugin_ProducesMidiOutput=0",
 					"JucePlugin_IsMidiEffect=0",
 					"JucePlugin_EditorRequiresKeyboardFocus=0",
-					"JucePlugin_Version=1.0.0",
-					"JucePlugin_VersionCode=0x10000",
-					"JucePlugin_VersionString=\\\"1.0.0\\\"",
+					"JucePlugin_Version=1.1.0",
+					"JucePlugin_VersionCode=0x10100",
+					"JucePlugin_VersionString=\\\"1.1.0\\\"",
 					"JucePlugin_VSTUniqueID=JucePlugin_PluginCode",
 					"JucePlugin_VSTCategory=kPlugCategEffect",
 					"JucePlugin_Vst3Category=\\\"Fx\\\"",
@@ -2197,15 +2215,15 @@
 					"JucePlugin_ARAContentTypes=0",
 					"JucePlugin_ARATransformationFlags=0",
 					"JucePlugin_ARAFactoryID=\\\"com.SoundSolutionsLLC.DeBleed.factory\\\"",
-					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.0.0\\\"",
+					"JucePlugin_ARADocumentArchiveID=\\\"com.SoundSolutionsLLC.DeBleed.aradocumentarchive.1.1.0\\\"",
 					"JucePlugin_ARACompatibleArchiveIDs=\\\"\\\"",
 					"JucePlugin_MaxNumInputChannels=2",
 					"JucePlugin_MaxNumOutputChannels=2",
 					"JucePlugin_PreferredChannelConfigurations={1,1},{2,2}",
 					"JUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone",
 					"JUCER_XCODE_MAC_F6D2F4CF=1",
-					"JUCE_APP_VERSION=1.0.0",
-					"JUCE_APP_VERSION_HEX=0x10000",
+					"JUCE_APP_VERSION=1.1.0",
+					"JUCE_APP_VERSION_HEX=0x10100",
 				);
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GENERATE_PKGINFO_FILE = YES;
@@ -2220,7 +2238,7 @@
 				INFOPLIST_PREPROCESS = NO;
 				INSTALL_PATH = "$(HOME)/Library/Audio/Plug-Ins/VST3/";
 				LIBRARY_STYLE = Bundle;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_HEADER_SEARCH_PATHS = "/Applications/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK $(SRCROOT)/../../JuceLibraryCode /Applications/JUCE/modules /Applications/JUCE/modules/juce_audio_plugin_client/AU";
 				OTHER_LDFLAGS = "-bundle -lDeBleed";
 				PRODUCT_BUNDLE_IDENTIFIER = com.soundsolutionsllc.debleed;

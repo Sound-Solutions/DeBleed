@@ -7,6 +7,9 @@
 #include "SpectralVAD.h"
 #include "DynamicEQ.h"
 #include "SimpleExpander.h"
+#include "LinkwitzRiley4.h"
+#include "PitchTracker.h"
+#include "HarmonicComb.h"
 
 /**
  * DeBleedAudioProcessor - DeBleed V2: Formant-Based Source Enhancer
@@ -37,6 +40,7 @@ public:
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlockBypassed(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
@@ -89,6 +93,11 @@ public:
     static const juce::String PARAM_EXP_RANGE;
     static const juce::String PARAM_USE_V2;  // Toggle between v1 and v2 architectures
 
+    static const juce::String PARAM_LOOKAHEAD;
+    static const juce::String PARAM_CONSONANT;
+    static const juce::String PARAM_COMB;
+    static const juce::String PARAM_COMB_DEPTH;
+
     // V2 component access for visualization
     const SpectralVAD& getSpectralVAD() const { return spectralVAD_; }
     const DynamicEQ& getDynamicEQ() const { return dynamicEQ_; }
@@ -100,6 +109,9 @@ public:
     bool loadV2Params(const juce::String& jsonPath);
 
 private:
+    float processLookaheadSample(int channel, float input, bool enabled);
+    void delayBypassedBlock(juce::AudioBuffer<float>& buffer);
+
     // Create parameter layout
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
@@ -125,6 +137,11 @@ private:
     std::atomic<float> expRange{-40.0f};      // dB
     std::atomic<bool> useV2{true};            // Use v2 architecture
 
+    std::atomic<bool> lookahead_{false}, consonant_{false}, comb_{false};
+    std::atomic<float> combDepth_{9.0f};
+    std::atomic<int> latencySamples_{0};
+    std::atomic<bool> resetComb_{false};
+
     // Biquad chain (legacy, may be removed)
     DifferentiableBiquadChain biquadChain_;  // SVF TPT filter cascade
 
@@ -132,11 +149,21 @@ private:
     SpectralVAD spectralVAD_;                // Spectral VAD with learned frequency weights
     DynamicEQ dynamicEQ_;                    // 6-band VAD-gated dynamic EQ
     SimpleExpander expander_;                // User-controlled expander
+    SimpleExpander hfExpander_;
+    LinkwitzRiley4 sidechainCrossover_;
+    PitchTracker pitchTracker_;
+    std::vector<LinkwitzRiley4> audioCrossovers_;
+    std::vector<HarmonicComb> harmonicCombs_;
+    std::vector<std::vector<float>> lookaheadBuffers_;
+    std::vector<int> lookaheadWritePositions_;
+    float unvoicedState_ = 0.0f, unvoicedRiseCoeff_ = 0.0f, unvoicedFallCoeff_ = 0.0f;
+    float appliedCombDepth_ = 9.0f;
 
     // Buffers for processing
     juce::AudioBuffer<float> dryBuffer_;     // Dry signal for wet/dry mix
     std::vector<float> monoSidechain_;       // Mono mix for neural network input
     std::vector<float> vadConfidence_;       // Per-sample VAD confidence for v2
+    std::vector<float> mainGain_, hiGain_, unvoiced_, hfSidechain_, lowBand_, highBand_;
 
     // Training process
     TrainerProcess trainerProcess;

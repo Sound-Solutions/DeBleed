@@ -225,6 +225,18 @@ void DeBleedLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton&
                                            bool shouldDrawButtonAsHighlighted,
                                            bool shouldDrawButtonAsDown)
 {
+    if (static_cast<bool>(btn.getProperties()["switchStyle"]))
+    {
+        const auto track = btn.getLocalBounds().toFloat().withSizeKeepingCentre(36.0f, 18.0f);
+        const bool on = btn.getToggleState();
+        g.setColour(juce::Colour(on ? 0xff39ff14 : 0xff3a3a3a));
+        g.fillRoundedRectangle(track, 9.0f);
+        g.setColour(juce::Colours::white);
+        g.fillEllipse(on ? track.getRight() - 16.0f : track.getX() + 2.0f,
+                      track.getY() + 2.0f, 14.0f, 14.0f);
+        return;
+    }
+
     auto bounds = btn.getLocalBounds().toFloat().reduced(2.0f);
 
     // For larger toggle buttons, use default rendering (with text)

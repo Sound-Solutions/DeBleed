@@ -40,7 +40,7 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     startTimer(50);
 
     // Set window size - narrower and compact
-    setSize(440, 460);
+    setSize(440, 552);
 }
 
 DeBleedAudioProcessorEditor::~DeBleedAudioProcessorEditor()

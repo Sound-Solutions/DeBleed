@@ -20,6 +20,10 @@ const juce::String DeBleedAudioProcessor::PARAM_EXP_ATTACK = "expAttack";
 const juce::String DeBleedAudioProcessor::PARAM_EXP_RELEASE = "expRelease";
 const juce::String DeBleedAudioProcessor::PARAM_EXP_RANGE = "expRange";
 const juce::String DeBleedAudioProcessor::PARAM_USE_V2 = "useV2";
+const juce::String DeBleedAudioProcessor::PARAM_LOOKAHEAD = "lookahead";
+const juce::String DeBleedAudioProcessor::PARAM_CONSONANT = "consonant";
+const juce::String DeBleedAudioProcessor::PARAM_COMB = "comb";
+const juce::String DeBleedAudioProcessor::PARAM_COMB_DEPTH = "combDepth";
 
 DeBleedAudioProcessor::DeBleedAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -41,6 +45,10 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     parameters.addParameterListener(PARAM_EXP_RELEASE, this);
     parameters.addParameterListener(PARAM_EXP_RANGE, this);
     parameters.addParameterListener(PARAM_USE_V2, this);
+    parameters.addParameterListener(PARAM_LOOKAHEAD, this);
+    parameters.addParameterListener(PARAM_CONSONANT, this);
+    parameters.addParameterListener(PARAM_COMB, this);
+    parameters.addParameterListener(PARAM_COMB_DEPTH, this);
 
     // Initialize atomic values
     mix.store(*parameters.getRawParameterValue(PARAM_MIX));
@@ -56,6 +64,10 @@ DeBleedAudioProcessor::DeBleedAudioProcessor()
     expRelease.store(*parameters.getRawParameterValue(PARAM_EXP_RELEASE));
     expRange.store(*parameters.getRawParameterValue(PARAM_EXP_RANGE));
     useV2.store(*parameters.getRawParameterValue(PARAM_USE_V2) > 0.5f);
+    lookahead_.store(*parameters.getRawParameterValue(PARAM_LOOKAHEAD) > 0.5f);
+    consonant_.store(*parameters.getRawParameterValue(PARAM_CONSONANT) > 0.5f);
+    comb_.store(*parameters.getRawParameterValue(PARAM_COMB) > 0.5f);
+    combDepth_.store(*parameters.getRawParameterValue(PARAM_COMB_DEPTH));
 }
 
 DeBleedAudioProcessor::~DeBleedAudioProcessor()
@@ -73,6 +85,10 @@ DeBleedAudioProcessor::~DeBleedAudioProcessor()
     parameters.removeParameterListener(PARAM_EXP_RELEASE, this);
     parameters.removeParameterListener(PARAM_EXP_RANGE, this);
     parameters.removeParameterListener(PARAM_USE_V2, this);
+    parameters.removeParameterListener(PARAM_LOOKAHEAD, this);
+    parameters.removeParameterListener(PARAM_CONSONANT, this);
+    parameters.removeParameterListener(PARAM_COMB, this);
+    parameters.removeParameterListener(PARAM_COMB_DEPTH, this);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::createParameterLayout()
@@ -246,6 +262,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout DeBleedAudioProcessor::creat
         nullptr
     ));
 
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID{PARAM_LOOKAHEAD, 1}, "Lookahead", false));
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID{PARAM_CONSONANT, 1}, "Consonant", false));
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID{PARAM_COMB, 1}, "Comb", false));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{PARAM_COMB_DEPTH, 1}, "Comb Depth",
+        juce::NormalisableRange<float>(6.0f, 12.0f, 0.1f), 9.0f,
+        juce::String(), juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(value, 1) + " dB"; }, nullptr));
+
     return {params.begin(), params.end()};
 }
 
@@ -296,6 +324,21 @@ void DeBleedAudioProcessor::parameterChanged(const juce::String& parameterID, fl
         useV2.store(newValue > 0.5f);
         DBG("V2 mode changed to: " << (newValue > 0.5f ? "ENABLED" : "DISABLED"));
     }
+    else if (parameterID == PARAM_LOOKAHEAD)
+    {
+        lookahead_.store(newValue > 0.5f);
+        setLatencySamples(newValue > 0.5f ? latencySamples_.load() : 0);
+    }
+    else if (parameterID == PARAM_CONSONANT)
+        consonant_.store(newValue > 0.5f);
+    else if (parameterID == PARAM_COMB)
+    {
+        comb_.store(newValue > 0.5f);
+        if (newValue <= 0.5f)
+            resetComb_.store(true);
+    }
+    else if (parameterID == PARAM_COMB_DEPTH)
+        combDepth_.store(newValue);
 }
 
 void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
@@ -318,14 +361,47 @@ void DeBleedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     expander_.setReleaseMs(expRelease.load());
     expander_.setRangeDb(expRange.load());
 
+    hfExpander_.prepare(sampleRate);
+    hfExpander_.setVadGating(false);
+    hfExpander_.setThresholdDb(expThreshold.load());
+    hfExpander_.setRatio(expRatio.load());
+    hfExpander_.setRangeDb(expRange.load());
+    hfExpander_.setAttackMs(0.5f);
+    hfExpander_.setReleaseMs(40.0f);
+    sidechainCrossover_.prepare(sampleRate, 4000.0);
+    pitchTracker_.prepare(sampleRate);
+    unvoicedState_ = 0.0f;
+    unvoicedRiseCoeff_ = static_cast<float>(1.0 - std::exp(-1.0 / (0.001 * sampleRate)));
+    unvoicedFallCoeff_ = static_cast<float>(1.0 - std::exp(-1.0 / (0.015 * sampleRate)));
+
     // Allocate buffers
     int numChannels = std::max(getTotalNumInputChannels(), getTotalNumOutputChannels());
-    dryBuffer_.setSize(numChannels, samplesPerBlock);
-    monoSidechain_.resize(samplesPerBlock);
-    vadConfidence_.resize(samplesPerBlock);
+    currentBlockSize_ = std::max(1, samplesPerBlock);
+    dryBuffer_.setSize(numChannels, currentBlockSize_);
+    monoSidechain_.resize(currentBlockSize_);
+    vadConfidence_.resize(currentBlockSize_);
+    mainGain_.resize(currentBlockSize_);
+    hiGain_.resize(currentBlockSize_);
+    unvoiced_.resize(currentBlockSize_);
+    hfSidechain_.resize(currentBlockSize_);
+    lowBand_.resize(currentBlockSize_);
+    highBand_.resize(currentBlockSize_);
 
-    // Zero latency - IIR filters are causal, no lookahead
-    setLatencySamples(0);
+    latencySamples_.store(static_cast<int>(std::round(sampleRate * 0.001)));
+    lookaheadBuffers_.assign(numChannels, std::vector<float>(latencySamples_.load() + 1, 0.0f));
+    lookaheadWritePositions_.assign(numChannels, 0);
+    audioCrossovers_.resize(numChannels);
+    harmonicCombs_.resize(numChannels);
+    appliedCombDepth_ = combDepth_.load();
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        audioCrossovers_[ch].prepare(sampleRate, 4000.0);
+        harmonicCombs_[ch].prepare(sampleRate);
+        harmonicCombs_[ch].setDepthDb(appliedCombDepth_);
+    }
+    resetComb_.store(false);
+
+    setLatencySamples(lookahead_.load() ? latencySamples_.load() : 0);
 
     DBG("DeBleedAudioProcessor prepared: " << sampleRate << " Hz, "
         << samplesPerBlock << " samples/block, " << numChannels << " channels");
@@ -340,6 +416,16 @@ void DeBleedAudioProcessor::releaseResources()
     spectralVAD_.reset();
     dynamicEQ_.reset();
     expander_.reset();
+    hfExpander_.reset();
+    sidechainCrossover_.reset();
+    pitchTracker_.reset();
+    for (auto& crossover : audioCrossovers_)
+        crossover.reset();
+    for (auto& comb : harmonicCombs_)
+        comb.reset();
+    lookaheadBuffers_.clear();
+    lookaheadWritePositions_.clear();
+    unvoicedState_ = 0.0f;
 }
 
 bool DeBleedAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -356,8 +442,36 @@ bool DeBleedAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) c
     return true;
 }
 
+float DeBleedAudioProcessor::processLookaheadSample(int channel, float input, bool enabled)
+{
+    if (lookaheadBuffers_.empty())
+        return input;
+    auto& delay = lookaheadBuffers_[channel];
+    auto& position = lookaheadWritePositions_[channel];
+    const int size = static_cast<int>(delay.size());
+    delay[position] = input;
+    const float output = enabled ? delay[(position + 1) % size] : input;
+    position = (position + 1) % size;
+    return output;
+}
+
+void DeBleedAudioProcessor::delayBypassedBlock(juce::AudioBuffer<float>& buffer)
+{
+    // Bypass and 0% mix still owe the host the latency reported by LOOKAHEAD.
+    if (lookahead_.load())
+        for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+            for (int s = 0; s < buffer.getNumSamples(); ++s)
+                buffer.setSample(ch, s, processLookaheadSample(ch, buffer.getSample(ch, s), true));
+}
+
+void DeBleedAudioProcessor::processBlockBypassed(juce::AudioBuffer<float>& buffer,
+                                                  juce::MidiBuffer& /*midiMessages*/)
+{
+    delayBypassedBlock(buffer);
+}
+
 void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
-                                          juce::MidiBuffer& /*midiMessages*/)
+                                          juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
 
@@ -371,7 +485,10 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Early return if bypassed
     if (bypassed.load())
+    {
+        delayBypassedBlock(buffer);
         return;
+    }
 
     // Get common parameter values
     float currentMix = mix.load();
@@ -379,7 +496,28 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Early bypass if mix is 0%
     if (currentMix < 0.001f)
+    {
+        delayBypassedBlock(buffer);
         return;
+    }
+
+    // Hosts can exceed the prepared block size. Bounded, non-owning stereo views
+    // keep every scratch buffer (including the dry mix) allocation-free.
+    if (numSamples > currentBlockSize_)
+    {
+        float peakDb = -60.0f;
+        for (int start = 0; start < numSamples; start += currentBlockSize_)
+        {
+            float* channels[2] = { buffer.getWritePointer(0),
+                totalNumInputChannels > 1 ? buffer.getWritePointer(1) : nullptr };
+            juce::AudioBuffer<float> chunk(channels, totalNumInputChannels, start,
+                                          std::min(currentBlockSize_, numSamples - start));
+            processBlock(chunk, midiMessages);
+            peakDb = std::max(peakDb, outputLevelDb_.load());
+        }
+        outputLevelDb_.store(peakDb);
+        return;
+    }
 
     // Store dry signal for wet/dry mix
     if (currentMix < 0.999f)
@@ -389,14 +527,30 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     }
 
     // =========================================================================
-    // V2 Architecture: VAD + Expander (Zero Latency)
+    // VAD and gain detection always see the undelayed mono sidechain.
     // =========================================================================
 
-    // Ensure buffers are large enough
-    if (static_cast<int>(monoSidechain_.size()) < numSamples)
-        monoSidechain_.resize(numSamples);
-    if (static_cast<int>(vadConfidence_.size()) < numSamples)
-        vadConfidence_.resize(numSamples);
+    const bool useLookahead = lookahead_.load();
+    const bool useConsonant = consonant_.load();
+    const bool useComb = comb_.load();
+    const bool splitBands = useConsonant || useComb;
+    if (resetComb_.exchange(false))
+    {
+        for (auto& comb : harmonicCombs_)
+            comb.reset();
+        pitchTracker_.reset();
+    }
+    const float depth = combDepth_.load();
+    if (depth != appliedCombDepth_)
+    {
+        for (auto& comb : harmonicCombs_)
+            comb.setDepthDb(depth);
+        appliedCombDepth_ = depth;
+    }
+    // Apply parameter changes on the audio thread; no DSP state is shared with UI callbacks.
+    hfExpander_.setThresholdDb(expThreshold.load());
+    hfExpander_.setRatio(expRatio.load());
+    hfExpander_.setRangeDb(expRange.load());
 
     // Create mono sidechain for VAD
     const float* ch0 = buffer.getReadPointer(0);
@@ -415,14 +569,61 @@ void DeBleedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             monoSidechain_[s] *= normFactor;
     }
 
-    // 1. Run Spectral VAD to get per-sample confidence
-    spectralVAD_.processBlock(monoSidechain_.data(), vadConfidence_.data(), numSamples);
+    // Compute one gain curve, then apply it to every channel.
+    for (int s = 0; s < numSamples; ++s)
+    {
+        const float input = monoSidechain_[s];
+        vadConfidence_[s] = spectralVAD_.processSample(input);
+        mainGain_[s] = expander_.computeGain(input, vadConfidence_[s]);
+        if (useComb)
+            pitchTracker_.pushSample(input);
+        hiGain_[s] = mainGain_[s];
+        if (useConsonant)
+        {
+            hfSidechain_[s] = sidechainCrossover_.processHigh(input);
+            const float hfGain = hfExpander_.computeGain(hfSidechain_[s], 0.0f);
+            const float target = std::clamp((spectralVAD_.getUnvoicedRatio() - 0.55f) / 0.25f, 0.0f, 1.0f);
+            const float coefficient = target > unvoicedState_ ? unvoicedRiseCoeff_ : unvoicedFallCoeff_;
+            unvoicedState_ += coefficient * (target - unvoicedState_);
+            unvoiced_[s] = unvoicedState_;
+            hiGain_[s] += unvoiced_[s] * std::max(0.0f, hfGain - mainGain_[s]);
+        }
+    }
+    const float period = pitchTracker_.getPeriodSamples();
+    const bool pitchConfident = pitchTracker_.getConfidence() >= 0.85f;
 
-    // 2. Process each channel through expander
+    // Optional delay precedes the shared crossover and per-channel comb.
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         float* channelData = buffer.getWritePointer(ch);
-        expander_.processBlock(channelData, vadConfidence_.data(), numSamples);
+        float* dry = currentMix < 0.999f ? dryBuffer_.getWritePointer(ch) : nullptr;
+        auto& comb = harmonicCombs_[ch];
+        comb.setTarget(period, pitchConfident);
+        for (int s = 0; s < numSamples; ++s)
+        {
+            channelData[s] = processLookaheadSample(ch, channelData[s], useLookahead);
+            // Keep the existing mix law, with both taps at the reported latency.
+            if (dry != nullptr)
+                dry[s] = channelData[s];
+
+            if (splitBands)
+            {
+                audioCrossovers_[ch].processSplit(channelData[s], lowBand_[s], highBand_[s]);
+                // The LR4 sum is an allpass (-180 deg at 4 kHz); the dry tap must carry the
+                // same phase or the wet/dry mix notches the crossover region.
+                if (dry != nullptr)
+                    dry[s] = lowBand_[s] + highBand_[s];
+                lowBand_[s] *= mainGain_[s];
+                if (useComb)
+                {
+                    comb.setVocalConfidence(vadConfidence_[s]);
+                    lowBand_[s] = comb.process(lowBand_[s]);
+                }
+                channelData[s] = lowBand_[s] + highBand_[s] * hiGain_[s];
+            }
+        }
+        if (!splitBands)
+            expander_.applyGains(channelData, mainGain_.data(), numSamples);
     }
 
     // 3. Apply output gain
@@ -568,7 +769,20 @@ void DeBleedAudioProcessor::setStateInformation(const void* data, int sizeInByte
     {
         if (xmlState->hasTagName(parameters.state.getType()))
         {
-            parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
+            auto state = juce::ValueTree::fromXml(*xmlState);
+            // Older sessions have no module parameters. Loading one into an
+            // already-used instance must restore the new controls to defaults.
+            for (const auto& id : { PARAM_LOOKAHEAD, PARAM_CONSONANT, PARAM_COMB, PARAM_COMB_DEPTH })
+            {
+                if (!state.getChildWithProperty("id", id).isValid())
+                {
+                    juce::ValueTree parameter("PARAM");
+                    parameter.setProperty("id", id, nullptr);
+                    parameter.setProperty("value", id == PARAM_COMB_DEPTH ? 9.0f : 0.0f, nullptr);
+                    state.appendChild(parameter, nullptr);
+                }
+            }
+            parameters.replaceState(state);
         }
     }
 }

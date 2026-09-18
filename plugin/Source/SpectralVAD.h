@@ -83,6 +83,7 @@ public:
      * Get current confidence (thread-safe, for UI).
      */
     float getConfidence() const { return currentConfidence_.load(); }
+    float getUnvoicedRatio() const { return unvoicedRatio_; }
 
     /**
      * Get current band energies (for visualization).
@@ -163,6 +164,8 @@ private:
     static constexpr int PITCH_BUFFER_SIZE = 1024;  // ~21ms at 48kHz, covers 50Hz-500Hz range
     std::array<float, PITCH_BUFFER_SIZE> pitchBuffer_{};
     int pitchBufferIndex_ = 0;
+    int pitchUpdateCounter_ = 0;
+    float unvoicedRatio_ = 0.0f;
     float pitchConfidence_ = 0.0f;  // 0 = unpitched (drums), 1 = clear pitch (vocals)
 
     // Formant detection - ratio of formant band energy to total

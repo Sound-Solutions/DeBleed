@@ -50,6 +50,8 @@ void SpectralVAD::reset()
     pitchConfidence_ = 0.0f;
     formantRatio_ = 0.0f;
     pitchBufferIndex_ = 0;
+    pitchUpdateCounter_ = 0;
+    unvoicedRatio_ = 0.0f;
     std::fill(pitchBuffer_.begin(), pitchBuffer_.end(), 0.0f);
 
     for (int i = 0; i < NUM_BANDS; ++i)
@@ -182,6 +184,11 @@ float SpectralVAD::processSample(float sample)
         bandEnergies_[i].store(filters_[i].envelope);
     }
 
+    const float hf = filters_[5].envelope + filters_[6].envelope + filters_[7].envelope;
+    const float lf = filters_[0].envelope + filters_[1].envelope
+                   + filters_[2].envelope + filters_[3].envelope;
+    unvoicedRatio_ = hf / (hf + lf + 1.0e-12f);
+
     // Compute formant ratio (vocals have high energy in formant region)
     formantRatio_ = (totalEnergy > 1e-10f) ? (formantEnergy / totalEnergy) : 0.0f;
 
@@ -190,10 +197,9 @@ float SpectralVAD::processSample(float sample)
     pitchBufferIndex_ = (pitchBufferIndex_ + 1) % PITCH_BUFFER_SIZE;
 
     // Compute pitch confidence every 256 samples (for efficiency)
-    static int pitchUpdateCounter = 0;
-    if (++pitchUpdateCounter >= 256)
+    if (++pitchUpdateCounter_ >= 256)
     {
-        pitchUpdateCounter = 0;
+        pitchUpdateCounter_ = 0;
         pitchConfidence_ = computePitchConfidence();
     }
 

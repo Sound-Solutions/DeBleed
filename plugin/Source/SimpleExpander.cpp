@@ -38,6 +38,11 @@ void SimpleExpander::updateCoefficients()
 
 float SimpleExpander::processSample(float sample, float vadConfidence)
 {
+    return sample * computeGain(sample, vadConfidence);
+}
+
+float SimpleExpander::computeGain(float sidechainSample, float vadConfidence)
+{
     // Get parameters
     float thresholdDb = thresholdDb_.load();
     float ratio = ratio_.load();
@@ -56,7 +61,7 @@ float SimpleExpander::processSample(float sample, float vadConfidence)
     }
 
     // Compute input level (rectified)
-    float inputLevel = std::abs(sample);
+    float inputLevel = std::abs(sidechainSample);
 
     // Envelope follower (peak detector with attack/release)
     float coeff = (inputLevel > envelope_) ? attackCoeff_ : releaseCoeff_;
@@ -96,17 +101,13 @@ float SimpleExpander::processSample(float sample, float vadConfidence)
     // Update meter
     gainReductionDb_.store(20.0f * std::log10(gainReduction_ + 1e-10f));
 
-    // Apply gain
-    return sample * gainReduction_;
+    return gainReduction_;
 }
 
-void SimpleExpander::processBlock(float* audio, const float* vadConfidence, int numSamples)
+void SimpleExpander::applyGains(float* audio, const float* gains, int numSamples)
 {
     for (int i = 0; i < numSamples; ++i)
-    {
-        float vad = (vadConfidence != nullptr) ? vadConfidence[i] : 0.0f;
-        audio[i] = processSample(audio[i], vad);
-    }
+        audio[i] *= gains[i];
 }
 
 void SimpleExpander::setThresholdDb(float thresholdDb)

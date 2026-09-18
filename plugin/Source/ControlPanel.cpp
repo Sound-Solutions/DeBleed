@@ -1,7 +1,7 @@
 /*
   ==============================================================================
     ControlPanel.cpp
-    Two-row control panel for DeBleed V2 expander
+    Three-row control panel for DeBleed V2 expander
   ==============================================================================
 */
 
@@ -38,6 +38,12 @@ ControlPanel::ControlPanel(DeBleedAudioProcessor& processor)
 
     rangeKnob.setup(this, "RANGE", apvts, DeBleedAudioProcessor::PARAM_EXP_RANGE);
     rangeKnob.setKnobColor(orangeColor);
+
+    lookaheadSwitch.setup(this, "LOOKAHEAD", apvts, DeBleedAudioProcessor::PARAM_LOOKAHEAD);
+    consonantSwitch.setup(this, "CONSONANT", apvts, DeBleedAudioProcessor::PARAM_CONSONANT);
+    combSwitch.setup(this, "COMB", apvts, DeBleedAudioProcessor::PARAM_COMB);
+    depthKnob.setup(this, "DEPTH", apvts, DeBleedAudioProcessor::PARAM_COMB_DEPTH);
+    depthKnob.setKnobColor(0xff39ff14);
 }
 
 ControlPanel::~ControlPanel()
@@ -54,16 +60,17 @@ void ControlPanel::paint(juce::Graphics& g)
     g.setColour(juce::Colours::white.withAlpha(0.08f));
     g.drawHorizontalLine(0, 0.0f, static_cast<float>(getWidth()));
 
-    // Row separator
-    int rowHeight = getHeight() / 2;
+    // Row separators (same inset rows as resized(): 8 px top margin, three equal rows)
+    int rowHeight = (getHeight() - 16) / 3;
     g.setColour(juce::Colours::white.withAlpha(0.04f));
-    g.drawHorizontalLine(rowHeight, 20.0f, static_cast<float>(getWidth() - 20));
+    g.drawHorizontalLine(8 + rowHeight, 20.0f, static_cast<float>(getWidth() - 20));
+    g.drawHorizontalLine(8 + 2 * rowHeight, 20.0f, static_cast<float>(getWidth() - 20));
 }
 
 void ControlPanel::resized()
 {
     auto bounds = getLocalBounds().reduced(15, 8);
-    int rowHeight = bounds.getHeight() / 2;
+    int rowHeight = bounds.getHeight() / 3;
 
     // =========================================================================
     // Row 1: Mix and Output (centered)
@@ -79,7 +86,7 @@ void ControlPanel::resized()
     // =========================================================================
     // Row 2: Expander controls (5 knobs, evenly spaced)
     // =========================================================================
-    auto row2 = bounds;
+    auto row2 = bounds.removeFromTop(rowHeight);
     int numKnobs = 5;
     int knobWidth2 = std::min(row2.getWidth() / numKnobs, 90);
     int totalWidth2 = knobWidth2 * numKnobs;
@@ -90,4 +97,12 @@ void ControlPanel::resized()
     attackKnob.setBounds(juce::Rectangle<int>(startX2 + knobWidth2 * 2, row2.getY(), knobWidth2, rowHeight - 5));
     releaseKnob.setBounds(juce::Rectangle<int>(startX2 + knobWidth2 * 3, row2.getY(), knobWidth2, rowHeight - 5));
     rangeKnob.setBounds(juce::Rectangle<int>(startX2 + knobWidth2 * 4, row2.getY(), knobWidth2, rowHeight - 5));
+
+    auto row3 = bounds;
+    int cellWidth = std::min(row3.getWidth() / 4, 90);
+    int startX3 = row3.getCentreX() - cellWidth * 4 / 2;
+    lookaheadSwitch.setBounds({startX3, row3.getY(), cellWidth, rowHeight - 5});
+    consonantSwitch.setBounds({startX3 + cellWidth, row3.getY(), cellWidth, rowHeight - 5});
+    combSwitch.setBounds({startX3 + cellWidth * 2, row3.getY(), cellWidth, rowHeight - 5});
+    depthKnob.setBounds({startX3 + cellWidth * 3, row3.getY(), cellWidth, rowHeight - 5});
 }

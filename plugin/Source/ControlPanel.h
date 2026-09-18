@@ -1,7 +1,7 @@
 /*
   ==============================================================================
     ControlPanel.h
-    Two-row control panel for DeBleed V2 expander
+    Three-row control panel for DeBleed V2 expander
   ==============================================================================
 */
 #pragma once
@@ -10,10 +10,11 @@
 #include "PluginProcessor.h"
 
 /**
- * ControlPanel - Two-row knob layout
+ * ControlPanel - Three-row control layout
  *
  * Row 1 (top):    [Mix] [Output]  - Cyan
- * Row 2 (bottom): [Thresh] [Ratio] [Attack] [Release] [Range] - Orange
+ * Row 2:         [Thresh] [Ratio] [Attack] [Release] [Range] - Orange
+ * Row 3:         [Lookahead] [Consonant] [Comb] [Depth] - Green
  */
 class ControlPanel : public juce::Component
 {
@@ -64,6 +65,34 @@ private:
         }
     };
 
+    struct LabeledSwitch
+    {
+        juce::ToggleButton button;
+        juce::Label label;
+        std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> attachment;
+
+        void setup(juce::Component* parent, const juce::String& labelText,
+                   juce::AudioProcessorValueTreeState& apvts, const juce::String& paramId)
+        {
+            button.getProperties().set("switchStyle", true);
+            button.setTitle(labelText);
+            parent->addAndMakeVisible(button);
+            label.setText(labelText, juce::dontSendNotification);
+            label.setJustificationType(juce::Justification::centred);
+            label.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.7f));
+            label.setFont(juce::FontOptions(10.0f));
+            parent->addAndMakeVisible(label);
+            attachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+                apvts, paramId, button);
+        }
+
+        void setBounds(juce::Rectangle<int> area)
+        {
+            label.setBounds(area.removeFromTop(14));
+            button.setBounds(area.withSizeKeepingCentre(36, 18));
+        }
+    };
+
     // Row 1: Output controls (cyan)
     LabeledKnob mixKnob;
     LabeledKnob outputGainKnob;
@@ -74,6 +103,9 @@ private:
     LabeledKnob attackKnob;
     LabeledKnob releaseKnob;
     LabeledKnob rangeKnob;
+
+    LabeledSwitch lookaheadSwitch, consonantSwitch, combSwitch;
+    LabeledKnob depthKnob;
 
     // Colors matching the mix knob gradient
     static constexpr juce::uint32 cyanColor = 0xff00d4ff;   // Cyan from mix gradient

@@ -43,9 +43,10 @@ public:
     float processSample(float sample, float vadConfidence = 0.0f);
 
     /**
-     * Process a block of audio.
+     * Apply a precomputed gain curve to a block of audio.
      */
-    void processBlock(float* audio, const float* vadConfidence, int numSamples);
+    float computeGain(float sidechainSample, float vadConfidence = 0.0f);
+    void applyGains(float* audio, const float* gains, int numSamples);
 
     // User parameter setters
     void setThresholdDb(float thresholdDb);

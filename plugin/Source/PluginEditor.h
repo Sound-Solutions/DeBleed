@@ -44,7 +44,7 @@ private:
 
     // Layout constants
     static constexpr int headerHeight = 36;
-    static constexpr int controlPanelHeight = 200;  // Two rows of knobs
+    static constexpr int controlPanelHeight = 292;  // Three rows of 92 px (rows 1-2 unchanged)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeBleedAudioProcessorEditor)
 };
