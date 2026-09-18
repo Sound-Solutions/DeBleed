@@ -18,6 +18,8 @@
             resource="0" file="plugin/Source/PluginProcessor.cpp"/>
       <FILE id="PluginProcessor_h" name="PluginProcessor.h" compile="0" resource="0"
             file="plugin/Source/PluginProcessor.h"/>
+      <FILE id="CmH001" name="ClickMonitor.h" compile="0" resource="0" file="plugin/Source/ClickMonitor.h"/>
+      <FILE id="CmM001" name="ClickMonitor.mm" compile="1" resource="0" file="plugin/Source/ClickMonitor.mm"/>
       <FILE id="PluginEditor_cpp" name="PluginEditor.cpp" compile="1" resource="0"
             file="plugin/Source/PluginEditor.cpp"/>
       <FILE id="PluginEditor_h" name="PluginEditor.h" compile="0" resource="0"
