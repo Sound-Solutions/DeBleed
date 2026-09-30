@@ -92,8 +92,8 @@ void DeBleedAudioProcessorEditor::resized()
 {
     // Fixed expanded coordinates: resizing the window reveals or covers the controls.
     arcMeter_.setBounds(0, 0, 268, 268);
-    powerButton_.setBounds(228, 0, 36, 36);      // centre (246, 18), room for the glow
-    chevronButton_.setBounds(228, 232, 36, 36);  // centre (246, 250)
+    powerButton_.setBounds(200, 0, 36, 36);      // centre (218, 18), room for the glow
+    chevronButton_.setBounds(228, 0, 36, 36);    // centre (246, 18), clear of Logic's footer when folded too
     expanderSection_.setBounds(270, 0, 590, 130);
     vocalSection_.setBounds(270, 132, 326, 136);
     outputSection_.setBounds(598, 132, 262, 136);
