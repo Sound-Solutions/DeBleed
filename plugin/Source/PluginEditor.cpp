@@ -40,7 +40,7 @@ DeBleedAudioProcessorEditor::DeBleedAudioProcessorEditor(DeBleedAudioProcessor& 
     };
     bypassAttachment_->sendInitialUpdate();
 
-    collapsed_ = static_cast<bool>(parameters.state.getProperty("editorCollapsed", false));
+    collapsed_ = audioProcessor.isEditorCollapsed();
     chevronButton_.setTitle("Collapse controls");
     chevronButton_.getProperties().set("chevron", true);
     chevronButton_.getProperties().set("pointsLeft", !collapsed_);
@@ -102,7 +102,7 @@ void DeBleedAudioProcessorEditor::resized()
 void DeBleedAudioProcessorEditor::toggleCollapsed()
 {
     collapsed_ = chevronButton_.getToggleState();
-    audioProcessor.getParameters().state.setProperty("editorCollapsed", collapsed_, nullptr);
+    audioProcessor.setEditorCollapsed(collapsed_);
     chevronButton_.getProperties().set("pointsLeft", !collapsed_);
     chevronButton_.repaint();
     slideStartWidth_ = getWidth();

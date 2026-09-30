@@ -756,6 +756,7 @@ juce::AudioProcessorEditor* DeBleedAudioProcessor::createEditor()
 void DeBleedAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = parameters.copyState();
+    state.setProperty(editorCollapsedProperty, editorCollapsed_.load(), nullptr);
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
     copyXmlToBinary(*xml, destData);
 }
@@ -769,6 +770,8 @@ void DeBleedAudioProcessor::setStateInformation(const void* data, int sizeInByte
         if (xmlState->hasTagName(parameters.state.getType()))
         {
             auto state = juce::ValueTree::fromXml(*xmlState);
+            editorCollapsed_.store(static_cast<bool>(state.getProperty(editorCollapsedProperty, false)));
+            state.removeProperty(editorCollapsedProperty, nullptr);
             // Older sessions have no module parameters. Loading one into an
             // already-used instance must restore the new controls to defaults.
             for (const auto& id : { PARAM_LOOKAHEAD, PARAM_CONSONANT, PARAM_COMB, PARAM_COMB_DEPTH })

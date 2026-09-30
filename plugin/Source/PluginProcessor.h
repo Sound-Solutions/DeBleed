@@ -73,6 +73,12 @@ public:
     // Parameter access
     juce::AudioProcessorValueTreeState& getParameters() { return parameters; }
 
+    // Whether the editor is folded to the meter. Kept here, not in the APVTS tree: the editor would be
+    // writing that tree while the host saves or restores state on another thread. Saved with the state.
+    bool isEditorCollapsed() const { return editorCollapsed_.load(); }
+    void setEditorCollapsed(bool collapsed) { editorCollapsed_.store(collapsed); }
+    static constexpr const char* editorCollapsedProperty = "editorCollapsed";
+
     // Parameter IDs
     static const juce::String PARAM_MIX;
     static const juce::String PARAM_BYPASS;
@@ -121,6 +127,7 @@ private:
     // Atomic parameter values for real-time access
     std::atomic<float> mix{1.0f};
     std::atomic<bool> bypassed{false};
+    std::atomic<bool> editorCollapsed_{false};
 
     // Phase 3 parameter atomics
     std::atomic<float> outputGain{0.0f};    // dB (-24 to +12)
